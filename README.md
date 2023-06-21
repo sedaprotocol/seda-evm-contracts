@@ -29,7 +29,6 @@ EVM contracts to interact with the SEDA network.
 
 **NOTE** this repo adheres to the [GPLv3 license](LICENSE.md).
 
-To learn how to build a local version, please read [developing](DEVELOPING.md).
 To learn how to contribute, please read [contributing](CONTRIBUTING.md).
 
 ## Dependencies
@@ -38,4 +37,14 @@ The [Foundry](https://book.getfoundry.sh/getting-started/installation) toolchain
 
 ```bash
 curl -L https://foundry.paradigm.xyz | bash
+```
+
+## Developing
+
+The [Foundry book](https://book.getfoundry.sh/reference/forge/) is a great reference for getting started.
+
+```bash
+forge build
+forge test
+forge fmt
 ```
