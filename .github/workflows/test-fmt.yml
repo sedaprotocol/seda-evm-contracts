@@ -4,7 +4,7 @@ name: test
 
 jobs:
   check:
-    name: Foundry project
+    name: Format check and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -14,8 +14,8 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Run tests
-        run: forge test -vvv
-
       - name: Run format check
         run: forge fmt --check
+
+      - name: Run tests
+        run: forge test -vvv
