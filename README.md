@@ -27,7 +27,7 @@
 
 EVM contracts to interact with the SEDA network.
 
-**NOTE** this repo adheres to the [GPLv3 license](LICENSE.md).
+<!-- **NOTE** this repo adheres to the [GPLv3 license](LICENSE.md). -->
 
 To learn how to contribute, please read [contributing](CONTRIBUTING.md).
 
