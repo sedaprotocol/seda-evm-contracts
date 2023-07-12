@@ -54,10 +54,10 @@ contract SedaOracle {
     }
 
     /// @notice Post a data request
-    function postDataRequest(string calldata _value) public {
+    function postDataRequest(string calldata value) public {
         data_request_count++;
-        data_request_pool[data_request_count] = SedaOracleLib.DataRequest(data_request_count, _value);
-        emit DataRequestPosted(data_request_count, _value);
+        data_request_pool[data_request_count] = SedaOracleLib.DataRequest(data_request_count, value);
+        emit DataRequestPosted(data_request_count, value);
     }
 
     /// @notice Post a result for a data request
