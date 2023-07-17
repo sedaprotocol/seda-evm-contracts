@@ -18,15 +18,15 @@ contract SedaOracleTest is Test {
 
         bytes32 dr_id = oracle.data_requests_by_nonce(1);
 
-        (bytes32 expected_id, string memory expected_value) = oracle.data_request_pool(dr_id);
+        (bytes32 expected_id,, string memory expected_value) = oracle.data_request_pool(dr_id);
         assertEq(expected_id, dr_id);
         assertEq(expected_value, "test");
     }
 
     function testPostDataResult() public {
         oracle.postDataRequest("test");
-        (bytes32 dr_id, string memory dr_value) = oracle.data_request_pool(oracle.data_requests_by_nonce(1));
-        (bytes32 res_id, string memory res_value, string memory res_result) = oracle.data_results(dr_id);
+        (bytes32 dr_id,, string memory dr_value) = oracle.data_request_pool(oracle.data_requests_by_nonce(1));
+        (bytes32 res_id,, string memory res_value, string memory res_result) = oracle.data_results(dr_id);
         assertEq(dr_id, oracle.data_requests_by_nonce(1));
         assertEq(dr_value, "test");
         assertEq(res_id, 0);
@@ -34,8 +34,8 @@ contract SedaOracleTest is Test {
         assertEq(res_result, "");
 
         oracle.postDataResult(dr_id, "result");
-        (bytes32 dr_id_after, string memory dr_value_after) = oracle.data_request_pool(dr_id);
-        (bytes32 res_id_after, string memory res_value_after, string memory res_result_after) =
+        (bytes32 dr_id_after,, string memory dr_value_after) = oracle.data_request_pool(dr_id);
+        (bytes32 res_id_after,, string memory res_value_after, string memory res_result_after) =
             oracle.data_results(dr_id);
         assertEq(dr_id_after, 0);
         assertEq(dr_value_after, "");

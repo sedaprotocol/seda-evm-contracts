@@ -4,11 +4,13 @@ pragma solidity 0.8.20;
 library SedaOracleLib {
     struct DataRequest {
         bytes32 dr_id;
+        uint128 nonce;
         string value;
     }
 
     struct DataResult {
         bytes32 dr_id;
+        uint128 nonce;
         string value;
         string result;
     }
@@ -65,7 +67,7 @@ contract SedaOracle {
     function postDataRequest(string calldata value) public {
         data_request_count++;
         bytes32 dr_id = keccak256(abi.encodePacked(data_request_count, value, block.chainid));
-        data_request_pool[dr_id] = SedaOracleLib.DataRequest(dr_id, value);
+        data_request_pool[dr_id] = SedaOracleLib.DataRequest(dr_id, data_request_count, value);
         data_requests_by_nonce[data_request_count] = dr_id;
 
         emit DataRequestPosted(dr_id, value, data_request_count);
@@ -74,7 +76,7 @@ contract SedaOracle {
     /// @notice Post a result for a data request
     function postDataResult(bytes32 dr_id, string calldata result) public {
         SedaOracleLib.DataRequest memory data_request = getDataRequest(dr_id);
-        data_results[dr_id] = SedaOracleLib.DataResult(dr_id, data_request.value, result);
+        data_results[dr_id] = SedaOracleLib.DataResult(dr_id, data_request.nonce, data_request.value, result);
         delete data_request_pool[dr_id];
         emit DataResultPosted(dr_id, data_request.value, result);
     }
