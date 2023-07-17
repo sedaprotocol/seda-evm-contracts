@@ -15,27 +15,31 @@ contract SedaOracleTest is Test {
         assertEq(oracle.data_request_count(), 0);
         oracle.postDataRequest("test");
         assertEq(oracle.data_request_count(), 1);
-        (uint128 expected_id, string memory expected_value) = oracle.data_request_pool(1);
-        assertEq(expected_id, 1);
+
+        bytes32 dr_id = oracle.data_requests_by_nonce(1);
+
+        (bytes32 expected_id, string memory expected_value) = oracle.data_request_pool(dr_id);
+        assertEq(expected_id, dr_id);
         assertEq(expected_value, "test");
     }
 
     function testPostDataResult() public {
         oracle.postDataRequest("test");
-        (uint128 dr_id, string memory dr_value) = oracle.data_request_pool(1);
-        (uint128 res_id, string memory res_value, string memory res_result) = oracle.data_results(1);
-        assertEq(dr_id, 1);
+        (bytes32 dr_id, string memory dr_value) = oracle.data_request_pool(oracle.data_requests_by_nonce(1));
+        (bytes32 res_id, string memory res_value, string memory res_result) = oracle.data_results(dr_id);
+        assertEq(dr_id, oracle.data_requests_by_nonce(1));
         assertEq(dr_value, "test");
         assertEq(res_id, 0);
         assertEq(res_value, "");
         assertEq(res_result, "");
 
-        oracle.postDataResult(1, "result");
-        (uint128 dr_id_after, string memory dr_value_after) = oracle.data_request_pool(1);
-        (uint128 res_id_after, string memory res_value_after, string memory res_result_after) = oracle.data_results(1);
+        oracle.postDataResult(dr_id, "result");
+        (bytes32 dr_id_after, string memory dr_value_after) = oracle.data_request_pool(dr_id);
+        (bytes32 res_id_after, string memory res_value_after, string memory res_result_after) =
+            oracle.data_results(dr_id);
         assertEq(dr_id_after, 0);
         assertEq(dr_value_after, "");
-        assertEq(res_id_after, 1);
+        assertEq(res_id_after, oracle.data_requests_by_nonce(1));
         assertEq(res_value_after, "test");
         assertEq(res_result_after, "result");
     }
