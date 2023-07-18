@@ -65,4 +65,18 @@ contract SedaOracleTest is Test {
         SedaOracleLib.DataRequest[] memory data_requests_4 = oracle.getDataRequests(2, 2);
         assertEq(data_requests_4.length, 1);
     }
+
+    function testHash() public {
+        uint256 nonce = 1;
+        string memory value = "hello world";
+        uint256 chainId = 31337;
+        bytes32 test_hash = keccak256(abi.encode(nonce, value, chainId));
+
+        bytes memory test_hash_bytes = new bytes(32);
+        assembly {
+            mstore(add(test_hash_bytes, 32), test_hash)
+        }
+
+        emit log_named_bytes("test_hash", test_hash_bytes);
+    }
 }
