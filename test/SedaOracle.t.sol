@@ -68,9 +68,9 @@ contract SedaOracleTest is Test {
 
     function testHash() public {
         uint256 nonce = 1;
-        string memory value = "hello world";
+        string memory value = "test";
         uint256 chainId = 31337;
-        bytes32 test_hash = keccak256(abi.encode(nonce, value, chainId));
+        bytes32 test_hash = keccak256(abi.encodePacked(nonce, value, chainId));
 
         bytes memory test_hash_bytes = new bytes(32);
         assembly {
