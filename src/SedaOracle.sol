@@ -4,25 +4,25 @@ pragma solidity 0.8.20;
 library SedaOracleLib {
     struct DataRequest {
         bytes32 dr_id;
-        uint128 nonce;
+        uint256 nonce;
         string value;
     }
 
     struct DataResult {
         bytes32 dr_id;
-        uint128 nonce;
+        uint256 nonce;
         string value;
         string result;
     }
 }
 
 contract SedaOracle {
-    uint128 public data_request_count; // i.e. nonce
+    uint256 public data_request_count; // i.e. nonce
     mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
-    mapping(uint128 => bytes32) public data_requests_by_nonce;
+    mapping(uint256 => bytes32) public data_requests_by_nonce;
     mapping(bytes32 => SedaOracleLib.DataResult) public data_results;
 
-    event DataRequestPosted(bytes32 id, string value, uint128 nonce);
+    event DataRequestPosted(bytes32 id, string value, uint256 nonce);
     event DataResultPosted(bytes32 id, string value, string result);
 
     error DataRequestNotFound(bytes32 id);
