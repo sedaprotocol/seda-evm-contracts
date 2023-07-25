@@ -16,7 +16,7 @@ contract SedaOracleTest is Test {
         oracle.postDataRequest("test");
         assertEq(oracle.data_request_count(), 1);
 
-        bytes32 dr_id = oracle.data_requests_by_nonce(1);
+        bytes32 dr_id = oracle.data_request_pool_by_nonce(1);
 
         (bytes32 expected_id,, string memory expected_value) = oracle.data_request_pool(dr_id);
         assertEq(expected_id, dr_id);
@@ -25,9 +25,9 @@ contract SedaOracleTest is Test {
 
     function testPostDataResult() public {
         oracle.postDataRequest("test");
-        (bytes32 dr_id,, string memory dr_value) = oracle.data_request_pool(oracle.data_requests_by_nonce(1));
+        (bytes32 dr_id,, string memory dr_value) = oracle.data_request_pool(oracle.data_request_pool_by_nonce(1));
         (bytes32 res_id,, string memory res_value, string memory res_result) = oracle.data_results(dr_id);
-        assertEq(dr_id, oracle.data_requests_by_nonce(1));
+        assertEq(dr_id, oracle.data_request_pool_by_nonce(1));
         assertEq(dr_value, "test");
         assertEq(res_id, 0);
         assertEq(res_value, "");
@@ -39,30 +39,33 @@ contract SedaOracleTest is Test {
             oracle.data_results(dr_id);
         assertEq(dr_id_after, 0);
         assertEq(dr_value_after, "");
-        assertEq(res_id_after, oracle.data_requests_by_nonce(1));
+        assertEq(res_id_after, dr_id);
         assertEq(res_value_after, "test");
         assertEq(res_result_after, "result");
+
+        (bytes32 dr_id_removed_from_pool,,) = oracle.data_request_pool(oracle.data_request_pool_by_nonce(1));
+        assertEq(dr_id_removed_from_pool, 0);
     }
 
-    function getDataRequests() public {
+    function getDataRequestsFromPool() public {
         oracle.postDataRequest("1");
         oracle.postDataRequest("2");
         oracle.postDataRequest("3");
 
         // fetch all three data requests
-        SedaOracleLib.DataRequest[] memory data_requests = oracle.getDataRequests(1, 3);
+        SedaOracleLib.DataRequest[] memory data_requests = oracle.getDataRequestsFromPool(1, 3);
         assertEq(data_requests.length, 3);
 
         // fetch data requests with a limit of 2
-        SedaOracleLib.DataRequest[] memory data_requests_2 = oracle.getDataRequests(1, 2);
+        SedaOracleLib.DataRequest[] memory data_requests_2 = oracle.getDataRequestsFromPool(1, 2);
         assertEq(data_requests_2.length, 2);
 
         // fetch a single data request
-        SedaOracleLib.DataRequest[] memory data_requests_3 = oracle.getDataRequests(1, 1);
+        SedaOracleLib.DataRequest[] memory data_requests_3 = oracle.getDataRequestsFromPool(1, 1);
         assertEq(data_requests_3.length, 1);
 
         // fetch two data requests starting from the second index
-        SedaOracleLib.DataRequest[] memory data_requests_4 = oracle.getDataRequests(2, 2);
+        SedaOracleLib.DataRequest[] memory data_requests_4 = oracle.getDataRequestsFromPool(2, 2);
         assertEq(data_requests_4.length, 1);
     }
 

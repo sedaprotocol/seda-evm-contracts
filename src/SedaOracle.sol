@@ -19,7 +19,7 @@ library SedaOracleLib {
 contract SedaOracle {
     uint256 public data_request_count; // i.e. nonce
     mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
-    mapping(uint256 => bytes32) public data_requests_by_nonce;
+    mapping(uint256 => bytes32) public data_request_pool_by_nonce;
     mapping(bytes32 => SedaOracleLib.DataResult) public data_results;
 
     event DataRequestPosted(bytes32 id, string value, uint256 nonce);
@@ -39,13 +39,13 @@ contract SedaOracle {
 
     /// @notice Get a data request by nonce / data request count
     /// @dev Throws if the data request does not exist
-    function getDataRequest(uint128 nonce) public view returns (SedaOracleLib.DataRequest memory) {
-        bytes32 dr_id = data_requests_by_nonce[nonce];
+    function getDataRequestFromPool(uint128 nonce) public view returns (SedaOracleLib.DataRequest memory) {
+        bytes32 dr_id = data_request_pool_by_nonce[nonce];
         return getDataRequest(dr_id);
     }
 
     /// @notice Get an array of data requests starting from a position, up to a limit
-    function getDataRequests(uint128 position, uint128 limit)
+    function getDataRequestsFromPool(uint128 position, uint128 limit)
         public
         view
         returns (SedaOracleLib.DataRequest[] memory)
@@ -57,7 +57,7 @@ contract SedaOracle {
             if (count == limit) {
                 break;
             }
-            data_requests[count] = getDataRequest(i);
+            data_requests[count] = getDataRequestFromPool(i);
             count++;
         }
         return data_requests;
@@ -68,7 +68,7 @@ contract SedaOracle {
         data_request_count++;
         bytes32 dr_id = keccak256(abi.encodePacked(data_request_count, value, block.chainid));
         data_request_pool[dr_id] = SedaOracleLib.DataRequest(dr_id, data_request_count, value);
-        data_requests_by_nonce[data_request_count] = dr_id;
+        data_request_pool_by_nonce[data_request_count] = dr_id;
 
         emit DataRequestPosted(dr_id, value, data_request_count);
     }
@@ -78,6 +78,7 @@ contract SedaOracle {
         SedaOracleLib.DataRequest memory data_request = getDataRequest(dr_id);
         data_results[dr_id] = SedaOracleLib.DataResult(dr_id, data_request.nonce, data_request.value, result);
         delete data_request_pool[dr_id];
+        delete data_request_pool_by_nonce[data_request.nonce];
         emit DataResultPosted(dr_id, data_request.value, result);
     }
 }
