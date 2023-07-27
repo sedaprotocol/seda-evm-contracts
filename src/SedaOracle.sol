@@ -37,6 +37,13 @@ contract SedaOracle {
         return data_request;
     }
 
+    /// @notice Internal function to get a data request by id
+    /// @dev Returns an empty DataRequest struct if the data request does not exist
+    function _getDataRequest(bytes32 id) internal view returns (SedaOracleLib.DataRequest memory) {
+        SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
+        return data_request;
+    }
+
     /// @notice Get a data request by nonce / data request count
     /// @dev Throws if the data request does not exist
     function getDataRequestFromPool(uint128 nonce) public view returns (SedaOracleLib.DataRequest memory) {
@@ -45,22 +52,30 @@ contract SedaOracle {
     }
 
     /// @notice Get an array of data requests starting from a position, up to a limit
+    /// @dev Skips over any data requests that do not exist
     function getDataRequestsFromPool(uint128 position, uint128 limit)
         public
         view
         returns (SedaOracleLib.DataRequest[] memory)
     {
-        // starting from position, iterate forwards until we reach the limit or the end of the data requests
         SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](limit);
         uint128 count = 0;
-        for (uint128 i = position; i <= data_request_count; i++) {
-            if (count == limit) {
-                break;
+        for (uint128 i = position; i <= data_request_count && count < limit; i++) {
+            bytes32 dr_id = data_request_pool_by_nonce[i];
+            SedaOracleLib.DataRequest memory data_request = _getDataRequest(dr_id);
+            if (data_request.dr_id != 0) {
+                data_requests[count] = data_request;
+                count++;
             }
-            data_requests[count] = getDataRequestFromPool(i);
-            count++;
         }
-        return data_requests;
+
+        // Create a new array with the actual number of data requests found
+        SedaOracleLib.DataRequest[] memory actual_data_requests = new SedaOracleLib.DataRequest[](count);
+        for (uint128 j = 0; j < count; j++) {
+            actual_data_requests[j] = data_requests[j];
+        }
+
+        return actual_data_requests;
     }
 
     /// @notice Post a data request
