@@ -60,7 +60,7 @@ contract SedaOracle {
     {
         SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](limit);
         uint128 count = 0;
-        for (uint128 i = position; i <= data_request_count && count < limit; i++) {
+        for (uint128 i = position; i <= data_request_count && count < limit; ++i) {
             bytes32 dr_id = data_request_pool_by_nonce[i];
             SedaOracleLib.DataRequest memory data_request = _getDataRequest(dr_id);
             if (data_request.dr_id != 0) {
@@ -71,7 +71,7 @@ contract SedaOracle {
 
         // Create a new array with the actual number of data requests found
         SedaOracleLib.DataRequest[] memory actual_data_requests = new SedaOracleLib.DataRequest[](count);
-        for (uint128 j = 0; j < count; j++) {
+        for (uint128 j = 0; j < count; ++j) {
             actual_data_requests[j] = data_requests[j];
         }
 
