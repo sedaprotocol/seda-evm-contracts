@@ -6,6 +6,7 @@ library SedaOracleLib {
         bytes32 dr_id;
         uint256 nonce;
         string value;
+        uint256 index_in_pool;
     }
 
     struct DataResult {
@@ -19,11 +20,11 @@ library SedaOracleLib {
 contract SedaOracle {
     uint256 public data_request_count; // i.e. nonce
     mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
-    mapping(uint256 => bytes32) public data_request_pool_by_nonce;
     mapping(bytes32 => SedaOracleLib.DataResult) public data_results;
+    bytes32[] public data_requests_array;
 
-    event DataRequestPosted(bytes32 id, string value, uint256 nonce);
-    event DataResultPosted(bytes32 id, string value, string result);
+    event DataRequestPosted(bytes32 id, string value, uint256 nonce, address caller);
+    event DataResultPosted(bytes32 id, string value, string result, address caller);
 
     error DataRequestNotFound(bytes32 id);
 
@@ -31,69 +32,55 @@ contract SedaOracle {
     /// @dev Throws if the data request does not exist
     function getDataRequest(bytes32 id) public view returns (SedaOracleLib.DataRequest memory) {
         SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
-        if (data_request.dr_id == 0) {
-            revert DataRequestNotFound(id);
-        }
+        require(data_request.dr_id != 0, "Data request not found");
         return data_request;
-    }
-
-    /// @notice Internal function to get a data request by id
-    /// @dev Returns an empty DataRequest struct if the data request does not exist
-    function _getDataRequest(bytes32 id) internal view returns (SedaOracleLib.DataRequest memory) {
-        SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
-        return data_request;
-    }
-
-    /// @notice Get a data request by nonce / data request count
-    /// @dev Throws if the data request does not exist
-    function getDataRequestFromPool(uint128 nonce) public view returns (SedaOracleLib.DataRequest memory) {
-        bytes32 dr_id = data_request_pool_by_nonce[nonce];
-        return getDataRequest(dr_id);
     }
 
     /// @notice Get an array of data requests starting from a position, up to a limit
-    /// @dev Skips over any data requests that do not exist
+    /// @dev Returns valid data requests
     function getDataRequestsFromPool(uint128 position, uint128 limit)
         public
         view
         returns (SedaOracleLib.DataRequest[] memory)
     {
-        SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](limit);
-        uint128 count = 0;
-        for (uint128 i = position; i <= data_request_count && count < limit; ++i) {
-            bytes32 dr_id = data_request_pool_by_nonce[i];
-            SedaOracleLib.DataRequest memory data_request = _getDataRequest(dr_id);
-            if (data_request.dr_id != 0) {
-                data_requests[count] = data_request;
-                count++;
-            }
+        // Compute the actual limit, taking into account the array size
+        uint128 actualLimit =
+            (position + limit > data_requests_array.length) ? (uint128(data_requests_array.length) - position) : limit;
+        SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](actualLimit);
+
+        for (uint128 i = 0; i < actualLimit; ++i) {
+            data_requests[i] = data_request_pool[data_requests_array[position + i]];
         }
 
-        // Create a new array with the actual number of data requests found
-        SedaOracleLib.DataRequest[] memory actual_data_requests = new SedaOracleLib.DataRequest[](count);
-        for (uint128 j = 0; j < count; ++j) {
-            actual_data_requests[j] = data_requests[j];
-        }
-
-        return actual_data_requests;
+        return data_requests;
     }
 
     /// @notice Post a data request
     function postDataRequest(string calldata value) public {
         data_request_count++;
         bytes32 dr_id = keccak256(abi.encodePacked(data_request_count, value, block.chainid));
-        data_request_pool[dr_id] = SedaOracleLib.DataRequest(dr_id, data_request_count, value);
-        data_request_pool_by_nonce[data_request_count] = dr_id;
-
-        emit DataRequestPosted(dr_id, value, data_request_count);
+        data_request_pool[dr_id] =
+            SedaOracleLib.DataRequest(dr_id, data_request_count, value, data_requests_array.length);
+        data_requests_array.push(dr_id);
+        emit DataRequestPosted(dr_id, value, data_request_count, msg.sender);
     }
 
     /// @notice Post a result for a data request
     function postDataResult(bytes32 dr_id, string calldata result) public {
         SedaOracleLib.DataRequest memory data_request = getDataRequest(dr_id);
         data_results[dr_id] = SedaOracleLib.DataResult(dr_id, data_request.nonce, data_request.value, result);
+
+        // Remove the data request from the array
+        uint256 index = data_request_pool[dr_id].index_in_pool;
+        // Swap the element to delete and the last element
+        bytes32 lastRequestId = data_requests_array[data_requests_array.length - 1];
+        data_requests_array[index] = lastRequestId;
+        // Update the index mapping for the last element
+        data_request_pool[lastRequestId].index_in_pool = index;
+        // Remove the last element in the array
+        data_requests_array.pop();
+
         delete data_request_pool[dr_id];
-        delete data_request_pool_by_nonce[data_request.nonce];
-        emit DataResultPosted(dr_id, data_request.value, result);
+        emit DataResultPosted(dr_id, data_request.value, result, msg.sender);
     }
 }
