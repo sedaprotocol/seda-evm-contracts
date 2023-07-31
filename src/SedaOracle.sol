@@ -21,7 +21,7 @@ contract SedaOracle {
     uint256 public data_request_count; // i.e. nonce
     mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
     mapping(bytes32 => SedaOracleLib.DataResult) public data_results;
-    bytes32[] public data_requests_array;
+    bytes32[] public data_request_pool_array; // for iterating over the data request pool
 
     event DataRequestPosted(bytes32 id, string value, uint256 nonce, address caller);
     event DataResultPosted(bytes32 id, string value, string result, address caller);
@@ -44,12 +44,13 @@ contract SedaOracle {
         returns (SedaOracleLib.DataRequest[] memory)
     {
         // Compute the actual limit, taking into account the array size
-        uint128 actualLimit =
-            (position + limit > data_requests_array.length) ? (uint128(data_requests_array.length) - position) : limit;
+        uint128 actualLimit = (position + limit > data_request_pool_array.length)
+            ? (uint128(data_request_pool_array.length) - position)
+            : limit;
         SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](actualLimit);
 
         for (uint128 i = 0; i < actualLimit; ++i) {
-            data_requests[i] = data_request_pool[data_requests_array[position + i]];
+            data_requests[i] = data_request_pool[data_request_pool_array[position + i]];
         }
 
         return data_requests;
@@ -60,8 +61,8 @@ contract SedaOracle {
         data_request_count++;
         bytes32 dr_id = keccak256(abi.encodePacked(data_request_count, value, block.chainid));
         data_request_pool[dr_id] =
-            SedaOracleLib.DataRequest(dr_id, data_request_count, value, data_requests_array.length);
-        data_requests_array.push(dr_id);
+            SedaOracleLib.DataRequest(dr_id, data_request_count, value, data_request_pool_array.length);
+        data_request_pool_array.push(dr_id);
         emit DataRequestPosted(dr_id, value, data_request_count, msg.sender);
     }
 
@@ -72,13 +73,10 @@ contract SedaOracle {
 
         // Remove the data request from the array
         uint256 index = data_request_pool[dr_id].index_in_pool;
-        // Swap the element to delete and the last element
-        bytes32 lastRequestId = data_requests_array[data_requests_array.length - 1];
-        data_requests_array[index] = lastRequestId;
-        // Update the index mapping for the last element
+        bytes32 lastRequestId = data_request_pool_array[data_request_pool_array.length - 1];
+        data_request_pool_array[index] = lastRequestId;
         data_request_pool[lastRequestId].index_in_pool = index;
-        // Remove the last element in the array
-        data_requests_array.pop();
+        data_request_pool_array.pop();
 
         delete data_request_pool[dr_id];
         emit DataResultPosted(dr_id, data_request.value, result, msg.sender);
