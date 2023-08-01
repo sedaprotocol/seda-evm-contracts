@@ -27,8 +27,6 @@
 
 EVM contracts to interact with the SEDA network.
 
-<!-- **NOTE** this repo adheres to the [GPLv3 license](LICENSE.md). -->
-
 To learn how to contribute, please read [contributing](CONTRIBUTING.md).
 
 ## Dependencies
@@ -48,3 +46,7 @@ forge build
 forge test
 forge fmt
 ```
+
+## License
+
+Contents of this repository are open source under [MIT License](LICENSE).
