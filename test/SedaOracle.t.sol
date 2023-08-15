@@ -11,22 +11,29 @@ contract SedaOracleTest is Test {
         oracle = new SedaOracle();
     }
 
+    function _getTestWasmArgs() private pure returns (bytes[][] memory) {
+        bytes[][] memory args = new bytes[][](1);
+        args[0] = new bytes[](2);
+        args[0][0] = bytes("arg1");
+        args[0][1] = bytes("arg2");
+        return args;
+    }
+
     function testPostDataRequest() public {
         assertEq(oracle.data_request_count(), 0);
-        oracle.postDataRequest("test");
+        oracle.postDataRequest("test", "wasm_id", _getTestWasmArgs());
         assertEq(oracle.data_request_count(), 1);
 
-        // bytes32 dr_id = oracle.data_request_pool_by_nonce(1);
         bytes32 dr_id = oracle.getDataRequestsFromPool(0, 1)[0].dr_id;
 
-        (bytes32 expected_id,, string memory expected_value,) = oracle.data_request_pool(dr_id);
+        (bytes32 expected_id,, string memory expected_value,,) = oracle.data_request_pool(dr_id);
         assertEq(expected_id, dr_id);
         assertEq(expected_value, "test");
     }
 
     function testPostDataResult() public {
-        oracle.postDataRequest("test");
-        (bytes32 dr_id,, string memory dr_value,) =
+        oracle.postDataRequest("test", "wasm_id", _getTestWasmArgs());
+        (bytes32 dr_id,, string memory dr_value,,) =
             oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].dr_id);
         (bytes32 res_id,, string memory res_value, string memory res_result) = oracle.data_results(dr_id);
         assertEq(dr_id, oracle.getDataRequestsFromPool(0, 1)[0].dr_id);
@@ -36,7 +43,7 @@ contract SedaOracleTest is Test {
         assertEq(res_result, "");
 
         oracle.postDataResult(dr_id, "result");
-        (bytes32 dr_id_after,, string memory dr_value_after,) = oracle.data_request_pool(dr_id);
+        (bytes32 dr_id_after,, string memory dr_value_after,,) = oracle.data_request_pool(dr_id);
         (bytes32 res_id_after,, string memory res_value_after, string memory res_result_after) =
             oracle.data_results(dr_id);
         assertEq(dr_id_after, 0);
@@ -49,9 +56,9 @@ contract SedaOracleTest is Test {
     }
 
     function testGetDataRequestsFromPool() public {
-        oracle.postDataRequest("1");
-        oracle.postDataRequest("2");
-        oracle.postDataRequest("3");
+        oracle.postDataRequest("1", "wasm_id", _getTestWasmArgs());
+        oracle.postDataRequest("2", "wasm_id", _getTestWasmArgs());
+        oracle.postDataRequest("3", "wasm_id", _getTestWasmArgs());
 
         // fetch all three data requests with a limit of 3
         SedaOracleLib.DataRequest[] memory data_requests = oracle.getDataRequestsFromPool(0, 3);
@@ -74,7 +81,7 @@ contract SedaOracleTest is Test {
         assertEq(data_requests_5.length, 2);
 
         // post a data result for dr 1
-        (bytes32 dr_1,,,) = oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].dr_id);
+        (bytes32 dr_1,,,,) = oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].dr_id);
         oracle.postDataResult(dr_1, "result");
 
         // should only return 2 data requests now, even with limit of 3

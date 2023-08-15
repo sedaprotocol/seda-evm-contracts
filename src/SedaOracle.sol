@@ -7,6 +7,8 @@ library SedaOracleLib {
         uint256 nonce;
         string value;
         uint256 index_in_pool;
+        bytes wasm_id;
+        bytes[][] wasm_args;
     }
 
     struct DataResult {
@@ -57,11 +59,12 @@ contract SedaOracle {
     }
 
     /// @notice Post a data request
-    function postDataRequest(string calldata value) public {
+    function postDataRequest(string calldata value, bytes calldata wasmId, bytes[][] calldata wasmArgs) public {
         data_request_count++;
         bytes32 dr_id = keccak256(abi.encodePacked(data_request_count, value, block.chainid));
-        data_request_pool[dr_id] =
-            SedaOracleLib.DataRequest(dr_id, data_request_count, value, data_request_pool_array.length);
+        data_request_pool[dr_id] = SedaOracleLib.DataRequest(
+            dr_id, data_request_count, value, data_request_pool_array.length, wasmId, wasmArgs
+        );
         data_request_pool_array.push(dr_id);
         emit DataRequestPosted(dr_id, value, data_request_count, msg.sender);
     }
