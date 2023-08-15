@@ -104,7 +104,9 @@ contract SedaOracleTest is Test {
         uint256 nonce = 1;
         string memory value = "test";
         uint256 chainId = 31337;
-        bytes32 test_hash = keccak256(abi.encodePacked(nonce, value, chainId));
+        bytes32 wasmId = "wasm_id";
+        bytes memory wasmArgs = abi.encode(_getTestWasmArgs());
+        bytes32 test_hash = keccak256(abi.encodePacked(nonce, value, chainId, wasmId, wasmArgs));
 
         bytes memory test_hash_bytes = new bytes(32);
         assembly {

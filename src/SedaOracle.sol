@@ -61,7 +61,8 @@ contract SedaOracle {
     /// @notice Post a data request
     function postDataRequest(string calldata value, bytes calldata wasmId, bytes[][] calldata wasmArgs) public {
         data_request_count++;
-        bytes32 dr_id = keccak256(abi.encodePacked(data_request_count, value, block.chainid));
+        bytes32 dr_id =
+            keccak256(abi.encodePacked(data_request_count, value, block.chainid, wasmId, abi.encode(wasmArgs)));
         data_request_pool[dr_id] = SedaOracleLib.DataRequest(
             dr_id, data_request_count, value, data_request_pool_array.length, wasmId, wasmArgs
         );
