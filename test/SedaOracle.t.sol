@@ -11,12 +11,11 @@ contract SedaOracleTest is Test {
         oracle = new SedaOracle();
     }
 
-    function _getTestWasmArgs() private pure returns (bytes[][] memory) {
-        bytes[][] memory args = new bytes[][](1);
-        args[0] = new bytes[](2);
-        args[0][0] = bytes("arg1");
-        args[0][1] = bytes("arg2");
-        return args;
+    function _getTestWasmArgs() private pure returns (bytes[] memory) {
+        bytes[] memory wasm_args = new bytes[](2);
+        wasm_args[0] = "arg1";
+        wasm_args[1] = "arg2";
+        return wasm_args;
     }
 
     function testPostDataRequest() public {
@@ -102,11 +101,12 @@ contract SedaOracleTest is Test {
 
     function testHash() public {
         uint256 nonce = 1;
-        string memory value = "test";
+        string memory value = "hello world";
         uint256 chainId = 31337;
-        bytes32 wasmId = "wasm_id";
-        bytes memory wasmArgs = abi.encode(_getTestWasmArgs());
-        bytes32 test_hash = keccak256(abi.encodePacked(nonce, value, chainId, wasmId, wasmArgs));
+        bytes memory wasmId = "wasm_id";
+        bytes[] memory wasmArgs = _getTestWasmArgs();
+
+        bytes32 test_hash = oracle.hashDataRequest(nonce, value, chainId, wasmId, wasmArgs);
 
         bytes memory test_hash_bytes = new bytes(32);
         assembly {

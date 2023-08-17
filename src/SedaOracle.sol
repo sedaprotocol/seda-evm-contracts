@@ -8,7 +8,7 @@ library SedaOracleLib {
         string value;
         uint256 index_in_pool;
         bytes wasm_id;
-        bytes[][] wasm_args;
+        bytes[] wasm_args;
     }
 
     struct DataResult {
@@ -59,10 +59,9 @@ contract SedaOracle {
     }
 
     /// @notice Post a data request
-    function postDataRequest(string calldata value, bytes calldata wasmId, bytes[][] calldata wasmArgs) public {
+    function postDataRequest(string calldata value, bytes calldata wasmId, bytes[] calldata wasmArgs) public {
         data_request_count++;
-        bytes32 dr_id =
-            keccak256(abi.encodePacked(data_request_count, value, block.chainid, wasmId, abi.encode(wasmArgs)));
+        bytes32 dr_id = hashDataRequest(data_request_count, value, block.chainid, wasmId, wasmArgs);
         data_request_pool[dr_id] = SedaOracleLib.DataRequest(
             dr_id, data_request_count, value, data_request_pool_array.length, wasmId, wasmArgs
         );
@@ -84,5 +83,20 @@ contract SedaOracle {
 
         delete data_request_pool[dr_id];
         emit DataResultPosted(dr_id, data_request.value, result, msg.sender);
+    }
+
+    /// @notice Hashes arguments to a data request to produce a unique id
+    function hashDataRequest(
+        uint256 nonce,
+        string calldata value,
+        uint256 chainId,
+        bytes calldata wasmId,
+        bytes[] calldata wasmArgs
+    ) public pure returns (bytes32) {
+        bytes memory wasmArgsConcatenated;
+        for (uint256 i = 0; i < wasmArgs.length; i++) {
+            wasmArgsConcatenated = abi.encodePacked(wasmArgsConcatenated, wasmArgs[i]);
+        }
+        return keccak256(abi.encodePacked(nonce, value, chainId, wasmId, wasmArgsConcatenated));
     }
 }
