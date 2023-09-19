@@ -11,53 +11,62 @@ contract SedaOracleTest is Test {
         oracle = new SedaOracle();
     }
 
-    function _getTestWasmArgs() private pure returns (bytes[] memory) {
-        bytes[] memory wasm_args = new bytes[](2);
-        wasm_args[0] = "arg1";
-        wasm_args[1] = "arg2";
-        return wasm_args;
+    function _getDataRequestInputs() private pure returns (SedaOracleLib.DataRequestInputs memory) {
+        return SedaOracleLib.DataRequestInputs({
+            dr_binary_id: "dr_binary_id",
+            dr_inputs: "dr_inputs",
+            tally_binary_id: "tally_binary_id",
+            tally_inputs: "tally_inputs",
+            replication_factor: 123,
+            gas_price: 456,
+            gas_limit: 789
+        });
+    }
+
+    function _getDataResultsInputs() private pure returns (SedaOracleLib.DataResult memory) {
+        return SedaOracleLib.DataResult({
+            id: 0x8d40bada95ad5147154f521650e7870964744a0638859b20baa741a3f8d21540,
+            dr_id: 0x27e7eec2f319302826ea53ae08b4aac6c4824cc07eafcdaf740501b3d603d0aa, // ID hash of __getDataRequestInputs()
+            block_height: 1,
+            exit_code: 2,
+            gas_used: 3,
+            result: "result",
+            payback_address: "payback_address",
+            seda_payload: "seda_payload"
+        });
     }
 
     function testPostDataRequest() public {
         assertEq(oracle.data_request_count(), 0);
-        oracle.postDataRequest("test", "wasm_id", _getTestWasmArgs());
+        oracle.postDataRequest(_getDataRequestInputs());
         assertEq(oracle.data_request_count(), 1);
 
-        bytes32 dr_id = oracle.getDataRequestsFromPool(0, 1)[0].dr_id;
+        bytes32 dr_id = oracle.getDataRequestsFromPool(0, 1)[0].id;
 
-        (bytes32 expected_id,, string memory expected_value,,) = oracle.data_request_pool(dr_id);
+        (bytes32 expected_id,,,,,,,,,,) = oracle.data_request_pool(dr_id);
         assertEq(expected_id, dr_id);
-        assertEq(expected_value, "test");
     }
 
     function testPostDataResult() public {
-        oracle.postDataRequest("test", "wasm_id", _getTestWasmArgs());
-        (bytes32 dr_id,, string memory dr_value,,) =
-            oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].dr_id);
-        (bytes32 res_id,, string memory res_value, string memory res_result) = oracle.data_results(dr_id);
-        assertEq(dr_id, oracle.getDataRequestsFromPool(0, 1)[0].dr_id);
-        assertEq(dr_value, "test");
-        assertEq(res_id, 0);
-        assertEq(res_value, "");
-        assertEq(res_result, "");
+        // post a data request and assert the associated result is non-existent
+        oracle.postDataRequest(_getDataRequestInputs());
+        (bytes32 dr_id,,,,,,,,,,) = oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].id);
+        (bytes32 res_id_nonexistent,,,,,,,) = oracle.data_request_id_to_result(dr_id);
+        assertEq(res_id_nonexistent, 0);
 
-        oracle.postDataResult(dr_id, "result");
-        (bytes32 dr_id_after,, string memory dr_value_after,,) = oracle.data_request_pool(dr_id);
-        (bytes32 res_id_after,, string memory res_value_after, string memory res_result_after) =
-            oracle.data_results(dr_id);
-        assertEq(dr_id_after, 0);
-        assertEq(dr_value_after, "");
-        assertEq(res_id_after, dr_id);
-        assertEq(res_value_after, "test");
-        assertEq(res_result_after, "result");
+        // post the data result and assert the dr_id is correct
+        oracle.postDataResult(_getDataResultsInputs());
+        (, bytes32 res_dr_id,,,,,,) = oracle.data_request_id_to_result(dr_id);
+        assertEq(res_dr_id, dr_id);
 
+        // assert the pool is empty
         assert(oracle.getDataRequestsFromPool(0, 1).length == 0);
     }
 
     function testGetDataRequestsFromPool() public {
-        oracle.postDataRequest("1", "wasm_id", _getTestWasmArgs());
-        oracle.postDataRequest("2", "wasm_id", _getTestWasmArgs());
-        oracle.postDataRequest("3", "wasm_id", _getTestWasmArgs());
+        oracle.postDataRequest(_getDataRequestInputs());
+        oracle.postDataRequest(_getDataRequestInputs());
+        oracle.postDataRequest(_getDataRequestInputs());
 
         // fetch all three data requests with a limit of 3
         SedaOracleLib.DataRequest[] memory data_requests = oracle.getDataRequestsFromPool(0, 3);
@@ -80,8 +89,7 @@ contract SedaOracleTest is Test {
         assertEq(data_requests_5.length, 2);
 
         // post a data result for dr 1
-        (bytes32 dr_1,,,,) = oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].dr_id);
-        oracle.postDataResult(dr_1, "result");
+        oracle.postDataResult(_getDataResultsInputs());
 
         // should only return 2 data requests now, even with limit of 3
         SedaOracleLib.DataRequest[] memory data_requests_6 = oracle.getDataRequestsFromPool(0, 3);
@@ -100,19 +108,25 @@ contract SedaOracleTest is Test {
     }
 
     function testHash() public {
-        uint256 nonce = 1;
-        string memory value = "hello world";
-        uint256 chainId = 31337;
-        bytes memory wasmId = "wasm_id";
-        bytes[] memory wasmArgs = _getTestWasmArgs();
+        // format memo and calculate memo hash
+        uint128 chainId = 31337;
+        uint128 nonce = 1;
+        bytes32 memo = oracle.hashMemo(chainId, nonce);
 
-        bytes32 test_hash = oracle.hashDataRequest(nonce, value, chainId, wasmId, wasmArgs);
+        // format data request inputs
+        SedaOracleLib.DataRequestInputs memory inputs = SedaOracleLib.DataRequestInputs({
+            dr_binary_id: "dr_binary_id",
+            dr_inputs: "dr_inputs",
+            tally_binary_id: "tally_binary_id",
+            tally_inputs: "tally_inputs",
+            replication_factor: 123,
+            gas_price: 456,
+            gas_limit: 789
+        });
 
-        bytes memory test_hash_bytes = new bytes(32);
-        assembly {
-            mstore(add(test_hash_bytes, 32), test_hash)
-        }
+        // calculate data request hash
+        bytes32 test_hash = oracle.hashDataRequest(inputs, memo);
 
-        emit log_named_bytes("test_hash", test_hash_bytes);
+        emit log_named_bytes32("test_hash", test_hash);
     }
 }
