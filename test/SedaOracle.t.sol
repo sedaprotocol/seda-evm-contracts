@@ -11,11 +11,16 @@ contract SedaOracleTest is Test {
         oracle = new SedaOracle();
     }
 
+    function hashString(string memory input) public pure returns (bytes32) {
+        bytes32 hash = keccak256(abi.encodePacked(input));
+        return hash;
+    }
+
     function _getDataRequestInputs() private pure returns (SedaOracleLib.DataRequestInputs memory) {
         return SedaOracleLib.DataRequestInputs({
-            dr_binary_id: "dr_binary_id",
+            dr_binary_id: hashString("dr_binary_id"),
             dr_inputs: "dr_inputs",
-            tally_binary_id: "tally_binary_id",
+            tally_binary_id: hashString("tally_binary_id"),
             tally_inputs: "tally_inputs",
             replication_factor: 123,
             gas_price: 456,
@@ -23,16 +28,33 @@ contract SedaOracleTest is Test {
         });
     }
 
-    function _getDataResultsInputs() private pure returns (SedaOracleLib.DataResult memory) {
+    function _getDataResultsInputs() private view returns (SedaOracleLib.DataResult memory) {
+        SedaOracleLib.DataRequestInputs memory data_request_inputs = _getDataRequestInputs();
+        uint128 chainId = 31337;
+        uint128 nonce = 1;
+        bytes32 memo = oracle.hashMemo(chainId, nonce);
+        bytes32 dr_id = oracle.hashDataRequest(data_request_inputs, memo);
+        uint128 block_height = 1;
+        uint8 exit_code = 2;
+        uint128 gas_used = 3;
+        bytes memory result = "result";
+        bytes memory payback_address = "payback_address";
+        bytes memory seda_payload = "seda_payload";
+        bytes32 resultHash = keccak256(abi.encodePacked(result));
+        bytes32 sedaPayloadHash = keccak256(abi.encodePacked(seda_payload));
+        bytes32 id = keccak256(
+            abi.encodePacked(dr_id, block_height, exit_code, resultHash, gas_used, payback_address, sedaPayloadHash)
+        );
+
         return SedaOracleLib.DataResult({
-            id: 0x8d40bada95ad5147154f521650e7870964744a0638859b20baa741a3f8d21540,
-            dr_id: 0x27e7eec2f319302826ea53ae08b4aac6c4824cc07eafcdaf740501b3d603d0aa, // ID hash of __getDataRequestInputs()
-            block_height: 1,
-            exit_code: 2,
-            gas_used: 3,
-            result: "result",
-            payback_address: "payback_address",
-            seda_payload: "seda_payload"
+            id: id,
+            dr_id: dr_id,
+            block_height: block_height,
+            exit_code: exit_code,
+            gas_used: gas_used,
+            result: result,
+            payback_address: payback_address,
+            seda_payload: seda_payload
         });
     }
 
@@ -115,9 +137,9 @@ contract SedaOracleTest is Test {
 
         // format data request inputs
         SedaOracleLib.DataRequestInputs memory inputs = SedaOracleLib.DataRequestInputs({
-            dr_binary_id: "dr_binary_id",
+            dr_binary_id: hashString("dr_binary_id"),
             dr_inputs: "dr_inputs",
-            tally_binary_id: "tally_binary_id",
+            tally_binary_id: hashString("tally_binary_id"),
             tally_inputs: "tally_inputs",
             replication_factor: 123,
             gas_price: 456,

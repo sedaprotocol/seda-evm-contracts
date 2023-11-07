@@ -4,11 +4,11 @@ pragma solidity 0.8.20;
 library SedaOracleLib {
     struct DataRequestInputs {
         /// Identifier of DR WASM binary
-        bytes dr_binary_id;
+        bytes32 dr_binary_id;
         // /// Inputs for DR WASM binary
         bytes dr_inputs;
         /// Identifier of Tally WASM binary
-        bytes tally_binary_id;
+        bytes32 tally_binary_id;
         /// Inputs for Tally WASM binary
         bytes tally_inputs;
         /// Amount of required DR executors
@@ -26,11 +26,11 @@ library SedaOracleLib {
         /// Semantic Version String
         // Version version; // TODO
         /// Identifier of DR WASM binary
-        bytes dr_binary_id;
+        bytes32 dr_binary_id;
         /// Inputs for DR WASM binary
         bytes dr_inputs;
         /// Identifier of Tally WASM binary
-        bytes tally_binary_id;
+        bytes32 tally_binary_id;
         /// Inputs for Tally WASM binary
         bytes tally_inputs;
         /// Amount of required DR executors
