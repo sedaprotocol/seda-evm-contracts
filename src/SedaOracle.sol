@@ -15,8 +15,10 @@ library SedaOracleLib {
         uint16 replication_factor;
         /// Amount of SEDA tokens per gas unit
         uint128 gas_price;
-        /// Maximum of gas units to be used
+        /// Maximum of gas units to be used by data request executors
         uint128 gas_limit;
+        /// Maximum of gas units to be used in the tallying process
+        uint128 tally_gas_limit;
     }
 
     struct DataRequest {
@@ -37,8 +39,10 @@ library SedaOracleLib {
         uint16 replication_factor;
         /// Amount of SEDA tokens per gas unit
         uint128 gas_price;
-        /// Maximum of gas units to be used
+        /// Maximum of gas units to be used by data request executors
         uint128 gas_limit;
+        /// Maximum of gas units to be used in the tallying process
+        uint128 tally_gas_limit;
         /// Public info attached to DR
         bytes32 memo;
         // Internal bookkeeping
@@ -129,6 +133,7 @@ contract SedaOracle {
             inputs.replication_factor,
             inputs.gas_price,
             inputs.gas_limit,
+            inputs.tally_gas_limit,
             memo,
             data_request_pool_array.length,
             data_request_count
@@ -191,6 +196,7 @@ contract SedaOracle {
                 inputs.dr_inputs,
                 inputs.gas_limit,
                 inputs.gas_price,
+                inputs.tally_gas_limit,
                 memo,
                 inputs.replication_factor,
                 inputs.tally_binary_id,

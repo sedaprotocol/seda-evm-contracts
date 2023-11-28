@@ -24,7 +24,8 @@ contract SedaOracleTest is Test {
             tally_inputs: "tally_inputs",
             replication_factor: 123,
             gas_price: 456,
-            gas_limit: 789
+            gas_limit: 789,
+            tally_gas_limit: 101112
         });
     }
 
@@ -75,14 +76,14 @@ contract SedaOracleTest is Test {
 
         bytes32 dr_id = oracle.getDataRequestsFromPool(0, 1)[0].id;
 
-        (, bytes32 expected_id,,,,,,,,,,) = oracle.data_request_pool(dr_id);
+        (, bytes32 expected_id,,,,,,,,,,,) = oracle.data_request_pool(dr_id);
         assertEq(expected_id, dr_id);
     }
 
     function testPostDataResult() public {
         // post a data request and assert the associated result is non-existent
         oracle.postDataRequest(_getDataRequestInputs());
-        (, bytes32 dr_id,,,,,,,,,,) = oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].id);
+        (, bytes32 dr_id,,,,,,,,,,,) = oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].id);
         (, bytes32 res_id_nonexistent,,,,,,,) = oracle.data_request_id_to_result(dr_id);
         assertEq(res_id_nonexistent, 0);
 
@@ -152,7 +153,8 @@ contract SedaOracleTest is Test {
             tally_inputs: "tally_inputs",
             replication_factor: 3,
             gas_price: 10,
-            gas_limit: 10
+            gas_limit: 10,
+            tally_gas_limit: 10
         });
 
         // calculate data request hash
