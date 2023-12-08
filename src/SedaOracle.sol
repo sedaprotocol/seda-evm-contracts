@@ -70,10 +70,8 @@ library SedaOracleLib {
         /// Payload set by SEDA Protocol (e.g. OEV-enabled data requests)
         bytes seda_payload;
     }
-    
-    string constant VERSION = "1.0.0";
 
-   
+    string constant VERSION = "1.0.0";
 }
 
 contract SedaOracle {
