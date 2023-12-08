@@ -17,9 +17,7 @@ contract SedaOracleTest is Test {
     }
 
     function _getDataRequestInputs() private pure returns (SedaOracleLib.DataRequestInputs memory) {
-        SedaOracleLib.Version memory version = SedaOracleLib.Version({major: "1", minor: "0", patch: "0"});
         return SedaOracleLib.DataRequestInputs({
-            version: version,
             dr_binary_id: hashString("dr_binary_id"),
             dr_inputs: "dr_inputs",
             tally_binary_id: hashString("tally_binary_id"),
@@ -46,7 +44,7 @@ contract SedaOracleTest is Test {
         bytes32 sedaPayloadHash = keccak256(abi.encodePacked(seda_payload));
         bytes32 id = keccak256(
             abi.encodePacked(
-                SedaOracleLib.version_to_string(data_request_inputs.version),
+                SedaOracleLib.VERSION,
                 dr_id,
                 block_height,
                 exit_code,
@@ -58,7 +56,7 @@ contract SedaOracleTest is Test {
         );
 
         return SedaOracleLib.DataResult({
-            version: data_request_inputs.version,
+            version: SedaOracleLib.VERSION,
             id: id,
             dr_id: dr_id,
             block_height: block_height,
@@ -146,11 +144,8 @@ contract SedaOracleTest is Test {
         uint128 chainId = 31337;
         uint128 nonce = 1;
         bytes32 memo = oracle.hashMemo(chainId, nonce);
-        SedaOracleLib.Version memory version = SedaOracleLib.Version({major: "1", minor: "0", patch: "0"});
-
         // format data request inputs
         SedaOracleLib.DataRequestInputs memory inputs = SedaOracleLib.DataRequestInputs({
-            version: version,
             dr_binary_id: hashString("dr_binary_id"),
             dr_inputs: "dr_inputs",
             tally_binary_id: hashString("tally_binary_id"),

@@ -3,8 +3,6 @@ pragma solidity 0.8.20;
 
 library SedaOracleLib {
     struct DataRequestInputs {
-        /// Semantic Version
-        Version version;
         /// Identifier of DR WASM binary
         bytes32 dr_binary_id;
         // /// Inputs for DR WASM binary
@@ -23,7 +21,7 @@ library SedaOracleLib {
 
     struct DataRequest {
         /// Semantic Version
-        Version version;
+        string version;
         /// Identifier
         bytes32 id;
         // DR definition
@@ -52,7 +50,7 @@ library SedaOracleLib {
 
     struct DataResult {
         /// Semantic Version
-        Version version;
+        string version;
         /// Identifier
         bytes32 id;
         // DR Result
@@ -72,17 +70,10 @@ library SedaOracleLib {
         /// Payload set by SEDA Protocol (e.g. OEV-enabled data requests)
         bytes seda_payload;
     }
+    
+    string constant VERSION = "1.0.0";
 
-    struct Version {
-        string major;
-        string minor;
-        string patch;
-    }
-
-    function version_to_string(Version calldata ver) public pure returns (string memory) {
-        string memory ver_string = string.concat(ver.major, ".", ver.minor, ".", ver.patch);
-        return ver_string;
-    }
+   
 }
 
 contract SedaOracle {
@@ -131,7 +122,7 @@ contract SedaOracle {
         bytes32 memo = hashMemo(uint128(block.chainid), uint128(data_request_count));
         bytes32 id = hashDataRequest(inputs, memo);
         SedaOracleLib.DataRequest memory data_request = SedaOracleLib.DataRequest(
-            inputs.version,
+            SedaOracleLib.VERSION,
             id,
             inputs.dr_binary_id,
             inputs.dr_inputs,
@@ -197,7 +188,7 @@ contract SedaOracle {
     {
         return keccak256(
             abi.encodePacked(
-                SedaOracleLib.version_to_string(inputs.version),
+                SedaOracleLib.VERSION,
                 inputs.dr_binary_id,
                 inputs.dr_inputs,
                 inputs.gas_limit,
@@ -221,7 +212,7 @@ contract SedaOracle {
         bytes32 sedaPayloadHash = keccak256(abi.encodePacked(inputs.seda_payload));
         bytes32 reconstructed_id = keccak256(
             abi.encodePacked(
-                SedaOracleLib.version_to_string(inputs.version),
+                inputs.version,
                 inputs.dr_id,
                 inputs.block_height,
                 inputs.exit_code,
