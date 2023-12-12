@@ -81,27 +81,18 @@ library SedaOracleLib {
 contract SedaOracle {
     uint256 public data_request_count; // i.e. nonce
     mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
-    mapping(bytes32 => SedaOracleLib.DataResult)
-        public data_request_id_to_result;
+    mapping(bytes32 => SedaOracleLib.DataResult) public data_request_id_to_result;
     bytes32[] public data_request_pool_array; // for iterating over the data request pool
 
-    event DataRequestPosted(
-        SedaOracleLib.DataRequest data_request,
-        address caller
-    );
-    event DataResultPosted(
-        SedaOracleLib.DataResult data_result,
-        address caller
-    );
+    event DataRequestPosted(SedaOracleLib.DataRequest data_request, address caller);
+    event DataResultPosted(SedaOracleLib.DataResult data_result, address caller);
 
     error DataRequestNotFound(bytes32 id);
     error DataResultInvalidHash(bytes32 expected, bytes32 actual);
 
     /// @notice Get a data request by id
     /// @dev Throws if the data request does not exist
-    function getDataRequest(
-        bytes32 id
-    ) public view returns (SedaOracleLib.DataRequest memory) {
+    function getDataRequest(bytes32 id) public view returns (SedaOracleLib.DataRequest memory) {
         SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
         require(data_request.id != 0, "Data request not found");
         return data_request;
@@ -109,53 +100,44 @@ contract SedaOracle {
 
     /// @notice Get an array of data requests starting from a position, up to a limit
     /// @dev Returns valid data requests
-    function getDataRequestsFromPool(
-        uint128 position,
-        uint128 limit
-    ) public view returns (SedaOracleLib.DataRequest[] memory) {
+    function getDataRequestsFromPool(uint128 position, uint128 limit)
+        public
+        view
+        returns (SedaOracleLib.DataRequest[] memory)
+    {
         // Compute the actual limit, taking into account the array size
-        uint128 actualLimit = (position + limit >
-            data_request_pool_array.length)
+        uint128 actualLimit = (position + limit > data_request_pool_array.length)
             ? (uint128(data_request_pool_array.length) - position)
             : limit;
-        SedaOracleLib.DataRequest[]
-            memory data_requests = new SedaOracleLib.DataRequest[](actualLimit);
+        SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](actualLimit);
 
         for (uint128 i = 0; i < actualLimit; ++i) {
-            data_requests[i] = data_request_pool[
-                data_request_pool_array[position + i]
-            ];
+            data_requests[i] = data_request_pool[data_request_pool_array[position + i]];
         }
 
         return data_requests;
     }
 
     /// @notice Post a data request
-    function postDataRequest(
-        SedaOracleLib.DataRequestInputs calldata inputs
-    ) public {
+    function postDataRequest(SedaOracleLib.DataRequestInputs calldata inputs) public {
         data_request_count++;
-        bytes32 memo = hashMemo(
-            uint128(block.chainid),
-            uint128(data_request_count)
-        );
+        bytes32 memo = hashMemo(uint128(block.chainid), uint128(data_request_count));
         bytes32 id = hashDataRequest(inputs, memo);
-        SedaOracleLib.DataRequest memory data_request = SedaOracleLib
-            .DataRequest(
-                SedaOracleLib.VERSION,
-                id,
-                inputs.dr_binary_id,
-                inputs.dr_inputs,
-                inputs.tally_binary_id,
-                inputs.tally_inputs,
-                inputs.replication_factor,
-                inputs.gas_price,
-                inputs.gas_limit,
-                inputs.tally_gas_limit,
-                memo,
-                data_request_pool_array.length,
-                data_request_count
-            );
+        SedaOracleLib.DataRequest memory data_request = SedaOracleLib.DataRequest(
+            SedaOracleLib.VERSION,
+            id,
+            inputs.dr_binary_id,
+            inputs.dr_inputs,
+            inputs.tally_binary_id,
+            inputs.tally_inputs,
+            inputs.replication_factor,
+            inputs.gas_price,
+            inputs.gas_limit,
+            inputs.tally_gas_limit,
+            memo,
+            data_request_pool_array.length,
+            data_request_count
+        );
         data_request_pool[id] = data_request;
         data_request_pool_array.push(id);
         emit DataRequestPosted(data_request, msg.sender);
@@ -171,9 +153,7 @@ contract SedaOracle {
 
         // Require the data request to exist
         // TODO: do we need this?
-        SedaOracleLib.DataRequest memory data_request = getDataRequest(
-            inputs.dr_id
-        );
+        SedaOracleLib.DataRequest memory data_request = getDataRequest(inputs.dr_id);
         if (data_request.id == 0) {
             revert DataRequestNotFound(inputs.dr_id);
         }
@@ -194,9 +174,7 @@ contract SedaOracle {
 
         // Remove the data request from the array
         uint256 index = data_request_pool[inputs.dr_id].index_in_pool;
-        bytes32 lastRequestId = data_request_pool_array[
-            data_request_pool_array.length - 1
-        ];
+        bytes32 lastRequestId = data_request_pool_array[data_request_pool_array.length - 1];
         data_request_pool_array[index] = lastRequestId;
         data_request_pool[lastRequestId].index_in_pool = index;
         data_request_pool_array.pop();
@@ -206,39 +184,34 @@ contract SedaOracle {
     }
 
     /// @notice Hashes arguments to a data request to produce a unique id
-    function hashDataRequest(
-        SedaOracleLib.DataRequestInputs memory inputs,
-        bytes32 memo
-    ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    SedaOracleLib.VERSION,
-                    inputs.dr_binary_id,
-                    inputs.dr_inputs,
-                    inputs.gas_limit,
-                    inputs.gas_price,
-                    inputs.tally_gas_limit,
-                    memo,
-                    inputs.replication_factor,
-                    inputs.tally_binary_id,
-                    inputs.tally_inputs
-                )
-            );
+    function hashDataRequest(SedaOracleLib.DataRequestInputs memory inputs, bytes32 memo)
+        public
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encode(
+                SedaOracleLib.VERSION,
+                inputs.dr_binary_id,
+                inputs.dr_inputs,
+                inputs.gas_limit,
+                inputs.gas_price,
+                inputs.tally_gas_limit,
+                memo,
+                inputs.replication_factor,
+                inputs.tally_binary_id,
+                inputs.tally_inputs
+            )
+        );
     }
 
     /// @notice Hashes memo using chainId and nonce
-    function hashMemo(
-        uint128 chainId,
-        uint128 nonce
-    ) public pure returns (bytes32) {
+    function hashMemo(uint128 chainId, uint128 nonce) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(chainId, nonce));
     }
 
     /// @notice Validates a data result hash based on the inputs
-    function hashDataResult(
-        SedaOracleLib.DataResult memory inputs
-    ) public pure returns (bytes32) {
+    function hashDataResult(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
         bytes32 resultHash = keccak256(abi.encode(inputs.result));
         bytes32 sedaPayloadHash = keccak256(abi.encode(inputs.seda_payload));
         bytes32 reconstructed_id = keccak256(
