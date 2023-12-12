@@ -41,10 +41,10 @@ contract SedaOracleTest is Test {
         bytes memory result = "result";
         bytes memory payback_address = "payback_address";
         bytes memory seda_payload = "seda_payload";
-        bytes32 resultHash = keccak256(abi.encodePacked(result));
-        bytes32 sedaPayloadHash = keccak256(abi.encodePacked(seda_payload));
+        bytes32 resultHash = keccak256(abi.encode(result));
+        bytes32 sedaPayloadHash = keccak256(abi.encode(seda_payload));
         bytes32 id = keccak256(
-            abi.encodePacked(
+            abi.encode(
                 SedaOracleLib.VERSION,
                 dr_id,
                 block_height,

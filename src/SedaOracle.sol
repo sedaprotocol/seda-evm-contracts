@@ -190,7 +190,7 @@ contract SedaOracle {
         returns (bytes32)
     {
         return keccak256(
-            abi.encodePacked(
+            abi.encode(
                 SedaOracleLib.VERSION,
                 inputs.dr_binary_id,
                 inputs.dr_inputs,
@@ -212,10 +212,10 @@ contract SedaOracle {
 
     /// @notice Validates a data result hash based on the inputs
     function hashDataResult(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
-        bytes32 resultHash = keccak256(abi.encodePacked(inputs.result));
-        bytes32 sedaPayloadHash = keccak256(abi.encodePacked(inputs.seda_payload));
+        bytes32 resultHash = keccak256(abi.encode(inputs.result));
+        bytes32 sedaPayloadHash = keccak256(abi.encode(inputs.seda_payload));
         bytes32 reconstructed_id = keccak256(
-            abi.encodePacked(
+            abi.encode(
                 inputs.version,
                 inputs.dr_id,
                 inputs.block_height,
