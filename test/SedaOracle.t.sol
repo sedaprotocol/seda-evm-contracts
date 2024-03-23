@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 
 import "forge-std/Test.sol";
 import "../src/SedaOracle.sol";
 
 contract SedaOracleTest is Test {
     SedaOracle public oracle;
+    address public constant ADMIN = address(1);
+    address public constant ALICE = address(2);
+    address public constant RELAYER = address(3);
+
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     function setUp() public {
-        oracle = new SedaOracle();
+        address[] memory initialRelayers = new address[](1);
+        initialRelayers[0] = RELAYER;
+        oracle = new SedaOracle(ADMIN, initialRelayers);
     }
 
     function hashString(string memory input) public pure returns (bytes32) {
@@ -80,6 +87,8 @@ contract SedaOracleTest is Test {
     }
 
     function testPostDataResult() public {
+        vm.startPrank(RELAYER);
+
         // post a data request and assert the associated result is non-existent
         SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
         oracle.postDataRequest(inputs);
@@ -98,6 +107,8 @@ contract SedaOracleTest is Test {
     }
 
     function testGetDataRequestsFromPool() public {
+        vm.startPrank(RELAYER);
+
         oracle.postDataRequest(_getDataRequestInputs("1"));
         oracle.postDataRequest(_getDataRequestInputs("2"));
         oracle.postDataRequest(_getDataRequestInputs("3"));
@@ -154,5 +165,91 @@ contract SedaOracleTest is Test {
         emit log_named_bytes32("test_hash", test_hash);
 
         assertEq(expected_hash, test_hash);
+    }
+
+    function testOnlyRelayerCanPostDataResult() public {
+        vm.startPrank(ADMIN);
+
+        oracle.postDataRequest(_getDataRequestInputs());
+
+        // ADMIN cannot post a data result
+        SedaOracleLib.DataResult memory dataResultInputs = _getDataResultsInputs();
+        vm.expectRevert(SedaOracle.NotRelayer.selector);
+        oracle.postDataResult(dataResultInputs);
+
+        // relayer can post a data result
+        vm.startPrank(RELAYER);
+        oracle.postDataResult(dataResultInputs);
+    }
+
+    function testAddRemoveRelayer() public {
+        // only admin can add relayer
+        vm.startPrank(ALICE);
+        vm.expectRevert(SedaOracle.NotAdmin.selector);
+        oracle.addRelayer(ALICE);
+
+        // add relayer
+        vm.startPrank(ADMIN);
+        oracle.addRelayer(ALICE);
+        assert(oracle.hasRole(oracle.RELAYER(), ALICE));
+
+        // only admin can remove relayer
+        vm.startPrank(ALICE);
+        vm.expectRevert(SedaOracle.NotAdmin.selector);
+        oracle.removeRelayer(ALICE);
+
+        // remove relayer
+        vm.startPrank(ADMIN);
+        oracle.removeRelayer(RELAYER);
+        assert(!oracle.hasRole(oracle.RELAYER(), RELAYER));
+    }
+
+    function testAdminTransfer() public {
+        bytes32 adminRole = oracle.ADMIN();
+        // initial assertions
+        assertEq(oracle.pendingAdmin(), address(0));
+        assert(oracle.hasRole(adminRole, ADMIN));
+        assert(!oracle.hasRole(adminRole, ALICE));
+
+        // only admin can transfer admin role
+        vm.startPrank(ALICE);
+        vm.expectRevert(SedaOracle.NotAdmin.selector);
+        oracle.transferOwnership(ALICE);
+
+        // admin cannot directly grant admin role to another address
+        vm.startPrank(ADMIN);
+        vm.expectRevert();
+        oracle.grantRole(adminRole, ALICE);
+
+        // transfer admin role
+        oracle.transferOwnership(ALICE);
+
+        // assert pending admin is ALICE and admin is still ADMIN
+        assertEq(oracle.pendingAdmin(), ALICE);
+        assert(oracle.hasRole(adminRole, ADMIN));
+        assert(!oracle.hasRole(adminRole, ALICE));
+
+        // only alice can claim admin role
+        vm.startPrank(RELAYER);
+        vm.expectRevert(SedaOracle.NotPendingAdmin.selector);
+        oracle.acceptOwnership();
+
+        // claim admin role
+        vm.startPrank(ALICE);
+        oracle.acceptOwnership();
+
+        // assert admin is now ALICE and old admin is no longer admin
+        assertEq(oracle.pendingAdmin(), address(0));
+        assert(!oracle.hasRole(adminRole, ADMIN));
+        assert(oracle.hasRole(adminRole, ALICE));
+
+        // old admin can no longer add relayers
+        vm.startPrank(ADMIN);
+        vm.expectRevert(SedaOracle.NotAdmin.selector);
+        oracle.addRelayer(RELAYER);
+
+        // new admin can add relayers
+        vm.startPrank(ALICE);
+        oracle.addRelayer(RELAYER);
     }
 }

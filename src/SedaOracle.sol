@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
+
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 library SedaOracleLib {
     struct DataRequestInputs {
@@ -69,8 +71,12 @@ library SedaOracleLib {
     string constant VERSION = "1.0.0";
 }
 
-contract SedaOracle {
-    // DR ID => DataRequest
+contract SedaOracle is AccessControl {
+    bytes32 public constant RELAYER = keccak256("RELAYER");
+    bytes32 public constant ADMIN = keccak256("ADMIN");
+    address public admin;
+    address public pendingAdmin;
+
     mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
     // DR ID => DataResult
     mapping(bytes32 => SedaOracleLib.DataResult) public data_request_id_to_result;
@@ -81,6 +87,82 @@ contract SedaOracle {
 
     error DataRequestNotFound(bytes32 id);
     error DataResultInvalidHash(bytes32 expected, bytes32 actual);
+    error NotAdmin();
+    error NotRelayer();
+    error NotPendingAdmin();
+
+    /// @param _admin The address of the initial admin of this contract
+    /// @param _relayers The addresses of the initial relayers
+    constructor(address _admin, address[] memory _relayers) {
+        _grantRole(ADMIN, _admin);
+        admin = _admin;
+        _setRoleAdmin(RELAYER, ADMIN);
+        for (uint256 i = 0; i < _relayers.length; ++i) {
+            _grantRole(RELAYER, _relayers[i]);
+        }
+    }
+
+    /// @notice Check if the caller has the admin role
+    modifier onlyAdmin() {
+        if (!hasRole(ADMIN, msg.sender)) {
+            revert NotAdmin();
+        }
+        _;
+    }
+
+    /// @notice Check if the caller has the pending admin role
+    modifier onlyPendingAdmin() {
+        if (msg.sender != pendingAdmin) {
+            revert NotPendingAdmin();
+        }
+        _;
+    }
+
+    /// @notice Check if the caller has the relayer role
+    modifier onlyRelayer() {
+        if (!hasRole(RELAYER, msg.sender)) {
+            revert NotRelayer();
+        }
+        _;
+    }
+
+    /// @notice Add a relayer
+    /// @param account The address of the relayer to add
+    function addRelayer(address account) public onlyAdmin {
+        grantRole(RELAYER, account);
+    }
+
+    /// @notice Remove a relayer
+    /// @param account The address of the relayer to remove
+    function removeRelayer(address account) public onlyAdmin {
+        revokeRole(RELAYER, account);
+    }
+
+    /// @notice Transfer the admin role to a new address
+    /// @param newOwner The address of the new admin
+    /// @dev The new owner must accept the ownership
+    function transferOwnership(address newOwner) public onlyAdmin {
+        pendingAdmin = newOwner;
+    }
+
+    /// @notice Accept the ownership of the contract
+    /// @dev The caller must be the pending admin
+    function acceptOwnership() public onlyPendingAdmin {
+        _revokeRole(ADMIN, admin); // Remove ADMIN role from old admin
+        _grantRole(ADMIN, msg.sender); // Assign ADMIN role to new admin
+        admin = msg.sender;
+        pendingAdmin = address(0);
+    }
+
+    /// @notice Get a data request by id
+    /// @dev Throws if the data request does not exist
+    function getDataRequest(bytes32 id) public view returns (SedaOracleLib.DataRequest memory) {
+        SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
+        if (data_request.id == 0) {
+            revert DataRequestNotFound(id);
+        }
+        return data_request;
+    }
 
     /// @notice Get an array of data requests starting from a position, up to a limit
     /// @dev Returns valid data requests
@@ -129,9 +211,13 @@ contract SedaOracle {
     }
 
     // @notice Post a result for a data request
-    function postDataResult(SedaOracleLib.DataResult calldata inputs) public {
-        // TODO: Validate the Data result making sure it is in the batch
-        // TODO: Allow list this method
+    function postDataResult(SedaOracleLib.DataResult calldata inputs) public onlyRelayer {
+        // Require the data request to exist
+        // TODO: do we need this?
+        SedaOracleLib.DataRequest memory data_request = getDataRequest(inputs.dr_id);
+        if (data_request.id == 0) {
+            revert DataRequestNotFound(inputs.dr_id);
+        }
 
         // set the data result
         SedaOracleLib.DataResult memory data_result = SedaOracleLib.DataResult(
