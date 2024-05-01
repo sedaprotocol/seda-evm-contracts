@@ -5,7 +5,7 @@ library SedaOracleLib {
     struct DataRequestInputs {
         /// Identifier of DR WASM binary
         bytes32 dr_binary_id;
-        // /// Inputs for DR WASM binary
+        /// Inputs for DR WASM binary
         bytes dr_inputs;
         /// Identifier of Tally WASM binary
         bytes32 tally_binary_id;
@@ -17,15 +17,13 @@ library SedaOracleLib {
         uint128 gas_price;
         /// Maximum of gas units to be used by data request executors
         uint128 gas_limit;
-        /// Maximum of gas units to be used in the tallying process
-        uint128 tally_gas_limit;
+        /// Public info attached to DR
+        bytes memo;
     }
 
     struct DataRequest {
         /// Semantic Version
         string version;
-        /// Identifier
-        bytes32 id;
         // DR definition
         /// Identifier of DR WASM binary
         bytes32 dr_binary_id;
@@ -41,33 +39,26 @@ library SedaOracleLib {
         uint128 gas_price;
         /// Maximum of gas units to be used by data request executors
         uint128 gas_limit;
-        /// Maximum of gas units to be used in the tallying process
-        uint128 tally_gas_limit;
         /// Public info attached to DR
-        bytes32 memo;
+        bytes memo;
         // Internal bookkeeping
         // Index within DR pool
         uint256 index_in_pool;
-        /// Nonce of data request in this contract
-        uint256 nonce;
     }
 
     struct DataResult {
         /// Semantic Version
         string version;
-        /// Identifier
-        bytes32 id;
-        // DR Result
         /// Data Request Identifier
         bytes32 dr_id;
-        /// Block Height at which data request was finalized
-        uint128 block_height;
         /// Exit code of Tally WASM binary execution
         uint8 exit_code;
-        /// Gas used by the complete data request execution
-        uint128 gas_used;
         /// Result from Tally WASM binary execution
         bytes result;
+        /// Gas used by the complete data request execution
+        uint128 gas_used;
+        /// Block Height at which data request was finalized
+        uint128 block_height;
         // Fields from Data Request Execution
         /// Payback address set by the relayer
         bytes payback_address;
@@ -79,8 +70,9 @@ library SedaOracleLib {
 }
 
 contract SedaOracle {
-    uint256 public data_request_count; // i.e. nonce
+    // DR ID => DataRequest
     mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
+    // DR ID => DataResult
     mapping(bytes32 => SedaOracleLib.DataResult) public data_request_id_to_result;
     bytes32[] public data_request_pool_array; // for iterating over the data request pool
 
@@ -89,14 +81,6 @@ contract SedaOracle {
 
     error DataRequestNotFound(bytes32 id);
     error DataResultInvalidHash(bytes32 expected, bytes32 actual);
-
-    /// @notice Get a data request by id
-    /// @dev Throws if the data request does not exist
-    function getDataRequest(bytes32 id) public view returns (SedaOracleLib.DataRequest memory) {
-        SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
-        require(data_request.id != 0, "Data request not found");
-        return data_request;
-    }
 
     /// @notice Get an array of data requests starting from a position, up to a limit
     /// @dev Returns valid data requests
@@ -119,13 +103,11 @@ contract SedaOracle {
     }
 
     /// @notice Post a data request
-    function postDataRequest(SedaOracleLib.DataRequestInputs calldata inputs) public {
-        data_request_count++;
-        bytes32 memo = hashMemo(uint128(block.chainid), uint128(data_request_count));
-        bytes32 id = hashDataRequest(inputs, memo);
+    function postDataRequest(SedaOracleLib.DataRequestInputs calldata inputs) public returns (bytes32) {
+        bytes32 dr_id = hashDataRequest(inputs);
+
         SedaOracleLib.DataRequest memory data_request = SedaOracleLib.DataRequest(
             SedaOracleLib.VERSION,
-            id,
             inputs.dr_binary_id,
             inputs.dr_inputs,
             inputs.tally_binary_id,
@@ -133,40 +115,32 @@ contract SedaOracle {
             inputs.replication_factor,
             inputs.gas_price,
             inputs.gas_limit,
-            inputs.tally_gas_limit,
-            memo,
-            data_request_pool_array.length,
-            data_request_count
+            inputs.memo,
+            data_request_pool_array.length
         );
-        data_request_pool[id] = data_request;
-        data_request_pool_array.push(id);
+
+        data_request_pool[dr_id] = data_request;
+        data_request_pool_array.push(dr_id);
+
         emit DataRequestPosted(data_request, msg.sender);
+
+        // Returns the dr_id, this allows the user to retrieve the result once its resolved
+        return dr_id;
     }
 
     // @notice Post a result for a data request
     function postDataResult(SedaOracleLib.DataResult calldata inputs) public {
-        // Validate the data result hash
-        bytes32 reconstructed_id = hashDataResult(inputs);
-        if (reconstructed_id != inputs.id) {
-            revert DataResultInvalidHash(reconstructed_id, inputs.id);
-        }
-
-        // Require the data request to exist
-        // TODO: do we need this?
-        SedaOracleLib.DataRequest memory data_request = getDataRequest(inputs.dr_id);
-        if (data_request.id == 0) {
-            revert DataRequestNotFound(inputs.dr_id);
-        }
+        // TODO: Validate the Data result making sure it is in the batch
+        // TODO: Allow list this method
 
         // set the data result
         SedaOracleLib.DataResult memory data_result = SedaOracleLib.DataResult(
             inputs.version,
-            inputs.id,
             inputs.dr_id,
-            inputs.block_height,
             inputs.exit_code,
-            inputs.gas_used,
             inputs.result,
+            inputs.gas_used,
+            inputs.block_height,
             inputs.payback_address,
             inputs.seda_payload
         );
@@ -184,46 +158,34 @@ contract SedaOracle {
     }
 
     /// @notice Hashes arguments to a data request to produce a unique id
-    function hashDataRequest(SedaOracleLib.DataRequestInputs memory inputs, bytes32 memo)
-        public
-        pure
-        returns (bytes32)
-    {
+    function hashDataRequest(SedaOracleLib.DataRequestInputs memory inputs) public pure returns (bytes32) {
         return keccak256(
-            abi.encode(
-                SedaOracleLib.VERSION,
+            bytes.concat(
+                bytes(SedaOracleLib.VERSION),
                 inputs.dr_binary_id,
-                inputs.dr_inputs,
-                inputs.gas_limit,
-                inputs.gas_price,
-                inputs.tally_gas_limit,
-                memo,
-                inputs.replication_factor,
+                keccak256(inputs.dr_inputs),
                 inputs.tally_binary_id,
-                inputs.tally_inputs
+                keccak256(inputs.tally_inputs),
+                bytes2(inputs.replication_factor),
+                bytes16(inputs.gas_price),
+                bytes16(inputs.gas_limit),
+                keccak256(inputs.memo)
             )
         );
     }
 
-    /// @notice Hashes memo using chainId and nonce
-    function hashMemo(uint128 chainId, uint128 nonce) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(chainId, nonce));
-    }
-
     /// @notice Validates a data result hash based on the inputs
     function hashDataResult(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
-        bytes32 resultHash = keccak256(abi.encode(inputs.result));
-        bytes32 sedaPayloadHash = keccak256(abi.encode(inputs.seda_payload));
         bytes32 reconstructed_id = keccak256(
-            abi.encode(
-                inputs.version,
+            bytes.concat(
+                bytes(inputs.version),
                 inputs.dr_id,
-                inputs.block_height,
-                inputs.exit_code,
-                resultHash,
-                inputs.gas_used,
+                bytes16(inputs.block_height),
+                bytes1(inputs.exit_code),
+                keccak256(inputs.result),
+                bytes16(inputs.gas_used),
                 inputs.payback_address,
-                sedaPayloadHash
+                keccak256(inputs.seda_payload)
             )
         );
         return reconstructed_id;

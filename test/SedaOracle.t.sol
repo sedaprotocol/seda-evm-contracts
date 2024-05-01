@@ -16,7 +16,8 @@ contract SedaOracleTest is Test {
         return hash;
     }
 
-    function _getDataRequestInputs() private pure returns (SedaOracleLib.DataRequestInputs memory) {
+    /// Standard data request inputs, memo can be used to generate different Dr hashes
+    function _getDataRequestInputs(bytes memory memo) private pure returns (SedaOracleLib.DataRequestInputs memory) {
         return SedaOracleLib.DataRequestInputs({
             dr_binary_id: hashString("dr_binary_id"),
             dr_inputs: "dr_inputs",
@@ -25,40 +26,23 @@ contract SedaOracleTest is Test {
             replication_factor: 123,
             gas_price: 456,
             gas_limit: 789,
-            tally_gas_limit: 101112
+            memo: memo
         });
     }
 
     function _getDataResultsInputs() private view returns (SedaOracleLib.DataResult memory) {
-        SedaOracleLib.DataRequestInputs memory data_request_inputs = _getDataRequestInputs();
-        uint128 chainId = 31337;
-        uint128 nonce = 1;
-        bytes32 memo = oracle.hashMemo(chainId, nonce);
-        bytes32 dr_id = oracle.hashDataRequest(data_request_inputs, memo);
+        SedaOracleLib.DataRequestInputs memory data_request_inputs = _getDataRequestInputs("0");
+        bytes32 dr_id = oracle.hashDataRequest(data_request_inputs);
         uint128 block_height = 1;
         uint8 exit_code = 2;
         uint128 gas_used = 3;
+
         bytes memory result = "result";
         bytes memory payback_address = "payback_address";
         bytes memory seda_payload = "seda_payload";
-        bytes32 resultHash = keccak256(abi.encode(result));
-        bytes32 sedaPayloadHash = keccak256(abi.encode(seda_payload));
-        bytes32 id = keccak256(
-            abi.encode(
-                SedaOracleLib.VERSION,
-                dr_id,
-                block_height,
-                exit_code,
-                resultHash,
-                gas_used,
-                payback_address,
-                sedaPayloadHash
-            )
-        );
 
         return SedaOracleLib.DataResult({
             version: SedaOracleLib.VERSION,
-            id: id,
             dr_id: dr_id,
             block_height: block_height,
             exit_code: exit_code,
@@ -70,26 +54,43 @@ contract SedaOracleTest is Test {
     }
 
     function testPostDataRequest() public {
-        assertEq(oracle.data_request_count(), 0);
-        oracle.postDataRequest(_getDataRequestInputs());
-        assertEq(oracle.data_request_count(), 1);
+        assertEq(oracle.getDataRequestsFromPool(0, 10).length, 0);
+        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
+        bytes32 expected_dr_id = oracle.hashDataRequest(inputs);
+        oracle.postDataRequest(inputs);
 
-        bytes32 dr_id = oracle.getDataRequestsFromPool(0, 1)[0].id;
+        assertEq(oracle.getDataRequestsFromPool(0, 10).length, 1);
 
-        (, bytes32 expected_id,,,,,,,,,,,) = oracle.data_request_pool(dr_id);
-        assertEq(expected_id, dr_id);
+        SedaOracleLib.DataRequest memory received_dr = oracle.getDataRequestsFromPool(0, 1)[0];
+
+        bytes32 received_dr_id = oracle.hashDataRequest(
+            SedaOracleLib.DataRequestInputs({
+                dr_binary_id: received_dr.dr_binary_id,
+                dr_inputs: received_dr.dr_inputs,
+                tally_binary_id: received_dr.tally_binary_id,
+                tally_inputs: received_dr.tally_inputs,
+                replication_factor: received_dr.replication_factor,
+                gas_price: received_dr.gas_price,
+                gas_limit: received_dr.gas_limit,
+                memo: received_dr.memo
+            })
+        );
+
+        assertEq(expected_dr_id, received_dr_id);
     }
 
     function testPostDataResult() public {
         // post a data request and assert the associated result is non-existent
-        oracle.postDataRequest(_getDataRequestInputs());
-        (, bytes32 dr_id,,,,,,,,,,,) = oracle.data_request_pool(oracle.getDataRequestsFromPool(0, 1)[0].id);
-        (, bytes32 res_id_nonexistent,,,,,,,) = oracle.data_request_id_to_result(dr_id);
+        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
+        oracle.postDataRequest(inputs);
+
+        bytes32 dr_id = oracle.hashDataRequest(inputs);
+        (, bytes32 res_id_nonexistent,,,,,,) = oracle.data_request_id_to_result(dr_id);
         assertEq(res_id_nonexistent, 0);
 
         // post the data result and assert the dr_id is correct
         oracle.postDataResult(_getDataResultsInputs());
-        (,, bytes32 res_dr_id,,,,,,) = oracle.data_request_id_to_result(dr_id);
+        (, bytes32 res_dr_id,,,,,,) = oracle.data_request_id_to_result(dr_id);
         assertEq(res_dr_id, dr_id);
 
         // assert the pool is empty
@@ -97,9 +98,9 @@ contract SedaOracleTest is Test {
     }
 
     function testGetDataRequestsFromPool() public {
-        oracle.postDataRequest(_getDataRequestInputs());
-        oracle.postDataRequest(_getDataRequestInputs());
-        oracle.postDataRequest(_getDataRequestInputs());
+        oracle.postDataRequest(_getDataRequestInputs("1"));
+        oracle.postDataRequest(_getDataRequestInputs("2"));
+        oracle.postDataRequest(_getDataRequestInputs("3"));
 
         // fetch all three data requests with a limit of 3
         SedaOracleLib.DataRequest[] memory data_requests = oracle.getDataRequestsFromPool(0, 3);
@@ -130,7 +131,7 @@ contract SedaOracleTest is Test {
 
         // if fetching from position 1, it should return dr 2 since dr 1 has been removed
         SedaOracleLib.DataRequest[] memory data_requests_7 = oracle.getDataRequestsFromPool(1, 1);
-        assertEq(data_requests_7[0].nonce, 2);
+        assertEq(data_requests_7[0].memo, bytes("2"));
 
         // limit can be larger than array length
         oracle.getDataRequestsFromPool(0, 10);
@@ -141,25 +142,17 @@ contract SedaOracleTest is Test {
     }
 
     function testHash() public {
-        // format memo and calculate memo hash
-        uint128 chainId = 31337;
-        uint128 nonce = 1;
-        bytes32 memo = oracle.hashMemo(chainId, nonce);
+        // If this fails we also have to change the relayer to handle this
+        bytes32 expected_hash = 0x4b5931ada6e31e4a383440db309057815a3c0d26b067615b380b2ac4ffdc2126;
+
         // format data request inputs
-        SedaOracleLib.DataRequestInputs memory inputs = SedaOracleLib.DataRequestInputs({
-            dr_binary_id: hashString("dr_binary_id"),
-            dr_inputs: "dr_inputs",
-            tally_binary_id: hashString("tally_binary_id"),
-            tally_inputs: "tally_inputs",
-            replication_factor: 3,
-            gas_price: 10,
-            gas_limit: 10,
-            tally_gas_limit: 10
-        });
+        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
 
         // calculate data request hash
-        bytes32 test_hash = oracle.hashDataRequest(inputs, memo);
+        bytes32 test_hash = oracle.hashDataRequest(inputs);
 
         emit log_named_bytes32("test_hash", test_hash);
+
+        assertEq(expected_hash, test_hash);
     }
 }
