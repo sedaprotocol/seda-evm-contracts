@@ -143,7 +143,7 @@ contract SedaOracleTest is Test {
 
     function testHash() public {
         // If this fails we also have to change the relayer to handle this
-        bytes32 expected_hash = 0x4b5931ada6e31e4a383440db309057815a3c0d26b067615b380b2ac4ffdc2126;
+        bytes32 expected_hash = 0x23eeef4d65a87c3e81b23fb54c94bfb66ed3f65f7082b744398bbd0248f1fb55;
 
         // format data request inputs
         SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");

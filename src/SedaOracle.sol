@@ -161,7 +161,7 @@ contract SedaOracle {
     function hashDataRequest(SedaOracleLib.DataRequestInputs memory inputs) public pure returns (bytes32) {
         return keccak256(
             bytes.concat(
-                bytes(SedaOracleLib.VERSION),
+                keccak256(bytes(SedaOracleLib.VERSION)),
                 inputs.dr_binary_id,
                 keccak256(inputs.dr_inputs),
                 inputs.tally_binary_id,
