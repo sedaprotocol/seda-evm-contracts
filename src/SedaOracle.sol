@@ -4,6 +4,8 @@ pragma solidity 0.8.25;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 library SedaOracleLib {
+    string constant VERSION = "0.0.1";
+
     struct DataRequestInputs {
         /// Identifier of DR WASM binary
         bytes32 dr_binary_id;
@@ -67,8 +69,6 @@ library SedaOracleLib {
         /// Payload set by SEDA Protocol (e.g. OEV-enabled data requests)
         bytes seda_payload;
     }
-
-    string constant VERSION = "1.0.0";
 }
 
 contract SedaOracle is AccessControl {
@@ -77,6 +77,7 @@ contract SedaOracle is AccessControl {
     address public admin;
     address public pendingAdmin;
 
+    // DR ID => DataRequest
     mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
     // DR ID => DataResult
     mapping(bytes32 => SedaOracleLib.DataResult) public data_request_id_to_result;
@@ -86,7 +87,7 @@ contract SedaOracle is AccessControl {
     event DataResultPosted(SedaOracleLib.DataResult data_result, address caller);
 
     error DataRequestNotFound(bytes32 id);
-    error DataResultInvalidHash(bytes32 expected, bytes32 actual);
+    error DataResultNotFound(bytes32 id);
     error NotAdmin();
     error NotRelayer();
     error NotPendingAdmin();
@@ -154,36 +155,6 @@ contract SedaOracle is AccessControl {
         pendingAdmin = address(0);
     }
 
-    /// @notice Get a data request by id
-    /// @dev Throws if the data request does not exist
-    function getDataRequest(bytes32 id) public view returns (SedaOracleLib.DataRequest memory) {
-        SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
-        if (data_request.id == 0) {
-            revert DataRequestNotFound(id);
-        }
-        return data_request;
-    }
-
-    /// @notice Get an array of data requests starting from a position, up to a limit
-    /// @dev Returns valid data requests
-    function getDataRequestsFromPool(uint128 position, uint128 limit)
-        public
-        view
-        returns (SedaOracleLib.DataRequest[] memory)
-    {
-        // Compute the actual limit, taking into account the array size
-        uint128 actualLimit = (position + limit > data_request_pool_array.length)
-            ? (uint128(data_request_pool_array.length) - position)
-            : limit;
-        SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](actualLimit);
-
-        for (uint128 i = 0; i < actualLimit; ++i) {
-            data_requests[i] = data_request_pool[data_request_pool_array[position + i]];
-        }
-
-        return data_requests;
-    }
-
     /// @notice Post a data request
     function postDataRequest(SedaOracleLib.DataRequestInputs calldata inputs) public returns (bytes32) {
         bytes32 dr_id = hashDataRequest(inputs);
@@ -215,7 +186,7 @@ contract SedaOracle is AccessControl {
         // Require the data request to exist
         // TODO: do we need this?
         SedaOracleLib.DataRequest memory data_request = getDataRequest(inputs.dr_id);
-        if (data_request.id == 0) {
+        if (data_request.replication_factor == 0) {
             revert DataRequestNotFound(inputs.dr_id);
         }
 
@@ -243,6 +214,46 @@ contract SedaOracle is AccessControl {
         emit DataResultPosted(data_result, msg.sender);
     }
 
+    /// @notice Get a data request by id
+    /// @dev Throws if the data request does not exist
+    function getDataRequest(bytes32 id) public view returns (SedaOracleLib.DataRequest memory) {
+        SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
+        if (data_request.replication_factor == 0) {
+            revert DataRequestNotFound(id);
+        }
+        return data_request;
+    }
+
+    /// @notice Get an array of data requests starting from a position, up to a limit
+    /// @dev Returns valid data requests
+    function getDataRequestsFromPool(uint128 position, uint128 limit)
+        public
+        view
+        returns (SedaOracleLib.DataRequest[] memory)
+    {
+        // Compute the actual limit, taking into account the array size
+        uint128 actualLimit = (position + limit > data_request_pool_array.length)
+            ? (uint128(data_request_pool_array.length) - position)
+            : limit;
+        SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](actualLimit);
+
+        for (uint128 i = 0; i < actualLimit; ++i) {
+            data_requests[i] = data_request_pool[data_request_pool_array[position + i]];
+        }
+
+        return data_requests;
+    }
+
+    /// @notice Get a data result by request id
+    /// @dev Throws if the data request does not exist
+    function getDataResult(bytes32 id) public view returns (SedaOracleLib.DataResult memory) {
+        SedaOracleLib.DataResult memory data_result = data_request_id_to_result[id];
+        if (data_result.dr_id == 0) {
+            revert DataResultNotFound(id);
+        }
+        return data_result;
+    }
+
     /// @notice Hashes arguments to a data request to produce a unique id
     function hashDataRequest(SedaOracleLib.DataRequestInputs memory inputs) public pure returns (bytes32) {
         return keccak256(
@@ -260,20 +271,20 @@ contract SedaOracle is AccessControl {
         );
     }
 
-    /// @notice Validates a data result hash based on the inputs
-    function hashDataResult(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
-        bytes32 reconstructed_id = keccak256(
-            bytes.concat(
-                bytes(inputs.version),
-                inputs.dr_id,
-                bytes16(inputs.block_height),
-                bytes1(inputs.exit_code),
-                keccak256(inputs.result),
-                bytes16(inputs.gas_used),
-                inputs.payback_address,
-                keccak256(inputs.seda_payload)
-            )
-        );
-        return reconstructed_id;
-    }
+    // /// @notice Validates a data result hash based on the inputs
+    // function hashDataResult(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
+    //     bytes32 reconstructed_id = keccak256(
+    //         bytes.concat(
+    //             bytes(inputs.version),
+    //             inputs.dr_id,
+    //             bytes16(inputs.block_height),
+    //             bytes1(inputs.exit_code),
+    //             keccak256(inputs.result),
+    //             bytes16(inputs.gas_used),
+    //             inputs.payback_address,
+    //             keccak256(inputs.seda_payload)
+    //         )
+    //     );
+    //     return reconstructed_id;
+    // }
 }
