@@ -37,8 +37,8 @@ contract SedaOracleTest is Test {
         });
     }
 
-    function _getDataResultsInputs() private view returns (SedaOracleLib.DataResult memory) {
-        SedaOracleLib.DataRequestInputs memory data_request_inputs = _getDataRequestInputs("0");
+    function _getDataResultsInputs(bytes memory memo) private view returns (SedaOracleLib.DataResult memory) {
+        SedaOracleLib.DataRequestInputs memory data_request_inputs = _getDataRequestInputs(memo);
         bytes32 dr_id = oracle.hashDataRequest(data_request_inputs);
         uint128 block_height = 1;
         uint8 exit_code = 2;
@@ -98,7 +98,7 @@ contract SedaOracleTest is Test {
         assertEq(res_id_nonexistent, 0);
 
         // post the data result and assert the dr_id is correct
-        oracle.postDataResult(_getDataResultsInputs());
+        oracle.postDataResult(_getDataResultsInputs("0"));
         (, bytes32 res_dr_id,,,,,,) = oracle.data_request_id_to_result(dr_id);
         assertEq(res_dr_id, dr_id);
 
@@ -134,7 +134,7 @@ contract SedaOracleTest is Test {
         assertEq(data_requests_5.length, 2);
 
         // post a data result for dr 1
-        oracle.postDataResult(_getDataResultsInputs());
+        oracle.postDataResult(_getDataResultsInputs("1"));
 
         // should only return 2 data requests now, even with limit of 3
         SedaOracleLib.DataRequest[] memory data_requests_6 = oracle.getDataRequestsFromPool(0, 3);
@@ -154,7 +154,7 @@ contract SedaOracleTest is Test {
 
     function testHash() public {
         // If this fails we also have to change the relayer to handle this
-        bytes32 expected_hash = 0x23eeef4d65a87c3e81b23fb54c94bfb66ed3f65f7082b744398bbd0248f1fb55;
+        bytes32 expected_hash = 0xef3cf2abe8e1bd9bdb92eff32deb42e0152cb894a395d20238a4c96458efccfd;
 
         // format data request inputs
         SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
@@ -170,10 +170,10 @@ contract SedaOracleTest is Test {
     function testOnlyRelayerCanPostDataResult() public {
         vm.startPrank(ADMIN);
 
-        oracle.postDataRequest(_getDataRequestInputs());
+        oracle.postDataRequest(_getDataRequestInputs("0"));
 
         // ADMIN cannot post a data result
-        SedaOracleLib.DataResult memory dataResultInputs = _getDataResultsInputs();
+        SedaOracleLib.DataResult memory dataResultInputs = _getDataResultsInputs("0");
         vm.expectRevert(SedaOracle.NotRelayer.selector);
         oracle.postDataResult(dataResultInputs);
 
@@ -251,5 +251,37 @@ contract SedaOracleTest is Test {
         // new admin can add relayers
         vm.startPrank(ALICE);
         oracle.addRelayer(RELAYER);
+    }
+
+    function testGetDataRequest() public {
+        vm.startPrank(RELAYER);
+
+        bytes memory memo = "123";
+        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs(memo);
+        bytes32 dr_id = oracle.postDataRequest(inputs);
+
+        SedaOracleLib.DataRequest memory data_request = oracle.getDataRequest(dr_id);
+        assertEq(data_request.memo, memo);
+
+        bytes32 non_existent_dr_id = 0xef3cf2abe8e1bd9bdb92eff32deb42e0152cb894a395d20238a4c96458efccfd;
+        vm.expectRevert(abi.encodeWithSelector(SedaOracle.DataRequestNotFound.selector, non_existent_dr_id));
+        oracle.getDataRequest(non_existent_dr_id);
+    }
+
+    function testGetDataResult() public {
+        vm.startPrank(RELAYER);
+
+        bytes memory memo = "123";
+        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs(memo);
+        bytes32 dr_id = oracle.postDataRequest(inputs);
+
+        oracle.postDataResult(_getDataResultsInputs("123"));
+
+        SedaOracleLib.DataResult memory data_result = oracle.getDataResult(dr_id);
+        assertEq(data_result.result, "result");
+
+        bytes32 non_existent_dr_id = 0xef3cf2abe8e1bd9bdb92eff32deb42e0152cb894a395d20238a4c96458efccfd;
+        vm.expectRevert(abi.encodeWithSelector(SedaOracle.DataResultNotFound.selector, non_existent_dr_id));
+        oracle.getDataResult(non_existent_dr_id);
     }
 }
