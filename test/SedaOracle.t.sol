@@ -31,6 +31,7 @@ contract SedaOracleTest is Test {
             tally_binary_id: hashString("tally_binary_id"),
             tally_inputs: "tally_inputs",
             replication_factor: 123,
+            consensus_filter: "0x00",
             gas_price: 456,
             gas_limit: 789,
             memo: memo
@@ -39,8 +40,9 @@ contract SedaOracleTest is Test {
 
     function _getDataResultsInputs(bytes memory memo) private view returns (SedaOracleLib.DataResult memory) {
         SedaOracleLib.DataRequestInputs memory data_request_inputs = _getDataRequestInputs(memo);
-        bytes32 dr_id = oracle.hashDataRequest(data_request_inputs);
+        bytes32 dr_id = oracle.generateDataRequestId(data_request_inputs);
         uint128 block_height = 1;
+        bool consensus = true;
         uint8 exit_code = 2;
         uint128 gas_used = 3;
 
@@ -52,6 +54,7 @@ contract SedaOracleTest is Test {
             version: SedaOracleLib.VERSION,
             dr_id: dr_id,
             block_height: block_height,
+            consensus: consensus,
             exit_code: exit_code,
             gas_used: gas_used,
             result: result,
@@ -63,20 +66,21 @@ contract SedaOracleTest is Test {
     function testPostDataRequest() public {
         assertEq(oracle.getDataRequestsFromPool(0, 10).length, 0);
         SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
-        bytes32 expected_dr_id = oracle.hashDataRequest(inputs);
+        bytes32 expected_dr_id = oracle.generateDataRequestId(inputs);
         oracle.postDataRequest(inputs);
 
         assertEq(oracle.getDataRequestsFromPool(0, 10).length, 1);
 
         SedaOracleLib.DataRequest memory received_dr = oracle.getDataRequestsFromPool(0, 1)[0];
 
-        bytes32 received_dr_id = oracle.hashDataRequest(
+        bytes32 received_dr_id = oracle.generateDataRequestId(
             SedaOracleLib.DataRequestInputs({
                 dr_binary_id: received_dr.dr_binary_id,
                 dr_inputs: received_dr.dr_inputs,
                 tally_binary_id: received_dr.tally_binary_id,
                 tally_inputs: received_dr.tally_inputs,
                 replication_factor: received_dr.replication_factor,
+                consensus_filter: received_dr.consensus_filter,
                 gas_price: received_dr.gas_price,
                 gas_limit: received_dr.gas_limit,
                 memo: received_dr.memo
@@ -93,13 +97,13 @@ contract SedaOracleTest is Test {
         SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
         oracle.postDataRequest(inputs);
 
-        bytes32 dr_id = oracle.hashDataRequest(inputs);
-        (, bytes32 res_id_nonexistent,,,,,,) = oracle.data_request_id_to_result(dr_id);
+        bytes32 dr_id = oracle.generateDataRequestId(inputs);
+        (, bytes32 res_id_nonexistent,,,,,,,) = oracle.data_request_id_to_result(dr_id);
         assertEq(res_id_nonexistent, 0);
 
         // post the data result and assert the dr_id is correct
         oracle.postDataResult(_getDataResultsInputs("0"));
-        (, bytes32 res_dr_id,,,,,,) = oracle.data_request_id_to_result(dr_id);
+        (, bytes32 res_dr_id,,,,,,,) = oracle.data_request_id_to_result(dr_id);
         assertEq(res_dr_id, dr_id);
 
         // assert the pool is empty
@@ -154,15 +158,13 @@ contract SedaOracleTest is Test {
 
     function testHash() public {
         // If this fails we also have to change the relayer to handle this
-        bytes32 expected_hash = 0xef3cf2abe8e1bd9bdb92eff32deb42e0152cb894a395d20238a4c96458efccfd;
+        bytes32 expected_hash = 0xe58da06ae6ed9c873e6fc3c7bdb05b84b0663f65934dc84e91e2b206e967b81b;
 
         // format data request inputs
         SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
 
         // calculate data request hash
-        bytes32 test_hash = oracle.hashDataRequest(inputs);
-
-        emit log_named_bytes32("test_hash", test_hash);
+        bytes32 test_hash = oracle.generateDataRequestId(inputs);
 
         assertEq(expected_hash, test_hash);
     }

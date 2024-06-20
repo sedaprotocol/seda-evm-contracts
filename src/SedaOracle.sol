@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
 library SedaOracleLib {
     string constant VERSION = "0.0.1";
@@ -17,6 +17,8 @@ library SedaOracleLib {
         bytes tally_inputs;
         /// Amount of required DR executors
         uint16 replication_factor;
+        /// Filter to be applied before tally execution
+        bytes consensus_filter;
         /// Amount of SEDA tokens per gas unit
         uint128 gas_price;
         /// Maximum of gas units to be used by data request executors
@@ -39,6 +41,8 @@ library SedaOracleLib {
         bytes tally_inputs;
         /// Amount of required DR executors
         uint16 replication_factor;
+        /// Filter to be applied before tally execution
+        bytes consensus_filter;
         /// Amount of SEDA tokens per gas unit
         uint128 gas_price;
         /// Maximum of gas units to be used by data request executors
@@ -55,14 +59,16 @@ library SedaOracleLib {
         string version;
         /// Data Request Identifier
         bytes32 dr_id;
+        /// True or false whether or not the result was in consensus or not (≥ 66%)
+        bool consensus;
         /// Exit code of Tally WASM binary execution
         uint8 exit_code;
         /// Result from Tally WASM binary execution
         bytes result;
-        /// Gas used by the complete data request execution
-        uint128 gas_used;
         /// Block Height at which data request was finalized
         uint128 block_height;
+        /// Gas used by the complete data request execution
+        uint128 gas_used;
         // Fields from Data Request Execution
         /// Payback address set by the relayer
         bytes payback_address;
@@ -157,7 +163,7 @@ contract SedaOracle is AccessControl {
 
     /// @notice Post a data request
     function postDataRequest(SedaOracleLib.DataRequestInputs calldata inputs) public returns (bytes32) {
-        bytes32 dr_id = hashDataRequest(inputs);
+        bytes32 dr_id = generateDataRequestId(inputs);
 
         SedaOracleLib.DataRequest memory data_request = SedaOracleLib.DataRequest(
             SedaOracleLib.VERSION,
@@ -166,6 +172,7 @@ contract SedaOracle is AccessControl {
             inputs.tally_binary_id,
             inputs.tally_inputs,
             inputs.replication_factor,
+            inputs.consensus_filter,
             inputs.gas_price,
             inputs.gas_limit,
             inputs.memo,
@@ -194,10 +201,11 @@ contract SedaOracle is AccessControl {
         SedaOracleLib.DataResult memory data_result = SedaOracleLib.DataResult(
             inputs.version,
             inputs.dr_id,
+            inputs.consensus,
             inputs.exit_code,
             inputs.result,
-            inputs.gas_used,
             inputs.block_height,
+            inputs.gas_used,
             inputs.payback_address,
             inputs.seda_payload
         );
@@ -218,7 +226,7 @@ contract SedaOracle is AccessControl {
     /// @dev Throws if the data request does not exist
     function getDataRequest(bytes32 id) public view returns (SedaOracleLib.DataRequest memory) {
         SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
-        if (data_request.replication_factor == 0) {
+        if (bytes(data_request.version).length == 0) {
             revert DataRequestNotFound(id);
         }
         return data_request;
@@ -226,7 +234,10 @@ contract SedaOracle is AccessControl {
 
     /// @notice Get an array of data requests starting from a position, up to a limit
     /// @dev Returns valid data requests
-    function getDataRequestsFromPool(uint128 position, uint128 limit)
+    function getDataRequestsFromPool(
+        uint128 position,
+        uint128 limit
+    )
         public
         view
         returns (SedaOracleLib.DataRequest[] memory)
@@ -255,7 +266,7 @@ contract SedaOracle is AccessControl {
     }
 
     /// @notice Hashes arguments to a data request to produce a unique id
-    function hashDataRequest(SedaOracleLib.DataRequestInputs memory inputs) public pure returns (bytes32) {
+    function generateDataRequestId(SedaOracleLib.DataRequestInputs memory inputs) public pure returns (bytes32) {
         return keccak256(
             bytes.concat(
                 keccak256(bytes(SedaOracleLib.VERSION)),
@@ -264,6 +275,7 @@ contract SedaOracle is AccessControl {
                 inputs.tally_binary_id,
                 keccak256(inputs.tally_inputs),
                 bytes2(inputs.replication_factor),
+                keccak256(inputs.consensus_filter),
                 bytes16(inputs.gas_price),
                 bytes16(inputs.gas_limit),
                 keccak256(inputs.memo)
@@ -271,20 +283,21 @@ contract SedaOracle is AccessControl {
         );
     }
 
-    // /// @notice Validates a data result hash based on the inputs
-    // function hashDataResult(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
-    //     bytes32 reconstructed_id = keccak256(
-    //         bytes.concat(
-    //             bytes(inputs.version),
-    //             inputs.dr_id,
-    //             bytes16(inputs.block_height),
-    //             bytes1(inputs.exit_code),
-    //             keccak256(inputs.result),
-    //             bytes16(inputs.gas_used),
-    //             inputs.payback_address,
-    //             keccak256(inputs.seda_payload)
-    //         )
-    //     );
-    //     return reconstructed_id;
-    // }
+    /// @notice Validates a data result hash based on the inputs
+    function generateDataResultId(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
+        bytes32 reconstructed_id = keccak256(
+            bytes.concat(
+                bytes(inputs.version),
+                inputs.dr_id,
+                inputs.consensus ? bytes1(0x01) : bytes1(0x00),
+                bytes1(inputs.exit_code),
+                keccak256(inputs.result),
+                bytes16(inputs.block_height),
+                bytes16(inputs.gas_used),
+                inputs.payback_address,
+                keccak256(inputs.seda_payload)
+            )
+        );
+        return reconstructed_id;
+    }
 }

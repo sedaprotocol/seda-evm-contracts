@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "../src/SedaOracle.sol";
 
 contract CreateDr is Script {
-    function setUp() public {}
+    function setUp() public { }
 
     function hashString(string memory input) public pure returns (bytes32) {
         bytes32 hash = keccak256(abi.encodePacked(input));
@@ -20,6 +20,7 @@ contract CreateDr is Script {
             tally_binary_id: hashString("tally_binary_id"),
             tally_inputs: "tally_inputs",
             replication_factor: 123,
+            consensus_filter: "00",
             gas_price: 456,
             gas_limit: 789,
             memo: memo
