@@ -156,19 +156,6 @@ contract SedaOracleTest is Test {
         oracle.getDataRequestsFromPool(3, 1);
     }
 
-    function testHash() public {
-        // If this fails we also have to change the relayer to handle this
-        bytes32 expected_hash = 0xe58da06ae6ed9c873e6fc3c7bdb05b84b0663f65934dc84e91e2b206e967b81b;
-
-        // format data request inputs
-        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
-
-        // calculate data request hash
-        bytes32 test_hash = oracle.generateDataRequestId(inputs);
-
-        assertEq(expected_hash, test_hash);
-    }
-
     function testOnlyRelayerCanPostDataResult() public {
         vm.startPrank(ADMIN);
 
@@ -285,5 +272,41 @@ contract SedaOracleTest is Test {
         bytes32 non_existent_dr_id = 0xef3cf2abe8e1bd9bdb92eff32deb42e0152cb894a395d20238a4c96458efccfd;
         vm.expectRevert(abi.encodeWithSelector(SedaOracle.DataResultNotFound.selector, non_existent_dr_id));
         oracle.getDataResult(non_existent_dr_id);
+    }
+
+    // Test function to check if DR_ID still matches with other components
+    // {
+    //     "version": "0.0.1",
+    //     "dr_binary_id": "044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d",
+    //     "dr_inputs": "ZHJfaW5wdXRz",
+    //     "tally_binary_id": "3a1561a3d854e446801b339c137f87dbd2238f481449c00d3470cfcc2a4e24a1",
+    //     "tally_inputs": "dGFsbHlfaW5wdXRz",
+    //     "replication_factor": 1,
+    //     "consensus_filter": "AA==",
+    //     "gas_price": "10",
+    //     "gas_limit": "10",
+    //     "memo": "XTtTqpLgvyGr54/+ov83JyG852lp7VqzBrC10UpsIjg="
+    //   }
+    function testGenerateDataRequestID() public {
+        // expected dr id
+        bytes32 expected_hash = 0x5b9194faf640b6c9b6fcb266dd3a1b3af9c11c8bb322528c89838f0aaff30e89;
+
+        // format data request inputs
+        SedaOracleLib.DataRequestInputs memory inputs = SedaOracleLib.DataRequestInputs({
+            dr_binary_id: 0x044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d,
+            dr_inputs: "ZHJfaW5wdXRz",
+            tally_binary_id: 0x3a1561a3d854e446801b339c137f87dbd2238f481449c00d3470cfcc2a4e24a1,
+            tally_inputs: "dGFsbHlfaW5wdXRz",
+            replication_factor: 1,
+            consensus_filter: "AA==",
+            gas_price: 10,
+            gas_limit: 10,
+            memo: "XTtTqpLgvyGr54/+ov83JyG852lp7VqzBrC10UpsIjg="
+        });
+
+        // calculate data request hash
+        bytes32 test_hash = oracle.generateDataRequestId(inputs);
+
+        assertEq(test_hash, expected_hash);
     }
 }

@@ -17,7 +17,7 @@ library SedaOracleLib {
         bytes tally_inputs;
         /// Amount of required DR executors
         uint16 replication_factor;
-        /// Filter to be applied before tally execution
+        /// Filter applied before tally execution
         bytes consensus_filter;
         /// Amount of SEDA tokens per gas unit
         uint128 gas_price;
@@ -59,7 +59,7 @@ library SedaOracleLib {
         string version;
         /// Data Request Identifier
         bytes32 dr_id;
-        /// True or false whether or not the result was in consensus or not (≥ 66%)
+        /// True or false whether the reveal results are in consensus or not (≥ 66%)
         bool consensus;
         /// Exit code of Tally WASM binary execution
         uint8 exit_code;
