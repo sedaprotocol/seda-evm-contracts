@@ -66,7 +66,7 @@ library SedaOracleLib {
         /// Result from Tally WASM binary execution
         bytes result;
         /// Block Height at which data request was finalized
-        uint128 block_height;
+        uint64 block_height;
         /// Gas used by the complete data request execution
         uint128 gas_used;
         // Fields from Data Request Execution
@@ -287,14 +287,14 @@ contract SedaOracle is AccessControl {
     function generateDataResultId(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
         bytes32 reconstructed_id = keccak256(
             bytes.concat(
-                bytes(inputs.version),
+                keccak256(bytes(SedaOracleLib.VERSION)),
                 inputs.dr_id,
                 inputs.consensus ? bytes1(0x01) : bytes1(0x00),
                 bytes1(inputs.exit_code),
                 keccak256(inputs.result),
-                bytes16(inputs.block_height),
+                bytes8(inputs.block_height),
                 bytes16(inputs.gas_used),
-                inputs.payback_address,
+                keccak256(inputs.payback_address),
                 keccak256(inputs.seda_payload)
             )
         );
