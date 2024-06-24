@@ -41,7 +41,7 @@ contract SedaOracleTest is Test {
     function _getDataResultsInputs(bytes memory memo) private view returns (SedaOracleLib.DataResult memory) {
         SedaOracleLib.DataRequestInputs memory data_request_inputs = _getDataRequestInputs(memo);
         bytes32 dr_id = oracle.generateDataRequestId(data_request_inputs);
-        uint128 block_height = 1;
+        uint64 block_height = 1;
         bool consensus = true;
         uint8 exit_code = 2;
         uint128 gas_used = 3;
@@ -278,35 +278,75 @@ contract SedaOracleTest is Test {
     // {
     //     "version": "0.0.1",
     //     "dr_binary_id": "044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d",
-    //     "dr_inputs": "ZHJfaW5wdXRz",
+    //     "dr_inputs": "64725f696e70757473",
     //     "tally_binary_id": "3a1561a3d854e446801b339c137f87dbd2238f481449c00d3470cfcc2a4e24a1",
-    //     "tally_inputs": "dGFsbHlfaW5wdXRz",
+    //     "tally_inputs": "74616c6c795f696e70757473",
     //     "replication_factor": 1,
-    //     "consensus_filter": "AA==",
+    //     "consensus_filter": "00",
     //     "gas_price": "10",
     //     "gas_limit": "10",
-    //     "memo": "XTtTqpLgvyGr54/+ov83JyG852lp7VqzBrC10UpsIjg="
+    //     "memo": "5d3b53aa92e0bf21abe78ffea2ff372721bce76969ed5ab306b0b5d14a6c2238"
+    //              (base64-encoded)"XTtTqpLgvyGr54/+ov83JyG852lp7VqzBrC10UpsIjg="
     //   }
     function testGenerateDataRequestID() public {
         // expected dr id
-        bytes32 expected_hash = 0x5b9194faf640b6c9b6fcb266dd3a1b3af9c11c8bb322528c89838f0aaff30e89;
+        bytes32 expected_request_id = 0x264b76bd166a8997c141a4b4b673b2cb5c90bfe313258a4083aaac1dd04e39c1;
 
         // format data request inputs
         SedaOracleLib.DataRequestInputs memory inputs = SedaOracleLib.DataRequestInputs({
             dr_binary_id: 0x044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d,
-            dr_inputs: "ZHJfaW5wdXRz",
+            dr_inputs: hex"64725f696e70757473",
+            // base64: "ZHJfaW5wdXRz"
             tally_binary_id: 0x3a1561a3d854e446801b339c137f87dbd2238f481449c00d3470cfcc2a4e24a1,
-            tally_inputs: "dGFsbHlfaW5wdXRz",
+            tally_inputs: hex"74616c6c795f696e70757473",
+            // base64: "dGFsbHlfaW5wdXRz"
             replication_factor: 1,
-            consensus_filter: "AA==",
+            consensus_filter: hex"00",
+            // base64: "XTtTqpLgvyGr54/+ov83JyG852lp7VqzBrC10UpsIjg="
             gas_price: 10,
             gas_limit: 10,
-            memo: "XTtTqpLgvyGr54/+ov83JyG852lp7VqzBrC10UpsIjg="
+            memo: hex"5d3b53aa92e0bf21abe78ffea2ff372721bce76969ed5ab306b0b5d14a6c2238"
         });
+        // base64: "XTtTqpLgvyGr54/+ov83JyG852lp7VqzBrC10UpsIjg="
 
         // calculate data request hash
-        bytes32 test_hash = oracle.generateDataRequestId(inputs);
+        bytes32 request_id = oracle.generateDataRequestId(inputs);
+        assertEq(request_id, expected_request_id);
+    }
 
-        assertEq(test_hash, expected_hash);
+    // Test function to check if DR_ID still matches with other components
+    // {
+    //   "version": "0.0.1",
+    //   "dr_id": "5b9194faf640b6c9b6fcb266dd3a1b3af9c11c8bb322528c89838f0aaff30e89",
+    //   "consensus": true,
+    //   "exit_code": 0,
+    //   "result": "1a192fabce13988b84994d4296e6cdc418d55e2f1d7f942188d4040b94fc57ac",
+    //   "block_height": 12345,
+    //   "gas_used": "20",
+    //   "payback_address": "010203",
+    //   "seda_payload": "040506"
+    // }
+    function testGenerateDataResultID() public {
+        // expected dr id
+        bytes32 expected_result_id = 0xc07800e3f74a3c4b1bf9e70d338b511c2f44b016528b63095efe4012cb1170ff;
+
+        // format data request inputs
+        SedaOracleLib.DataResult memory result = SedaOracleLib.DataResult({
+            version: "0.0.1",
+            dr_id: 0x264b76bd166a8997c141a4b4b673b2cb5c90bfe313258a4083aaac1dd04e39c1,
+            consensus: true,
+            exit_code: 0,
+            result: hex"1a192fabce13988b84994d4296e6cdc418d55e2f1d7f942188d4040b94fc57ac",
+            // base64: "Ghkvq84TmIuEmU1ClubNxBjVXi8df5QhiNQEC5T8V6w="
+            block_height: 12_345,
+            gas_used: 20,
+            payback_address: hex"010203",
+            // base64: "AQID"
+            seda_payload: hex"040506"
+        });
+        // base 64: "BAUG"
+
+        bytes32 result_id = oracle.generateDataResultId(result);
+        assertEq(result_id, expected_result_id);
     }
 }
