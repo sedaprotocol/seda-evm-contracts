@@ -1,0 +1,7 @@
+{
+    "name": "@seda-protocol/contracts",
+    "version": "0.0.1",
+    "dependencies": {
+        "@openzeppelin/contracts": "5.0.2"
+    }
+}
