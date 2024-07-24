@@ -2,10 +2,10 @@
 pragma solidity 0.8.25;
 
 import "forge-std/Test.sol";
-import "../src/SedaOracle.sol";
+import "../src/SedaProver.sol";
 
-contract SedaOracleTest is Test {
-    SedaOracle public oracle;
+contract SedaProverTest is Test {
+    SedaProver public oracle;
     address public constant ADMIN = address(1);
     address public constant ALICE = address(2);
     address public constant RELAYER = address(3);
@@ -15,7 +15,7 @@ contract SedaOracleTest is Test {
     function setUp() public {
         address[] memory initialRelayers = new address[](1);
         initialRelayers[0] = RELAYER;
-        oracle = new SedaOracle(ADMIN, initialRelayers);
+        oracle = new SedaProver(ADMIN, initialRelayers);
     }
 
     function hashString(string memory input) public pure returns (bytes32) {
@@ -24,8 +24,8 @@ contract SedaOracleTest is Test {
     }
 
     /// Standard data request inputs, memo can be used to generate different Dr hashes
-    function _getDataRequestInputs(bytes memory memo) private pure returns (SedaOracleLib.DataRequestInputs memory) {
-        return SedaOracleLib.DataRequestInputs({
+    function _getDataRequestInputs(bytes memory memo) private pure returns (SedaDataTypes.DataRequestInputs memory) {
+        return SedaDataTypes.DataRequestInputs({
             dr_binary_id: hashString("dr_binary_id"),
             dr_inputs: "dr_inputs",
             tally_binary_id: hashString("tally_binary_id"),
@@ -38,8 +38,8 @@ contract SedaOracleTest is Test {
         });
     }
 
-    function _getDataResultsInputs(bytes memory memo) private view returns (SedaOracleLib.DataResult memory) {
-        SedaOracleLib.DataRequestInputs memory data_request_inputs = _getDataRequestInputs(memo);
+    function _getDataResultsInputs(bytes memory memo) private view returns (SedaDataTypes.DataResult memory) {
+        SedaDataTypes.DataRequestInputs memory data_request_inputs = _getDataRequestInputs(memo);
         bytes32 dr_id = oracle.generateDataRequestId(data_request_inputs);
         uint64 block_height = 1;
         bool consensus = true;
@@ -50,8 +50,8 @@ contract SedaOracleTest is Test {
         bytes memory payback_address = "payback_address";
         bytes memory seda_payload = "seda_payload";
 
-        return SedaOracleLib.DataResult({
-            version: SedaOracleLib.VERSION,
+        return SedaDataTypes.DataResult({
+            version: SedaDataTypes.VERSION,
             dr_id: dr_id,
             block_height: block_height,
             consensus: consensus,
@@ -65,16 +65,16 @@ contract SedaOracleTest is Test {
 
     function testPostDataRequest() public {
         assertEq(oracle.getDataRequestsFromPool(0, 10).length, 0);
-        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
+        SedaDataTypes.DataRequestInputs memory inputs = _getDataRequestInputs("0");
         bytes32 expected_dr_id = oracle.generateDataRequestId(inputs);
         oracle.postDataRequest(inputs);
 
         assertEq(oracle.getDataRequestsFromPool(0, 10).length, 1);
 
-        SedaOracleLib.DataRequest memory received_dr = oracle.getDataRequestsFromPool(0, 1)[0];
+        SedaDataTypes.DataRequest memory received_dr = oracle.getDataRequestsFromPool(0, 1)[0];
 
         bytes32 received_dr_id = oracle.generateDataRequestId(
-            SedaOracleLib.DataRequestInputs({
+            SedaDataTypes.DataRequestInputs({
                 dr_binary_id: received_dr.dr_binary_id,
                 dr_inputs: received_dr.dr_inputs,
                 tally_binary_id: received_dr.tally_binary_id,
@@ -94,7 +94,7 @@ contract SedaOracleTest is Test {
         vm.startPrank(RELAYER);
 
         // post a data request and assert the associated result is non-existent
-        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs("0");
+        SedaDataTypes.DataRequestInputs memory inputs = _getDataRequestInputs("0");
         oracle.postDataRequest(inputs);
 
         bytes32 dr_id = oracle.generateDataRequestId(inputs);
@@ -118,34 +118,34 @@ contract SedaOracleTest is Test {
         oracle.postDataRequest(_getDataRequestInputs("3"));
 
         // fetch all three data requests with a limit of 3
-        SedaOracleLib.DataRequest[] memory data_requests = oracle.getDataRequestsFromPool(0, 3);
+        SedaDataTypes.DataRequest[] memory data_requests = oracle.getDataRequestsFromPool(0, 3);
         assertEq(data_requests.length, 3);
 
         // fetch data requests with a limit of 2
-        SedaOracleLib.DataRequest[] memory data_requests_3 = oracle.getDataRequestsFromPool(0, 2);
+        SedaDataTypes.DataRequest[] memory data_requests_3 = oracle.getDataRequestsFromPool(0, 2);
         assertEq(data_requests_3.length, 2);
 
         // fetch two data requests with a limit of 3 (skipping the first)
-        SedaOracleLib.DataRequest[] memory data_requests_2 = oracle.getDataRequestsFromPool(1, 3);
+        SedaDataTypes.DataRequest[] memory data_requests_2 = oracle.getDataRequestsFromPool(1, 3);
         assertEq(data_requests_2.length, 2);
 
         // fetch a single data request
-        SedaOracleLib.DataRequest[] memory data_requests_4 = oracle.getDataRequestsFromPool(0, 1);
+        SedaDataTypes.DataRequest[] memory data_requests_4 = oracle.getDataRequestsFromPool(0, 1);
         assertEq(data_requests_4.length, 1);
 
         // fetch two data requests starting from the second index
-        SedaOracleLib.DataRequest[] memory data_requests_5 = oracle.getDataRequestsFromPool(1, 2);
+        SedaDataTypes.DataRequest[] memory data_requests_5 = oracle.getDataRequestsFromPool(1, 2);
         assertEq(data_requests_5.length, 2);
 
         // post a data result for dr 1
         oracle.postDataResult(_getDataResultsInputs("1"));
 
         // should only return 2 data requests now, even with limit of 3
-        SedaOracleLib.DataRequest[] memory data_requests_6 = oracle.getDataRequestsFromPool(0, 3);
+        SedaDataTypes.DataRequest[] memory data_requests_6 = oracle.getDataRequestsFromPool(0, 3);
         assertEq(data_requests_6.length, 2);
 
         // if fetching from position 1, it should return dr 2 since dr 1 has been removed
-        SedaOracleLib.DataRequest[] memory data_requests_7 = oracle.getDataRequestsFromPool(1, 1);
+        SedaDataTypes.DataRequest[] memory data_requests_7 = oracle.getDataRequestsFromPool(1, 1);
         assertEq(data_requests_7[0].memo, bytes("2"));
 
         // limit can be larger than array length
@@ -162,8 +162,8 @@ contract SedaOracleTest is Test {
         oracle.postDataRequest(_getDataRequestInputs("0"));
 
         // ADMIN cannot post a data result
-        SedaOracleLib.DataResult memory dataResultInputs = _getDataResultsInputs("0");
-        vm.expectRevert(SedaOracle.NotRelayer.selector);
+        SedaDataTypes.DataResult memory dataResultInputs = _getDataResultsInputs("0");
+        vm.expectRevert(SedaProver.NotRelayer.selector);
         oracle.postDataResult(dataResultInputs);
 
         // relayer can post a data result
@@ -174,7 +174,7 @@ contract SedaOracleTest is Test {
     function testAddRemoveRelayer() public {
         // only admin can add relayer
         vm.startPrank(ALICE);
-        vm.expectRevert(SedaOracle.NotAdmin.selector);
+        vm.expectRevert(SedaProver.NotAdmin.selector);
         oracle.addRelayer(ALICE);
 
         // add relayer
@@ -184,7 +184,7 @@ contract SedaOracleTest is Test {
 
         // only admin can remove relayer
         vm.startPrank(ALICE);
-        vm.expectRevert(SedaOracle.NotAdmin.selector);
+        vm.expectRevert(SedaProver.NotAdmin.selector);
         oracle.removeRelayer(ALICE);
 
         // remove relayer
@@ -202,7 +202,7 @@ contract SedaOracleTest is Test {
 
         // only admin can transfer admin role
         vm.startPrank(ALICE);
-        vm.expectRevert(SedaOracle.NotAdmin.selector);
+        vm.expectRevert(SedaProver.NotAdmin.selector);
         oracle.transferOwnership(ALICE);
 
         // admin cannot directly grant admin role to another address
@@ -220,7 +220,7 @@ contract SedaOracleTest is Test {
 
         // only alice can claim admin role
         vm.startPrank(RELAYER);
-        vm.expectRevert(SedaOracle.NotPendingAdmin.selector);
+        vm.expectRevert(SedaProver.NotPendingAdmin.selector);
         oracle.acceptOwnership();
 
         // claim admin role
@@ -234,7 +234,7 @@ contract SedaOracleTest is Test {
 
         // old admin can no longer add relayers
         vm.startPrank(ADMIN);
-        vm.expectRevert(SedaOracle.NotAdmin.selector);
+        vm.expectRevert(SedaProver.NotAdmin.selector);
         oracle.addRelayer(RELAYER);
 
         // new admin can add relayers
@@ -246,14 +246,14 @@ contract SedaOracleTest is Test {
         vm.startPrank(RELAYER);
 
         bytes memory memo = "123";
-        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs(memo);
+        SedaDataTypes.DataRequestInputs memory inputs = _getDataRequestInputs(memo);
         bytes32 dr_id = oracle.postDataRequest(inputs);
 
-        SedaOracleLib.DataRequest memory data_request = oracle.getDataRequest(dr_id);
+        SedaDataTypes.DataRequest memory data_request = oracle.getDataRequest(dr_id);
         assertEq(data_request.memo, memo);
 
         bytes32 non_existent_dr_id = 0xef3cf2abe8e1bd9bdb92eff32deb42e0152cb894a395d20238a4c96458efccfd;
-        vm.expectRevert(abi.encodeWithSelector(SedaOracle.DataRequestNotFound.selector, non_existent_dr_id));
+        vm.expectRevert(abi.encodeWithSelector(SedaProver.DataRequestNotFound.selector, non_existent_dr_id));
         oracle.getDataRequest(non_existent_dr_id);
     }
 
@@ -261,16 +261,16 @@ contract SedaOracleTest is Test {
         vm.startPrank(RELAYER);
 
         bytes memory memo = "123";
-        SedaOracleLib.DataRequestInputs memory inputs = _getDataRequestInputs(memo);
+        SedaDataTypes.DataRequestInputs memory inputs = _getDataRequestInputs(memo);
         bytes32 dr_id = oracle.postDataRequest(inputs);
 
         oracle.postDataResult(_getDataResultsInputs("123"));
 
-        SedaOracleLib.DataResult memory data_result = oracle.getDataResult(dr_id);
+        SedaDataTypes.DataResult memory data_result = oracle.getDataResult(dr_id);
         assertEq(data_result.result, "result");
 
         bytes32 non_existent_dr_id = 0xef3cf2abe8e1bd9bdb92eff32deb42e0152cb894a395d20238a4c96458efccfd;
-        vm.expectRevert(abi.encodeWithSelector(SedaOracle.DataResultNotFound.selector, non_existent_dr_id));
+        vm.expectRevert(abi.encodeWithSelector(SedaProver.DataResultNotFound.selector, non_existent_dr_id));
         oracle.getDataResult(non_existent_dr_id);
     }
 
@@ -293,7 +293,7 @@ contract SedaOracleTest is Test {
         bytes32 expected_request_id = 0x264b76bd166a8997c141a4b4b673b2cb5c90bfe313258a4083aaac1dd04e39c1;
 
         // format data request inputs
-        SedaOracleLib.DataRequestInputs memory inputs = SedaOracleLib.DataRequestInputs({
+        SedaDataTypes.DataRequestInputs memory inputs = SedaDataTypes.DataRequestInputs({
             dr_binary_id: 0x044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d,
             dr_inputs: hex"64725f696e70757473",
             // base64: "ZHJfaW5wdXRz"
@@ -331,7 +331,7 @@ contract SedaOracleTest is Test {
         bytes32 expected_result_id = 0xc07800e3f74a3c4b1bf9e70d338b511c2f44b016528b63095efe4012cb1170ff;
 
         // format data request inputs
-        SedaOracleLib.DataResult memory result = SedaOracleLib.DataResult({
+        SedaDataTypes.DataResult memory result = SedaDataTypes.DataResult({
             version: "0.0.1",
             dr_id: 0x264b76bd166a8997c141a4b4b673b2cb5c90bfe313258a4083aaac1dd04e39c1,
             consensus: true,
@@ -348,5 +348,28 @@ contract SedaOracleTest is Test {
 
         bytes32 result_id = oracle.generateDataResultId(result);
         assertEq(result_id, expected_result_id);
+    }
+
+    enum FilterType {
+        None,
+        Mode,
+        StandardDeviation
+    }
+
+    function testEncode() public {
+        bytes memory filter_none = abi.encodePacked(FilterType.None);
+        emit log_bytes(filter_none);
+
+        bytes memory modeJsonPath = bytes("$.result.text");
+        bytes memory filter_mode = abi.encodePacked(FilterType.Mode, uint64(modeJsonPath.length), modeJsonPath);
+        emit log_bytes(filter_mode);
+
+        bytes memory stdJsonPath = bytes("$.result.number");
+        uint64 sigma = 1;
+        uint8 numberType = 0x00;
+        require(stdJsonPath.length <= type(uint64).max, "ooopsi");
+        bytes memory filter_std_dev =
+            abi.encodePacked(FilterType.StandardDeviation, uint64(stdJsonPath.length), stdJsonPath, sigma, numberType);
+        emit log_bytes(filter_std_dev);
     }
 }

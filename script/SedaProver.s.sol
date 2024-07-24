@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import "forge-std/Script.sol";
-import "../src/SedaOracle.sol";
+import "../src/SedaProver.sol";
 
 contract CreateDr is Script {
     function setUp() public { }
@@ -13,8 +13,8 @@ contract CreateDr is Script {
     }
 
     /// Standard data request inputs, memo can be used to generate different Dr hashes
-    function _getDataRequestInputs(bytes memory memo) private pure returns (SedaOracleLib.DataRequestInputs memory) {
-        return SedaOracleLib.DataRequestInputs({
+    function _getDataRequestInputs(bytes memory memo) private pure returns (SedaDataTypes.DataRequestInputs memory) {
+        return SedaDataTypes.DataRequestInputs({
             dr_binary_id: hashString("dr_binary_id"),
             dr_inputs: "dr_inputs",
             tally_binary_id: hashString("tally_binary_id"),
@@ -36,7 +36,7 @@ contract CreateDr is Script {
         inputs[0] = "date";
         bytes memory result = vm.ffi(inputs);
 
-        SedaOracle(previousDeployment).postDataRequest(_getDataRequestInputs(result));
+        SedaProver(previousDeployment).postDataRequest(_getDataRequestInputs(result));
 
         vm.stopBroadcast();
     }

@@ -13,5 +13,5 @@ check_commands forge
 # Required variables
 check_env_vars EVM_RPC EVM_PRIVATE_KEY EVM_ORACLE_CONTRACT
 
-forge script script/SedaOracle.s.sol:CreateDr --rpc-url $EVM_RPC --broadcast --verify -vvvv --ffi
+forge script script/SedaProver.s.sol:CreateDr --rpc-url $EVM_RPC --broadcast --verify -vvvv --ffi
 

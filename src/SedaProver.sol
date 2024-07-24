@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
-library SedaOracleLib {
+library SedaDataTypes {
     string constant VERSION = "0.0.1";
 
     struct DataRequestInputs {
@@ -77,20 +77,20 @@ library SedaOracleLib {
     }
 }
 
-contract SedaOracle is AccessControl {
+contract SedaProver is AccessControl {
     bytes32 public constant RELAYER = keccak256("RELAYER");
     bytes32 public constant ADMIN = keccak256("ADMIN");
     address public admin;
     address public pendingAdmin;
 
     // DR ID => DataRequest
-    mapping(bytes32 => SedaOracleLib.DataRequest) public data_request_pool;
+    mapping(bytes32 => SedaDataTypes.DataRequest) public data_request_pool;
     // DR ID => DataResult
-    mapping(bytes32 => SedaOracleLib.DataResult) public data_request_id_to_result;
+    mapping(bytes32 => SedaDataTypes.DataResult) public data_request_id_to_result;
     bytes32[] public data_request_pool_array; // for iterating over the data request pool
 
-    event DataRequestPosted(SedaOracleLib.DataRequest data_request, address caller);
-    event DataResultPosted(SedaOracleLib.DataResult data_result, address caller);
+    event DataRequestPosted(SedaDataTypes.DataRequest data_request, address caller);
+    event DataResultPosted(SedaDataTypes.DataResult data_result, address caller);
 
     error DataRequestNotFound(bytes32 id);
     error DataResultNotFound(bytes32 id);
@@ -162,11 +162,11 @@ contract SedaOracle is AccessControl {
     }
 
     /// @notice Post a data request
-    function postDataRequest(SedaOracleLib.DataRequestInputs calldata inputs) public returns (bytes32) {
+    function postDataRequest(SedaDataTypes.DataRequestInputs calldata inputs) public returns (bytes32) {
         bytes32 dr_id = generateDataRequestId(inputs);
 
-        SedaOracleLib.DataRequest memory data_request = SedaOracleLib.DataRequest(
-            SedaOracleLib.VERSION,
+        SedaDataTypes.DataRequest memory data_request = SedaDataTypes.DataRequest(
+            SedaDataTypes.VERSION,
             inputs.dr_binary_id,
             inputs.dr_inputs,
             inputs.tally_binary_id,
@@ -189,16 +189,16 @@ contract SedaOracle is AccessControl {
     }
 
     // @notice Post a result for a data request
-    function postDataResult(SedaOracleLib.DataResult calldata inputs) public onlyRelayer {
+    function postDataResult(SedaDataTypes.DataResult calldata inputs) public onlyRelayer {
         // Require the data request to exist
         // TODO: do we need this?
-        SedaOracleLib.DataRequest memory data_request = getDataRequest(inputs.dr_id);
+        SedaDataTypes.DataRequest memory data_request = getDataRequest(inputs.dr_id);
         if (data_request.replication_factor == 0) {
             revert DataRequestNotFound(inputs.dr_id);
         }
 
         // set the data result
-        SedaOracleLib.DataResult memory data_result = SedaOracleLib.DataResult(
+        SedaDataTypes.DataResult memory data_result = SedaDataTypes.DataResult(
             inputs.version,
             inputs.dr_id,
             inputs.consensus,
@@ -224,8 +224,8 @@ contract SedaOracle is AccessControl {
 
     /// @notice Get a data request by id
     /// @dev Throws if the data request does not exist
-    function getDataRequest(bytes32 id) public view returns (SedaOracleLib.DataRequest memory) {
-        SedaOracleLib.DataRequest memory data_request = data_request_pool[id];
+    function getDataRequest(bytes32 id) public view returns (SedaDataTypes.DataRequest memory) {
+        SedaDataTypes.DataRequest memory data_request = data_request_pool[id];
         if (bytes(data_request.version).length == 0) {
             revert DataRequestNotFound(id);
         }
@@ -240,13 +240,13 @@ contract SedaOracle is AccessControl {
     )
         public
         view
-        returns (SedaOracleLib.DataRequest[] memory)
+        returns (SedaDataTypes.DataRequest[] memory)
     {
         // Compute the actual limit, taking into account the array size
         uint128 actualLimit = (position + limit > data_request_pool_array.length)
             ? (uint128(data_request_pool_array.length) - position)
             : limit;
-        SedaOracleLib.DataRequest[] memory data_requests = new SedaOracleLib.DataRequest[](actualLimit);
+        SedaDataTypes.DataRequest[] memory data_requests = new SedaDataTypes.DataRequest[](actualLimit);
 
         for (uint128 i = 0; i < actualLimit; ++i) {
             data_requests[i] = data_request_pool[data_request_pool_array[position + i]];
@@ -257,8 +257,8 @@ contract SedaOracle is AccessControl {
 
     /// @notice Get a data result by request id
     /// @dev Throws if the data request does not exist
-    function getDataResult(bytes32 id) public view returns (SedaOracleLib.DataResult memory) {
-        SedaOracleLib.DataResult memory data_result = data_request_id_to_result[id];
+    function getDataResult(bytes32 id) public view returns (SedaDataTypes.DataResult memory) {
+        SedaDataTypes.DataResult memory data_result = data_request_id_to_result[id];
         if (data_result.dr_id == 0) {
             revert DataResultNotFound(id);
         }
@@ -266,10 +266,10 @@ contract SedaOracle is AccessControl {
     }
 
     /// @notice Hashes arguments to a data request to produce a unique id
-    function generateDataRequestId(SedaOracleLib.DataRequestInputs memory inputs) public pure returns (bytes32) {
+    function generateDataRequestId(SedaDataTypes.DataRequestInputs memory inputs) public pure returns (bytes32) {
         return keccak256(
             bytes.concat(
-                keccak256(bytes(SedaOracleLib.VERSION)),
+                keccak256(bytes(SedaDataTypes.VERSION)),
                 inputs.dr_binary_id,
                 keccak256(inputs.dr_inputs),
                 inputs.tally_binary_id,
@@ -284,10 +284,10 @@ contract SedaOracle is AccessControl {
     }
 
     /// @notice Validates a data result hash based on the inputs
-    function generateDataResultId(SedaOracleLib.DataResult memory inputs) public pure returns (bytes32) {
+    function generateDataResultId(SedaDataTypes.DataResult memory inputs) public pure returns (bytes32) {
         bytes32 reconstructed_id = keccak256(
             bytes.concat(
-                keccak256(bytes(SedaOracleLib.VERSION)),
+                keccak256(bytes(SedaDataTypes.VERSION)),
                 inputs.dr_id,
                 inputs.consensus ? bytes1(0x01) : bytes1(0x00),
                 bytes1(inputs.exit_code),

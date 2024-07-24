@@ -20,7 +20,7 @@ else
     VERIFY_FLAGS="--verify --verifier-url $EVM_VERIFIER_URL --etherscan-api-key $ETHERSCAN_API_KEY"
 fi;
 
-command="forge create $VERIFY_FLAGS --rpc-url $EVM_RPC --private-key $EVM_PRIVATE_KEY src/SedaOracle.sol:SedaOracle --constructor-args $EVM_ADMIN_ADDRESS [$EVM_ADMIN_ADDRESS]"
+command="forge create $VERIFY_FLAGS --rpc-url $EVM_RPC --private-key $EVM_PRIVATE_KEY src/SedaProver.sol:SedaProver --constructor-args $EVM_ADMIN_ADDRESS [$EVM_ADMIN_ADDRESS]"
 echo $command
 output=$($command)
 
