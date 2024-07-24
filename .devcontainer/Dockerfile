@@ -11,5 +11,6 @@ RUN apt-get update \
 # Tools
 RUN apt-get -y install --no-install-recommends vim git
 
-RUN curl -L https://foundry.paradigm.xyz | bash
-RUN source /home/vscode/.bashrc && foundryup
+# Foundry (already added to postCreateCommand)
+# RUN curl -L https://foundry.paradigm.xyz | bash
+# RUN source ~/.bashrc && foundryup
