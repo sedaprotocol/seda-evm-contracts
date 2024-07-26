@@ -21,15 +21,14 @@ else
 fi;
 
 command="forge create $VERIFY_FLAGS --rpc-url $EVM_RPC --private-key $EVM_PRIVATE_KEY src/SedaProver.sol:SedaProver --constructor-args $EVM_ADMIN_ADDRESS [$EVM_ADMIN_ADDRESS]"
-echo $command
 output=$($command)
 
 # Extract the deployed address
-EVM_ORACLE_CONTRACT=$(echo "$output" | sed -n 's/Deployed to: \(.*\)/\1/p')
+EVM_PROVER_CONTRACT=$(echo "$output" | sed -n 's/Deployed to: \(.*\)/\1/p')
 
-echo "Deployed to $EVM_ORACLE_CONTRACT (EVM_ORACLE_CONTRACT)"
+echo "Deployed to $EVM_PROVER_CONTRACT (EVM_PROVER_CONTRACT)"
 
 # Update .env file with the deployed address
-update_env_file "EVM_ORACLE_CONTRACT" "$EVM_ORACLE_CONTRACT"
+update_env_file "EVM_PROVER_CONTRACT" "$EVM_PROVER_CONTRACT"
 
 exit 0

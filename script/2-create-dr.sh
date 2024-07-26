@@ -11,7 +11,7 @@ source "${parent_path}/common.sh"
 check_commands forge
 
 # Required variables
-check_env_vars EVM_RPC EVM_PRIVATE_KEY EVM_ORACLE_CONTRACT
+check_env_vars EVM_RPC EVM_PRIVATE_KEY EVM_PROVER_CONTRACT
 
 forge script script/SedaProver.s.sol:CreateDr --rpc-url $EVM_RPC --broadcast --verify -vvvv --ffi
 
