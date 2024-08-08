@@ -82,6 +82,7 @@ contract SedaProver is AccessControl {
     bytes32 public constant ADMIN = keccak256("ADMIN");
     address public admin;
     address public pendingAdmin;
+    uint16 internal maxReplicationFactor;
 
     // DR ID => DataRequest
     mapping(bytes32 => SedaDataTypes.DataRequest) public data_request_pool;
@@ -100,13 +101,14 @@ contract SedaProver is AccessControl {
 
     /// @param _admin The address of the initial admin of this contract
     /// @param _relayers The addresses of the initial relayers
-    constructor(address _admin, address[] memory _relayers) {
+    constructor(address _admin, address[] memory _relayers, uint16 _maxReplicationFactor) {
         _grantRole(ADMIN, _admin);
         admin = _admin;
         _setRoleAdmin(RELAYER, ADMIN);
         for (uint256 i = 0; i < _relayers.length; ++i) {
             _grantRole(RELAYER, _relayers[i]);
         }
+        maxReplicationFactor = _maxReplicationFactor;
     }
 
     /// @notice Check if the caller has the admin role
@@ -163,8 +165,10 @@ contract SedaProver is AccessControl {
 
     /// @notice Post a data request
     function postDataRequest(SedaDataTypes.DataRequestInputs calldata inputs) public returns (bytes32) {
-        require(inputs.replication_factor == 1, "Replication factor bigger than 1 is not yet supported");
-
+        require(
+            inputs.replication_factor > 0 && inputs.replication_factor <= maxReplicationFactor,
+            "Replication factor must be greater than zero and not exceed the allowed maximum"
+        );
         bytes32 dr_id = generateDataRequestId(inputs);
 
         SedaDataTypes.DataRequest memory data_request = SedaDataTypes.DataRequest(

@@ -9,13 +9,14 @@ contract SedaProverTest is Test {
     address public constant ADMIN = address(1);
     address public constant ALICE = address(2);
     address public constant RELAYER = address(3);
+    uint16 public constant MAX_REPLICATION_FACTOR = 1;
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     function setUp() public {
         address[] memory initialRelayers = new address[](1);
         initialRelayers[0] = RELAYER;
-        oracle = new SedaProver(ADMIN, initialRelayers);
+        oracle = new SedaProver(ADMIN, initialRelayers, MAX_REPLICATION_FACTOR);
     }
 
     function hashString(string memory input) public pure returns (bytes32) {
@@ -373,11 +374,18 @@ contract SedaProverTest is Test {
         emit log_bytes(filter_std_dev);
     }
 
-    function testReplicationFactorGreaterThanUnit() public {
+    function testReplicationFactorExceedsMaximum() public {
         assertEq(oracle.getDataRequestsFromPool(0, 10).length, 0);
         SedaDataTypes.DataRequestInputs memory inputs = _getDataRequestInputs("0");
-        inputs.replication_factor = 2;
+        inputs.replication_factor = MAX_REPLICATION_FACTOR + 1;
+        vm.expectRevert();
+        oracle.postDataRequest(inputs);
+    }
 
+    function testReplicationFactorZero() public {
+        assertEq(oracle.getDataRequestsFromPool(0, 10).length, 0);
+        SedaDataTypes.DataRequestInputs memory inputs = _getDataRequestInputs("0");
+        inputs.replication_factor = 0;
         vm.expectRevert();
         oracle.postDataRequest(inputs);
     }
