@@ -19,7 +19,7 @@ contract CreateDr is Script {
             dr_inputs: "dr_inputs",
             tally_binary_id: hashString("tally_binary_id"),
             tally_inputs: "tally_inputs",
-            replication_factor: 123,
+            replication_factor: 1,
             consensus_filter: "00",
             gas_price: 456,
             gas_limit: 789,

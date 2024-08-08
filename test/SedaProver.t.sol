@@ -30,7 +30,7 @@ contract SedaProverTest is Test {
             dr_inputs: "dr_inputs",
             tally_binary_id: hashString("tally_binary_id"),
             tally_inputs: "tally_inputs",
-            replication_factor: 123,
+            replication_factor: 1,
             consensus_filter: "0x00",
             gas_price: 456,
             gas_limit: 789,
@@ -371,5 +371,14 @@ contract SedaProverTest is Test {
         bytes memory filter_std_dev =
             abi.encodePacked(FilterType.StandardDeviation, uint64(stdJsonPath.length), stdJsonPath, sigma, numberType);
         emit log_bytes(filter_std_dev);
+    }
+
+    function testReplicationFactorGreaterThanUnit() public {
+        assertEq(oracle.getDataRequestsFromPool(0, 10).length, 0);
+        SedaDataTypes.DataRequestInputs memory inputs = _getDataRequestInputs("0");
+        inputs.replication_factor = 2;
+
+        vm.expectRevert();
+        oracle.postDataRequest(inputs);
     }
 }
