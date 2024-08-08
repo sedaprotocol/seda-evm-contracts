@@ -163,6 +163,8 @@ contract SedaProver is AccessControl {
 
     /// @notice Post a data request
     function postDataRequest(SedaDataTypes.DataRequestInputs calldata inputs) public returns (bytes32) {
+        require(inputs.replication_factor == 1, "Replication factor bigger than 1 is not yet supported");
+
         bytes32 dr_id = generateDataRequestId(inputs);
 
         SedaDataTypes.DataRequest memory data_request = SedaDataTypes.DataRequest(
