@@ -1,7 +1,26 @@
 {
-    "name": "@seda-protocol/contracts",
-    "version": "0.0.2",
-    "dependencies": {
-        "@openzeppelin/contracts": "5.0.2"
-    }
+  "name": "@seda-protocol/contracts",
+  "version": "0.0.4",
+  "main": "index.js",
+  "scripts": {
+    "check": "bunx biome check .",
+    "check:write": "bunx biome check --write .",
+    "clean": "rimraf artifacts cache typechain-types",
+    "compile": "hardhat compile",
+    "test": "hardhat test"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.2",
+    "@openzeppelin/merkle-tree": "^1.0.7",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.10",
+    "dotenv": "^16.4.5",
+    "rimraf": "^6.0.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.0.2"
+  }
 }

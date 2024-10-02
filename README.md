@@ -31,21 +31,11 @@ To learn how to contribute, please read [contributing](CONTRIBUTING.md).
 
 ## Dependencies
 
-The [Foundry](https://book.getfoundry.sh/getting-started/installation) toolchain must be installed, and recommended method is to use Foundryup. You can install it via:
-
-```bash
-curl -L https://foundry.paradigm.xyz | bash
-```
+TBD
 
 ## Developing
 
-The [Foundry book](https://book.getfoundry.sh/reference/forge/) is a great reference for getting started.
-
-```bash
-forge build --via-ir
-forge test -vv --via-ir
-forge fmt
-```
+TBD
 
 ## License
 
