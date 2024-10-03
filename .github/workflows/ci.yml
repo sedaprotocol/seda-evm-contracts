@@ -1,0 +1,30 @@
+name: "Hardhat CI 🚀"
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Check out the repo 📥"
+        uses: "actions/checkout@v4"
+
+      - name: "Install Bun 🥟"
+        uses: "oven-sh/setup-bun@v1"
+
+      - name: "Install the dependencies 📦"
+        run: "bun install"
+
+      - name: "Check the code formatting 🧹"
+        run: "bun run check"
+
+      - name: "Compile the contracts 🛠️"
+        run: "bun run compile"
+
+      - name: "Test the contracts 🧪"
+        run: "bun run test"

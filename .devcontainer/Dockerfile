@@ -8,6 +8,7 @@ RUN apt-get update \
     unzip \
     vim-tiny \
     ssh \
+    ca-certificates \
     && apt-get auto-remove -y \
     && apt-get clean -y \
     && chsh -s $(which bash) bun \
