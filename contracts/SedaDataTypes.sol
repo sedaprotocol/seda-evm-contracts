@@ -64,7 +64,7 @@ library SedaDataTypes {
         /// Result from Tally WASM binary execution
         bytes result;
         /// Block Height at which data request was finalized
-        uint128 blockHeight;
+        uint64 blockHeight;
         /// Gas used by the complete data request execution
         uint64 gasUsed;
         // Fields from Data Request Execution
