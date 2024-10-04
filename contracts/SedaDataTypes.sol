@@ -79,7 +79,7 @@ library SedaDataTypes {
         uint256 blockHeight;
         bytes32 validatorRoot;
         bytes32 resultsRoot;
-        // bytes32 provingData;
+        bytes32 provingMetadata;
     }
 
     struct ValidatorProof {
@@ -95,7 +95,8 @@ library SedaDataTypes {
                     batch.batchHeight,
                     batch.blockHeight,
                     batch.validatorRoot,
-                    batch.resultsRoot
+                    batch.resultsRoot,
+                    batch.provingMetadata
                 )
             );
     }

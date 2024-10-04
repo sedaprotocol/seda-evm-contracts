@@ -11,16 +11,18 @@ describe('SedaK256Prover: 4 validators', () => {
       blockHeight: 100,
       validatorRoot: ethers.keccak256(ethers.toUtf8Bytes('new validator root')),
       resultsRoot: ethers.keccak256(ethers.toUtf8Bytes('new results root')),
+      provingMetadata: ethers.keccak256(ethers.toUtf8Bytes('new proving data')),
     };
 
     const newBatchId = ethers.keccak256(
       ethers.AbiCoder.defaultAbiCoder().encode(
-        ['uint256', 'uint256', 'bytes32', 'bytes32'],
+        ['uint256', 'uint256', 'bytes32', 'bytes32', 'bytes32'],
         [
           newBatch.batchHeight,
           newBatch.blockHeight,
           newBatch.validatorRoot,
           newBatch.resultsRoot,
+          newBatch.provingMetadata,
         ]
       )
     );
@@ -74,8 +76,9 @@ describe('SedaK256Prover: 4 validators', () => {
     const initialBatch = {
       batchHeight: 0,
       blockHeight: 0,
-      validatorRoot: tree.root, // Placeholder, replace with actual validatorRoot
+      validatorRoot: tree.root,
       resultsRoot: ethers.ZeroHash,
+      provingMetadata: ethers.ZeroHash,
     };
 
     // Deploy the SedaDataTypes library first
