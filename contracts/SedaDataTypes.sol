@@ -100,4 +100,23 @@ library SedaDataTypes {
                 )
             );
     }
+
+    function computeResultId(
+        SedaDataTypes.DataResult memory result
+    ) public pure returns (bytes32) {
+        return
+            keccak256(
+                bytes.concat(
+                    keccak256(bytes(SedaDataTypes.VERSION)),
+                    result.drId,
+                    result.consensus ? bytes1(0x01) : bytes1(0x00),
+                    bytes1(result.exitCode),
+                    keccak256(result.result),
+                    bytes8(result.blockHeight),
+                    bytes8(result.gasUsed),
+                    keccak256(result.paybackAddress),
+                    keccak256(result.sedaPayload)
+                )
+            );
+    }
 }
