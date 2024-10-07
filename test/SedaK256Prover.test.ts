@@ -56,8 +56,8 @@ describe('SedaK256Prover: 4 validators', () => {
 
     const leaves = validators.map((validator, index) =>
       ethers.solidityPackedKeccak256(
-        ['address', 'uint32'],
-        [validator, votingPowers[index]]
+        ['string', 'address', 'uint32'],
+        ['SECP256K1', validator, votingPowers[index]]
       )
     );
 

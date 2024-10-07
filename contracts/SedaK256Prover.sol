@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./SedaDataTypes.sol";
 
 contract SedaK256Prover {
-    // Default consensus percentage (~2/3)
-    uint32 public constant CONSENSUS_PERCENTAGE = 66_000_000;
+    // Default consensus percentage (2/3)
+    uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
 
     SedaDataTypes.Batch public currentBatch;
 
@@ -54,7 +54,10 @@ contract SedaK256Prover {
             validVotingPower += validatorProofs[i].votingPower;
         }
 
-        require(validVotingPower >= CONSENSUS_PERCENTAGE, "Consensus not reached");
+        require(
+            validVotingPower >= CONSENSUS_PERCENTAGE,
+            "Consensus not reached"
+        );
 
         currentBatch = newBatch;
         emit BatchUpdated(newBatch.batchHeight, batchId);
@@ -64,13 +67,25 @@ contract SedaK256Prover {
         SedaDataTypes.ValidatorProof memory proof
     ) internal view returns (bool) {
         bytes32 leaf = keccak256(
-            abi.encodePacked(proof.publicKey, proof.votingPower)
+            abi.encodePacked("SECP256K1", proof.publicKey, proof.votingPower)
         );
         return
             MerkleProof.verify(
                 proof.merkleProof,
                 currentBatch.validatorRoot,
                 leaf
+            );
+    }
+
+    function _verifyDataResultProof(
+        bytes32 dataResultId,
+        bytes32[] memory merkleProof
+    ) external view returns (bool) {
+        return
+            MerkleProof.verify(
+                merkleProof,
+                currentBatch.resultsRoot,
+                dataResultId
             );
     }
 

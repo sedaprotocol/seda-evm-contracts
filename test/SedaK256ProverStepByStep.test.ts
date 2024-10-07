@@ -175,8 +175,9 @@ describe('SedaK256Prover: test vectors', () => {
       batchHeight: 0,
       blockHeight: 0,
       validatorRoot:
-        '0x7cfabf40bbb7751ee9b7cdc882a3ff7f640290777a7531311df18afca1060bca', // Placeholder, replace with actual validatorRoot
+        '0xbdba7e10339bec96fd4f8bfaa74bd1b917d9d9c8cb6d133946549379f4014ba2', // Placeholder, replace with actual validatorRoot
       resultsRoot: ethers.ZeroHash,
+      provingMetadata: ethers.ZeroHash,
     };
 
     // Deploy the SedaDataTypes library first
@@ -202,19 +203,20 @@ describe('SedaK256Prover: test vectors', () => {
       blockHeight: 100,
       validatorRoot: ethers.keccak256(ethers.toUtf8Bytes('new validator root')),
       resultsRoot: ethers.keccak256(ethers.toUtf8Bytes('new results root')),
+      provingMetadata: ethers.keccak256(ethers.toUtf8Bytes('new proving data')),
     };
 
     const signatures = [
-      '0xc222a45941b2f856038bc20cbb220cf469b50002b555186b1b00b5d4fff3ad634004c274cc1afdd2371cfc6a1849ad60279f82255a6038af7ac60624579620541c',
+      '0xeb85547afe0d0c8e1fcfb8539ad6e4c04f7915649da64d36e62f74ac5a99a34165d6233ca1c53a45003308fe8a585ac6dcf57cb92686afc2a7e929688d5b441a1b',
     ];
 
     const proofs = [
       {
         publicKey: '0xCc082f1F022BEA35aC8e1b24F854B36202a3028f',
-        votingPower: 70_000_000, // 70.000000%
+        votingPower: 75_000_000, // 70.000000%
         merkleProof: [
-          '0xa7440814145cfa0232f2f808eee353cfddf8a89f4656aedb3ed0262ab9f9d819',
-          '0xc940381413165a94c0f8bcec61dcd5e64527bf9c000d02ef65297e1d23d67f1e',
+          '0xd4c15ab4f4fd38fcbe0a7dc5af01a52019a58c646623debc36a0b8974862e4ca',
+          '0x04ba85846376fe724985f102b966bf5c77eac00c9ae89a322b81c44fb270bdd5',
         ],
       },
     ];
