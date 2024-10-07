@@ -7,6 +7,7 @@
     "check:write": "bunx biome check --write .",
     "clean": "rimraf artifacts cache typechain-types",
     "compile": "hardhat compile",
+    "deploy:prover": "hardhat ignition deploy ignition/modules/SedaProver.ts",
     "test": "hardhat test"
   },
   "author": "",
