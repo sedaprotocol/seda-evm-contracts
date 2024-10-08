@@ -83,7 +83,7 @@ library SedaDataTypes {
     }
 
     struct ValidatorProof {
-        address publicKey;
+        bytes publicKey;
         uint32 votingPower;
         bytes32[] merkleProof;
     }

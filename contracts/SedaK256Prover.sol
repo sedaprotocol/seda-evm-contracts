@@ -92,8 +92,19 @@ contract SedaK256Prover {
     function _verifySignature(
         bytes32 messageHash,
         bytes memory signature,
-        address signer
+        bytes memory publicKey
     ) internal pure returns (bool) {
-        return ECDSA.recover(messageHash, signature) == signer;
+        // return ECDSA.recover(messageHash, signature) == signer;
+        if (publicKey.length == 20) {
+            // If the public key is already an address (20 bytes)
+            address signer = address(bytes20(publicKey));
+            return ECDSA.recover(messageHash, signature) == signer;
+        } else if (publicKey.length == 64 || publicKey.length == 65) {
+            // If the public key is a full public key (64 or 65 bytes)
+            address signer = address(uint160(uint256(keccak256(publicKey))));
+            return ECDSA.recover(messageHash, signature) == signer;
+        } else {
+            revert("Invalid public key format");
+        }
     }
 }
