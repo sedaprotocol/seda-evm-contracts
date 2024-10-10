@@ -4,13 +4,13 @@ pragma solidity ^0.8.9;
 library SedaDataTypes {
     string constant VERSION = "0.0.1";
 
-    struct DataRequestInputs {
+    struct RequestInputs {
         /// Identifier of Execution WASM binary
         bytes32 execProgramId;
         /// Inputs for Execution WASM binary
         bytes execInputs;
         /// Identifier of Tally WASM binary
-        bytes32 tallyBinaryId;
+        bytes32 tallyProgramId;
         /// Inputs for Tally WASM binary
         bytes tallyInputs;
         /// Amount of required DR executors
@@ -25,7 +25,7 @@ library SedaDataTypes {
         bytes memo;
     }
 
-    struct DataRequest {
+    struct Request {
         /// Semantic Version
         string version;
         // DR definition
@@ -34,7 +34,7 @@ library SedaDataTypes {
         /// Inputs for Execution WASM binary
         bytes execInputs;
         /// Identifier of Tally WASM binary
-        bytes32 tallyBinaryId;
+        bytes32 tallyProgramId;
         /// Inputs for Tally WASM binary
         bytes tallyInputs;
         /// Amount of required DR executors
@@ -47,12 +47,9 @@ library SedaDataTypes {
         uint64 gasLimit;
         /// Public info attached to DR
         bytes memo;
-        // Internal bookkeeping
-        // Index within DR pool
-        uint256 indexInPool;
     }
 
-    struct DataResult {
+    struct Result {
         /// Semantic Version
         string version;
         /// Data Request Identifier
@@ -88,7 +85,7 @@ library SedaDataTypes {
         bytes32[] merkleProof;
     }
 
-    function computeBatchId(Batch memory batch) public pure returns (bytes32) {
+    function deriveBatchId(Batch memory batch) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -101,8 +98,8 @@ library SedaDataTypes {
             );
     }
 
-    function computeResultId(
-        SedaDataTypes.DataResult memory result
+    function deriveResultId(
+        SedaDataTypes.Result memory result
     ) public pure returns (bytes32) {
         return
             keccak256(
@@ -116,6 +113,27 @@ library SedaDataTypes {
                     bytes8(result.gasUsed),
                     keccak256(result.paybackAddress),
                     keccak256(result.sedaPayload)
+                )
+            );
+    }
+
+    /// @notice Hashes arguments to a data request to produce a unique id
+    function deriveRequestId(
+        SedaDataTypes.RequestInputs memory inputs
+    ) public pure returns (bytes32) {
+        return
+            keccak256(
+                bytes.concat(
+                    keccak256(bytes(SedaDataTypes.VERSION)),
+                    inputs.execProgramId,
+                    keccak256(inputs.execInputs),
+                    inputs.tallyProgramId,
+                    keccak256(inputs.tallyInputs),
+                    bytes2(inputs.replicationFactor),
+                    keccak256(inputs.consensusFilter),
+                    bytes16(inputs.gasPrice),
+                    bytes8(inputs.gasLimit),
+                    keccak256(inputs.memo)
                 )
             );
     }
