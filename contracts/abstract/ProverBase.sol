@@ -7,14 +7,16 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 abstract contract ProverBase is IProver {
     event BatchUpdated(uint256 indexed batchHeight, bytes32 batchHash);
 
+    /// @inheritdoc IProver
     function updateBatch(
-        SedaDataTypes.Batch memory _batch,
-        bytes[] memory _signatures,
-        SedaDataTypes.ValidatorProof[] memory _proofs
+        SedaDataTypes.Batch calldata newBatch,
+        bytes[] calldata signatures,
+        SedaDataTypes.ValidatorProof[] calldata validatorProofs
     ) public virtual override;
 
-    function verifyDataResultProof(
-        bytes32 _resultId,
-        bytes32[] memory _proof
+    /// @inheritdoc IProver
+    function verifyResultProof(
+        bytes32 resultId,
+        bytes32[] calldata merkleProof
     ) public view virtual override returns (bool);
 }

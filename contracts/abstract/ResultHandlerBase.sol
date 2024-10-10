@@ -11,16 +11,18 @@ abstract contract ResultHandlerBase is IResultHandler {
     // Event emitted when a Result is posted
     event ResultPosted(bytes32 indexed resultId, SedaDataTypes.Result result);
 
-    constructor(address _sedaProverAddress) {
-        sedaProver = IProver(_sedaProverAddress);
+    constructor(address sedaProverAddress) {
+        sedaProver = IProver(sedaProverAddress);
     }
 
+    /// @inheritdoc IResultHandler
     function postResult(
-        SedaDataTypes.Result calldata _result,
-        bytes32[] memory _proof
-    ) public virtual override;
+        SedaDataTypes.Result calldata result,
+        bytes32[] calldata proof
+    ) external virtual override;
 
+    /// @inheritdoc IResultHandler
     function getResult(
-        bytes32 _resultId
-    ) public view virtual override returns (SedaDataTypes.Result memory);
+        bytes32 resultId
+    ) external view virtual override returns (SedaDataTypes.Result memory);
 }

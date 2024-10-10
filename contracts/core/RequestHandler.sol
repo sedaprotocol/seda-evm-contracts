@@ -4,47 +4,50 @@ pragma solidity ^0.8.9;
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 import {RequestHandlerBase} from "../abstract/RequestHandlerBase.sol";
 
+/// @title RequestHandler
+/// @notice Implements the RequestHandlerBase for managing Seda protocol requests
 contract RequestHandler is RequestHandlerBase {
     mapping(bytes32 => SedaDataTypes.Request) public requests;
 
+    /// @inheritdoc RequestHandlerBase
     function postRequest(
-        SedaDataTypes.RequestInputs calldata _inputs
+        SedaDataTypes.RequestInputs calldata inputs
     ) public override virtual returns (bytes32) {
-        // Generate a unique Request ID using SedaDataTypes library
-        bytes32 requestId = SedaDataTypes.deriveRequestId(_inputs);
+        bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
 
-        // Ensure the request does not already exist
         require(
             requests[requestId].execProgramId == bytes32(0),
             "RequestHandler: Request already exists"
         );
 
-        // Create a new Request struct and store it in the mapping
         requests[requestId] = SedaDataTypes.Request({
             version: SedaDataTypes.VERSION,
-            execProgramId: _inputs.execProgramId,
-            execInputs: _inputs.execInputs,
-            tallyProgramId: _inputs.tallyProgramId,
-            tallyInputs: _inputs.tallyInputs,
-            replicationFactor: _inputs.replicationFactor,
-            consensusFilter: _inputs.consensusFilter,
-            gasPrice: _inputs.gasPrice,
-            gasLimit: _inputs.gasLimit,
-            memo: _inputs.memo
+            execProgramId: inputs.execProgramId,
+            execInputs: inputs.execInputs,
+            tallyProgramId: inputs.tallyProgramId,
+            tallyInputs: inputs.tallyInputs,
+            replicationFactor: inputs.replicationFactor,
+            consensusFilter: inputs.consensusFilter,
+            gasPrice: inputs.gasPrice,
+            gasLimit: inputs.gasLimit,
+            memo: inputs.memo
         });
 
         emit RequestPosted(requestId, requests[requestId]);
         return requestId;
     }
 
+    /// @inheritdoc RequestHandlerBase
     function getRequest(
         bytes32 requestId
     ) external view override returns (SedaDataTypes.Request memory) {
         return requests[requestId];
     }
 
-        // Function to expose the deriveRequestId from the SedaDataTypes library
-    function deriveRequestId(SedaDataTypes.RequestInputs calldata _inputs) public pure returns (bytes32) {
-        return SedaDataTypes.deriveRequestId(_inputs);
+    /// @notice Derives a request ID from the given inputs
+    /// @param inputs The request inputs
+    /// @return The derived request ID
+    function deriveRequestId(SedaDataTypes.RequestInputs calldata inputs) public pure returns (bytes32) {
+        return SedaDataTypes.deriveRequestId(inputs);
     }
 }

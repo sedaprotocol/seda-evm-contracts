@@ -4,46 +4,47 @@ pragma solidity ^0.8.9;
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 import {ResultHandlerBase} from "../abstract/ResultHandlerBase.sol";
 
+/// @title ResultHandler
+/// @notice Implements the ResultHandlerBase for managing Seda protocol results
 contract ResultHandler is ResultHandlerBase {
     mapping(bytes32 => SedaDataTypes.Result) public results;
 
-    constructor(
-        address _sedaProverAddress
-    ) ResultHandlerBase(_sedaProverAddress) {}
+    constructor(address sedaProverAddress) ResultHandlerBase(sedaProverAddress) {}
 
+    /// @inheritdoc ResultHandlerBase
     function postResult(
-        SedaDataTypes.Result calldata _result,
-        bytes32[] memory _proof
-    ) public virtual override {
-        // Check if the data result has already been posted
+        SedaDataTypes.Result calldata result,
+        bytes32[] calldata proof
+    ) public override virtual {
         require(
-            results[_result.drId].drId == bytes32(0),
-            "Data result already posted"
+            results[result.drId].drId == bytes32(0),
+            "ResultHandler: Result already posted"
         );
 
-        // Verify the data result proof
-        bytes32 resultId = SedaDataTypes.deriveResultId(_result);
+        bytes32 resultId = SedaDataTypes.deriveResultId(result);
         require(
-            sedaProver.verifyDataResultProof(resultId, _proof),
-            "Invalid data result proof"
+            sedaProver.verifyResultProof(resultId, proof),
+            "ResultHandler: Invalid result proof"
         );
 
-        // Store the data result
-        results[_result.drId] = _result;
+        results[result.drId] = result;
 
-        emit ResultPosted(resultId, _result);
+        emit ResultPosted(resultId, result);
     }
 
+    /// @inheritdoc ResultHandlerBase
     function getResult(
-        bytes32 _resultId
+        bytes32 resultId
     ) public view override returns (SedaDataTypes.Result memory) {
-        return results[_resultId];
+        return results[resultId];
     }
 
-    // Function to expose the deriveResultId from the SedaDataTypes library
+    /// @notice Derives a result ID from the given result
+    /// @param result The result data
+    /// @return The derived result ID
     function deriveResultId(
-        SedaDataTypes.Result calldata _result
+        SedaDataTypes.Result calldata result
     ) public pure returns (bytes32) {
-        return SedaDataTypes.deriveResultId(_result);
+        return SedaDataTypes.deriveResultId(result);
     }
 }

@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+// TODO: Rearrange struct fields to minimize storage gaps and optimize packing
+
+/// @title SedaDataTypes Library
+/// @notice Contains data structures and utility functions for the SEDA protocol
 library SedaDataTypes {
     string constant VERSION = "0.0.1";
 
+    /// @notice Input parameters for creating a data request
     struct RequestInputs {
         /// Identifier of Execution WASM binary
         bytes32 execProgramId;
@@ -25,6 +30,7 @@ library SedaDataTypes {
         bytes memo;
     }
 
+    /// @notice Full data request structure
     struct Request {
         /// Semantic Version
         string version;
@@ -49,6 +55,7 @@ library SedaDataTypes {
         bytes memo;
     }
 
+    /// @notice Result of a data request execution
     struct Result {
         /// Semantic Version
         string version;
@@ -71,6 +78,8 @@ library SedaDataTypes {
         bytes sedaPayload;
     }
 
+    /// @notice Represents a batch of data request results
+    /// @dev This struct is used in the batch verification process
     struct Batch {
         uint256 batchHeight;
         uint256 blockHeight;
@@ -79,13 +88,18 @@ library SedaDataTypes {
         bytes32 provingMetadata;
     }
 
+    /// @notice Proof structure for validator verification
+    /// @dev Used in the validator set verification process
     struct ValidatorProof {
         bytes publicKey;
         uint32 votingPower;
         bytes32[] merkleProof;
     }
 
-    function deriveBatchId(Batch memory batch) public pure returns (bytes32) {
+    /// @notice Derives a unique batch ID from a Batch struct
+    /// @param batch The Batch struct to derive the ID from
+    /// @return The derived batch ID
+    function deriveBatchId(Batch calldata batch) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -98,8 +112,11 @@ library SedaDataTypes {
             );
     }
 
+    /// @notice Derives a unique result ID from a Result struct
+    /// @param result The Result struct to derive the ID from
+    /// @return The derived result ID
     function deriveResultId(
-        SedaDataTypes.Result memory result
+        SedaDataTypes.Result calldata result
     ) public pure returns (bytes32) {
         return
             keccak256(
@@ -117,9 +134,11 @@ library SedaDataTypes {
             );
     }
 
-    /// @notice Hashes arguments to a data request to produce a unique id
+    /// @notice Derives a unique request ID from RequestInputs
+    /// @param inputs The RequestInputs struct to derive the ID from
+    /// @return The derived request ID
     function deriveRequestId(
-        SedaDataTypes.RequestInputs memory inputs
+        SedaDataTypes.RequestInputs calldata inputs
     ) public pure returns (bytes32) {
         return
             keccak256(

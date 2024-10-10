@@ -20,11 +20,10 @@ interface IRequestHandler {
 
     /**
      * @dev Retrieves a stored data request by its unique identifier.
-     * @param requestId The unique identifier of the request to retrieve.
+     * @param id The unique identifier of the request to retrieve.
      * @return request The details of the requested data.
      */
-    function getRequest(bytes32 requestId)
-        external
-        view
-        returns (SedaDataTypes.Request memory);
+    function getRequest(
+        bytes32 id
+    ) external view returns (SedaDataTypes.Request memory);
 }

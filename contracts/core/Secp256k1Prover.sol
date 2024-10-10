@@ -6,6 +6,13 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {ProverBase} from "../abstract/ProverBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
+/// @title Secp256k1Prover
+/// @notice Implements the ProverBase for Secp256k1 signature verification in the Seda protocol
+/// @dev This contract manages batch updates and result proof verification using Secp256k1 signatures.
+///      Batch validity is determined by consensus among validators, requiring:
+///      - Increasing batch and block heights
+///      - Valid validator proofs and signatures
+///      - Sufficient voting power to meet the consensus threshold
 contract Secp256k1Prover is ProverBase {
     // Default consensus percentage (2/3)
     uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
@@ -20,62 +27,77 @@ contract Secp256k1Prover is ProverBase {
         );
     }
 
+    /// @inheritdoc ProverBase
+    /// @notice Updates the current batch with new data, ensuring validity through consensus
+    /// @dev Validates a new batch by checking:
+    ///   1. Higher batch and block heights than the current batch
+    ///   2. Matching number of signatures and validator proofs
+    ///   3. Valid validator proofs (verified against the batch's validator root)
+    ///   4. Valid signatures (signed by the corresponding validators)
+    ///   5. Sufficient voting power to meet or exceed the consensus threshold
+    /// @param newBatch The new batch data to be validated and set as current
+    /// @param signatures Array of signatures from validators approving the new batch
+    /// @param validatorProofs Array of validator proofs corresponding to the signatures
     function updateBatch(
-        SedaDataTypes.Batch memory _batch,
-        bytes[] memory _signatures,
-        SedaDataTypes.ValidatorProof[] memory _proofs
+        SedaDataTypes.Batch calldata newBatch,
+        bytes[] calldata signatures,
+        SedaDataTypes.ValidatorProof[] calldata validatorProofs
     ) public override {
         // Check that new batch invariants hold
         require(
-            _batch.batchHeight > currentBatch.batchHeight,
+            newBatch.batchHeight > currentBatch.batchHeight,
             "Invalid batch height"
         );
         require(
-            _batch.blockHeight > currentBatch.blockHeight,
+            newBatch.blockHeight > currentBatch.blockHeight,
             "Invalid block height"
         );
         require(
-            _signatures.length == _proofs.length,
+            signatures.length == validatorProofs.length,
             "Mismatched signatures and proofs"
         );
 
         // Derive Batch Id
-        bytes32 batchId = SedaDataTypes.deriveBatchId(_batch);
+        bytes32 batchId = SedaDataTypes.deriveBatchId(newBatch);
 
         // Check that all validator proofs are valid and accumulate voting power
         uint64 votingPower = 0;
-        for (uint256 i = 0; i < _proofs.length; i++) {
+        for (uint256 i = 0; i < validatorProofs.length; i++) {
             require(
-                _verifyValidatorProof(_proofs[i]),
+                _verifyValidatorProof(validatorProofs[i]),
                 "Invalid validator proof"
             );
             require(
-                _verifySignature(batchId, _signatures[i], _proofs[i].publicKey),
+                _verifySignature(batchId, signatures[i], validatorProofs[i].publicKey),
                 "Invalid signature"
             );
-            votingPower += _proofs[i].votingPower;
+            votingPower += validatorProofs[i].votingPower;
         }
 
         // Check voting power consensus
         require(votingPower >= CONSENSUS_PERCENTAGE, "Consensus not reached");
 
         // Update current batch
-        currentBatch = _batch;
-        emit BatchUpdated(_batch.batchHeight, batchId);
+        currentBatch = newBatch;
+        emit BatchUpdated(newBatch.batchHeight, batchId);
     }
 
-    function verifyDataResultProof(
-        bytes32 dataResultId,
-        bytes32[] memory merkleProof
+    /// @inheritdoc ProverBase
+    function verifyResultProof(
+        bytes32 resultId,
+        bytes32[] calldata merkleProof
     ) public view override returns (bool) {
         return
             MerkleProof.verify(
                 merkleProof,
                 currentBatch.resultsRoot,
-                dataResultId
+                resultId
             );
     }
 
+    /// @notice Verifies a validator proof
+    /// @param proof The validator proof to verify
+    /// @return bool Returns true if the proof is valid, false otherwise
     function _verifyValidatorProof(
         SedaDataTypes.ValidatorProof memory proof
     ) internal view returns (bool) {
@@ -90,12 +112,16 @@ contract Secp256k1Prover is ProverBase {
             );
     }
 
+    /// @notice Verifies a signature against a message hash and public key
+    /// @param messageHash The hash of the message that was signed
+    /// @param signature The signature to verify
+    /// @param publicKey The public key of the signer
+    /// @return bool Returns true if the signature is valid, false otherwise
     function _verifySignature(
         bytes32 messageHash,
-        bytes memory signature,
-        bytes memory publicKey
+        bytes calldata signature,
+        bytes calldata publicKey
     ) internal pure returns (bool) {
-        // return ECDSA.recover(messageHash, signature) == signer;
         if (publicKey.length == 20) {
             // If the public key is already an address (20 bytes)
             address signer = address(bytes20(publicKey));

@@ -11,11 +11,13 @@ abstract contract RequestHandlerBase is IRequestHandler {
         SedaDataTypes.Request request
     );
 
+    /// @inheritdoc IRequestHandler
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
     ) external virtual override returns (bytes32);
 
+    /// @inheritdoc IRequestHandler
     function getRequest(
         bytes32 requestId
-    ) external view virtual returns (SedaDataTypes.Request memory);
+    ) external view virtual override returns (SedaDataTypes.Request memory);
 }
