@@ -92,25 +92,29 @@ describe('RequestHandler', () => {
         .to.emit(handler, 'RequestPosted')
         .withArgs(requestId);
     });
+
+    it('should revert when replicationFactor is 0', async () => {
+      const { handler, requests } = await loadFixture(
+        deployRequestHandlerFixture
+      );
+
+      const invalidRequest = { ...requests[0], replicationFactor: 0 };
+
+      await expect(
+        handler.postRequest(invalidRequest)
+      ).to.be.revertedWithCustomError(handler, 'InvalidReplicationFactor');
+    });
   });
 
   describe('getRequest', () => {
-    it('should return an empty request for non-existent request id', async () => {
+    it('should revert with RequestNotFound for non-existent request id', async () => {
       const { handler } = await loadFixture(deployRequestHandlerFixture);
 
       const nonExistentRequestId = ethers.ZeroHash;
-      const emptyRequest = await handler.getRequest(nonExistentRequestId);
 
-      expect(emptyRequest.version).to.empty;
-      expect(emptyRequest.execProgramId).to.equal(ethers.ZeroHash);
-      expect(emptyRequest.execInputs).to.equal('0x');
-      expect(emptyRequest.tallyProgramId).to.equal(ethers.ZeroHash);
-      expect(emptyRequest.tallyInputs).to.equal('0x');
-      expect(emptyRequest.replicationFactor).to.equal(0);
-      expect(emptyRequest.consensusFilter).to.equal('0x');
-      expect(emptyRequest.gasPrice).to.equal(0);
-      expect(emptyRequest.gasLimit).to.equal(0);
-      expect(emptyRequest.memo).to.equal('0x');
+      await expect(handler.getRequest(nonExistentRequestId))
+        .to.be.revertedWithCustomError(handler, 'RequestNotFound')
+        .withArgs(nonExistentRequestId);
     });
 
     it('should return the correct request for an existing request id', async () => {

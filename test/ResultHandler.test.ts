@@ -98,7 +98,7 @@ describe('ResultHandler', () => {
 
       const resultId = deriveDataResultId(data.results[0]);
       await expect(handler.postResult(data.results[0], data.proofs[0]))
-        .to.be.revertedWithCustomError(handler, 'ResultAlreadyPosted')
+        .to.be.revertedWithCustomError(handler, 'ResultAlreadyExists')
         .withArgs(resultId);
     });
 
@@ -118,24 +118,35 @@ describe('ResultHandler', () => {
         .to.emit(handler, 'ResultPosted')
         .withArgs(deriveDataResultId(data.results[0]));
     });
+
+    it('should fail to post a result with empty proof', async () => {
+      const { handler, data } = await loadFixture(deployResultHandlerFixture);
+
+      const resultId = deriveDataResultId(data.results[0]);
+      await expect(handler.postResult(data.results[0], []))
+        .to.be.revertedWithCustomError(handler, 'InvalidResultProof')
+        .withArgs(resultId);
+    });
+
+    it('should fail to post a result with invalid drId', async () => {
+      const { handler, data } = await loadFixture(deployResultHandlerFixture);
+
+      const invalidResult = { ...data.results[0], drId: ethers.ZeroHash };
+      const resultId = deriveDataResultId(invalidResult);
+      await expect(handler.postResult(invalidResult, data.proofs[0]))
+        .to.be.revertedWithCustomError(handler, 'InvalidResultProof')
+        .withArgs(resultId);
+    });
   });
 
   describe('getResult', () => {
-    it('should return an empty result for non-existent result id', async () => {
+    it('should revert with ResultNotFound for non-existent result id', async () => {
       const { handler } = await loadFixture(deployResultHandlerFixture);
 
-      const nonExistentResultId = ethers.ZeroHash;
-      const emptyResult = await handler.getResult(nonExistentResultId);
-
-      expect(emptyResult.version).to.empty;
-      expect(emptyResult.drId).to.equal(ethers.ZeroHash);
-      expect(emptyResult.consensus).to.be.false;
-      expect(emptyResult.exitCode).to.equal(0);
-      expect(emptyResult.result).to.equal('0x');
-      expect(emptyResult.blockHeight).to.equal(0);
-      expect(emptyResult.gasUsed).to.equal(0);
-      expect(emptyResult.paybackAddress).to.equal('0x');
-      expect(emptyResult.sedaPayload).to.equal('0x');
+      const nonExistentId = ethers.ZeroHash;
+      await expect(handler.getResult(nonExistentId))
+        .to.be.revertedWithCustomError(handler, 'ResultNotFound')
+        .withArgs(nonExistentId);
     });
 
     it('should return the correct result for an existing result id', async () => {
@@ -145,6 +156,27 @@ describe('ResultHandler', () => {
       const retrievedResult = await handler.getResult(data.results[0].drId);
 
       compareResults(retrievedResult, data.results[0]);
+    });
+
+    it('should return the correct result for multiple posted results', async () => {
+      const { handler, data } = await loadFixture(deployResultHandlerFixture);
+
+      // Post two results
+      await handler.postResult(data.results[0], data.proofs[0]);
+      await handler.postResult(data.results[1], data.proofs[1]);
+
+      // Retrieve and verify both results
+      const retrievedResult1 = await handler.getResult(data.results[0].drId);
+      const retrievedResult2 = await handler.getResult(data.results[1].drId);
+
+      compareResults(retrievedResult1, data.results[0]);
+      compareResults(retrievedResult2, data.results[1]);
+
+      // Try to get a non-existent result
+      const nonExistentId = ethers.randomBytes(32);
+      await expect(handler.getResult(nonExistentId))
+        .to.be.revertedWithCustomError(handler, 'ResultNotFound')
+        .withArgs(nonExistentId);
     });
   });
 });

@@ -244,5 +244,36 @@ describe('SedaCoreV1', () => {
       expect(pending.length).to.equal(2);
       expect(Array.from(pending)).to.have.members(finalPending);
     });
+
+    it('should correctly handle removing the last request', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+
+      // Post several requests
+      for (let i = 0; i < 3; i++) {
+        await core.postRequest(data.requests[i]);
+      }
+
+      // Verify that all requests are pending
+      let pendingRequests = await core.getPendingRequests(0, 3);
+      expect(pendingRequests.length).to.equal(3);
+
+      // Post the result for the last request
+      await core.postResult(data.results[2], data.proofs[2]);
+
+      // Verify that the last request has been removed
+      pendingRequests = await core.getPendingRequests(0, 3);
+      expect(pendingRequests.length).to.equal(2);
+      expect(pendingRequests).to.not.include(
+        await core.deriveRequestId(data.requests[2])
+      );
+
+      // Verify the remaining requests are still in order
+      expect(pendingRequests[0]).to.equal(
+        await core.deriveRequestId(data.requests[0])
+      );
+      expect(pendingRequests[1]).to.equal(
+        await core.deriveRequestId(data.requests[1])
+      );
+    });
   });
 });

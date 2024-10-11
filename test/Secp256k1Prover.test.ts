@@ -269,6 +269,24 @@ describe('Secp256k1Prover', () => {
         prover.updateBatch(newBatch, signatures, [proofs[0]])
       ).to.be.revertedWithCustomError(prover, 'InvalidBlockHeight');
     });
+
+    it('should update a batch with all 4 validators (100% voting power)', async () => {
+      const {
+        prover,
+        wallets,
+        data: { validatorProofs: proofs },
+      } = await loadFixture(deployProverFixture);
+
+      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const signatures = await Promise.all(
+        wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
+      );
+
+      await prover.updateBatch(newBatch, signatures, proofs);
+
+      const updatedBatch = await prover.currentBatch();
+      compareBatches(updatedBatch, newBatch);
+    });
   });
 
   describe('verifyResultProof', () => {
