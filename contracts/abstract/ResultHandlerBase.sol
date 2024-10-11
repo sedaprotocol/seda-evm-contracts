@@ -6,6 +6,9 @@ import {IProver} from "../interfaces/IProver.sol";
 import {IResultHandler} from "../interfaces/IResultHandler.sol";
 
 abstract contract ResultHandlerBase is IResultHandler {
+    error ResultAlreadyPosted(bytes32);
+    error InvalidResultProof(bytes32);
+
     IProver public sedaProver;
 
     // Event emitted when a Result is posted

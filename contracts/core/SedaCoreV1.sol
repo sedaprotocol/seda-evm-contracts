@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IProver} from "../interfaces/IProver.sol";
-import "./Secp256k1Prover.sol";
-import "./ResultHandler.sol";
-import "./RequestHandler.sol";
+import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
+import {ResultHandler} from "./ResultHandler.sol";
+import {RequestHandler} from "./RequestHandler.sol";
 
 /// @title SedaCoreV1
 /// @notice Core contract for the Seda protocol, managing requests and results

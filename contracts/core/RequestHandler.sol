@@ -15,10 +15,9 @@ contract RequestHandler is RequestHandlerBase {
     ) public virtual override(RequestHandlerBase) returns (bytes32) {
         bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
 
-        require(
-            bytes(requests[requestId].version).length == 0,
-            "RequestHandler: Request already exists"
-        );
+        if (bytes(requests[requestId].version).length != 0) {
+            revert RequestAlreadyExists(requestId);
+        }
 
         requests[requestId] = SedaDataTypes.Request({
             version: SedaDataTypes.VERSION,

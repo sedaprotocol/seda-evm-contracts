@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {ProverBase} from "../abstract/ProverBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
@@ -14,13 +14,13 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 ///      - Valid validator proofs and signatures
 ///      - Sufficient voting power to meet the consensus threshold
 contract Secp256k1Prover is ProverBase {
-    // Default consensus percentage (2/3)
-    uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
+    error ConsensusNotReached();
+    error InvalidBlockHeight();
 
-    bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
-
-    // Current Batch
     SedaDataTypes.Batch public currentBatch;
+
+    uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
+    bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
 
     constructor(SedaDataTypes.Batch memory initialBatch) {
         currentBatch = initialBatch;
@@ -47,18 +47,15 @@ contract Secp256k1Prover is ProverBase {
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
     ) public override {
         // Check that new batch invariants hold
-        require(
-            newBatch.batchHeight > currentBatch.batchHeight,
-            "Invalid batch height"
-        );
-        require(
-            newBatch.blockHeight > currentBatch.blockHeight,
-            "Invalid block height"
-        );
-        require(
-            signatures.length == validatorProofs.length,
-            "Mismatched signatures and proofs"
-        );
+        if (newBatch.batchHeight <= currentBatch.batchHeight) {
+            revert InvalidBatchHeight();
+        }
+        if (newBatch.blockHeight <= currentBatch.blockHeight) {
+            revert InvalidBlockHeight();
+        }
+        if (signatures.length != validatorProofs.length) {
+            revert MismatchedSignaturesAndProofs();
+        }
 
         // Derive Batch Id
         bytes32 batchId = SedaDataTypes.deriveBatchId(newBatch);
@@ -66,23 +63,25 @@ contract Secp256k1Prover is ProverBase {
         // Check that all validator proofs are valid and accumulate voting power
         uint64 votingPower = 0;
         for (uint256 i = 0; i < validatorProofs.length; i++) {
-            require(
-                _verifyValidatorProof(validatorProofs[i]),
-                "Invalid validator proof"
-            );
-            require(
-                _verifySignature(
+            if (!_verifyValidatorProof(validatorProofs[i])) {
+                revert InvalidValidatorProof();
+            }
+            if (
+                !_verifySignature(
                     batchId,
                     signatures[i],
                     validatorProofs[i].publicKey
-                ),
-                "Invalid signature"
-            );
+                )
+            ) {
+                revert InvalidSignature();
+            }
             votingPower += validatorProofs[i].votingPower;
         }
 
         // Check voting power consensus
-        require(votingPower >= CONSENSUS_PERCENTAGE, "Consensus not reached");
+        if (votingPower < CONSENSUS_PERCENTAGE) {
+            revert ConsensusNotReached();
+        }
 
         // Update current batch
         currentBatch = newBatch;
@@ -94,7 +93,9 @@ contract Secp256k1Prover is ProverBase {
         bytes32 resultId,
         bytes32[] calldata merkleProof
     ) public view override returns (bool) {
-        bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
+        bytes32 leaf = keccak256(
+            abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId)
+        );
         return MerkleProof.verify(merkleProof, currentBatch.resultsRoot, leaf);
     }
 
@@ -105,7 +106,11 @@ contract Secp256k1Prover is ProverBase {
         SedaDataTypes.ValidatorProof memory proof
     ) internal view returns (bool) {
         bytes32 leaf = keccak256(
-            abi.encodePacked(SECP256K1_DOMAIN_SEPARATOR, proof.publicKey, proof.votingPower)
+            abi.encodePacked(
+                SECP256K1_DOMAIN_SEPARATOR,
+                proof.publicKey,
+                proof.votingPower
+            )
         );
         return
             MerkleProof.verify(
@@ -134,7 +139,7 @@ contract Secp256k1Prover is ProverBase {
             address signer = address(uint160(uint256(keccak256(publicKey))));
             return ECDSA.recover(messageHash, signature) == signer;
         } else {
-            revert("Invalid public key format");
+            revert InvalidPublicKeyFormat();
         }
     }
 }

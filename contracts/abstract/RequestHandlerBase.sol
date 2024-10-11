@@ -5,10 +5,9 @@ import {IRequestHandler} from "../interfaces/IRequestHandler.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 abstract contract RequestHandlerBase is IRequestHandler {
-    // Event emitted when a Request is posted
-    event RequestPosted(
-        bytes32 indexed requestId
-    );
+    error RequestAlreadyExists(bytes32);
+
+    event RequestPosted(bytes32 indexed requestId);
 
     /// @inheritdoc IRequestHandler
     function postRequest(
@@ -18,5 +17,10 @@ abstract contract RequestHandlerBase is IRequestHandler {
     /// @inheritdoc IRequestHandler
     function getRequest(
         bytes32 requestId
-    ) external view virtual override(IRequestHandler) returns (SedaDataTypes.Request memory);
+    )
+        external
+        view
+        virtual
+        override(IRequestHandler)
+        returns (SedaDataTypes.Request memory);
 }

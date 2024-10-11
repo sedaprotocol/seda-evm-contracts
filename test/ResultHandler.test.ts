@@ -96,17 +96,19 @@ describe('ResultHandler', () => {
 
       await handler.postResult(data.results[0], data.proofs[0]);
 
-      await expect(
-        handler.postResult(data.results[0], data.proofs[0])
-      ).to.be.revertedWith('ResultHandler: Result already posted');
+      const resultId = deriveDataResultId(data.results[0]);
+      await expect(handler.postResult(data.results[0], data.proofs[0]))
+        .to.be.revertedWithCustomError(handler, 'ResultAlreadyPosted')
+        .withArgs(resultId);
     });
 
     it('should fail to post a result with invalid proof', async () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
-      await expect(
-        handler.postResult(data.results[1], data.proofs[0])
-      ).to.be.revertedWith('ResultHandler: Invalid result proof');
+      const resultId = deriveDataResultId(data.results[1]);
+      await expect(handler.postResult(data.results[1], data.proofs[0]))
+        .to.be.revertedWithCustomError(handler, 'InvalidResultProof')
+        .withArgs(resultId);
     });
 
     it('should emit a ResultPosted event', async () => {

@@ -171,7 +171,7 @@ describe('Secp256k1Prover', () => {
 
       await expect(
         prover.updateBatch(newBatch, signatures, [proofs[1]])
-      ).to.be.revertedWith('Consensus not reached');
+      ).to.be.revertedWithCustomError(prover, 'ConsensusNotReached');
 
       const currentBatch = await prover.currentBatch();
       expect(currentBatch.batchHeight).to.equal(0);
@@ -191,7 +191,7 @@ describe('Secp256k1Prover', () => {
 
       await expect(
         prover.updateBatch(newBatch, signatures, proofs)
-      ).to.be.revertedWith('Mismatched signatures and proofs');
+      ).to.be.revertedWithCustomError(prover, 'MismatchedSignaturesAndProofs');
     });
 
     it('should fail to update a batch if invalid merkle proof', async () => {
@@ -214,7 +214,7 @@ describe('Secp256k1Prover', () => {
 
       await expect(
         prover.updateBatch(newBatch, signatures, invalidProofs)
-      ).to.be.revertedWith('Invalid validator proof');
+      ).to.be.revertedWithCustomError(prover, 'InvalidValidatorProof');
     });
 
     it('should fail to update a batch if invalid signature', async () => {
@@ -231,7 +231,7 @@ describe('Secp256k1Prover', () => {
 
       await expect(
         prover.updateBatch(newBatch, signatures, [proofs[0]])
-      ).to.be.revertedWith('Invalid signature');
+      ).to.be.revertedWithCustomError(prover, 'InvalidSignature');
     });
 
     it('should fail to update a batch with lower batch height', async () => {
@@ -249,7 +249,7 @@ describe('Secp256k1Prover', () => {
 
       await expect(
         prover.updateBatch(newBatch, signatures, [proofs[0]])
-      ).to.be.revertedWith('Invalid batch height');
+      ).to.be.revertedWithCustomError(prover, 'InvalidBatchHeight');
     });
 
     it('should fail to update a batch with lower block height', async () => {
@@ -267,7 +267,7 @@ describe('Secp256k1Prover', () => {
 
       await expect(
         prover.updateBatch(newBatch, signatures, [proofs[0]])
-      ).to.be.revertedWith('Invalid block height');
+      ).to.be.revertedWithCustomError(prover, 'InvalidBlockHeight');
     });
   });
 

@@ -177,9 +177,9 @@ describe('SedaCoreV1', () => {
 
       const pr1 = await core.postRequest(data.requests[0]);
 
-      await expect(core.postRequest(data.requests[0])).to.be.revertedWith(
-        'RequestHandler: Request already exists'
-      );
+      await expect(
+        core.postRequest(data.requests[0])
+      ).to.be.revertedWithCustomError(core, 'RequestAlreadyExists');
 
       expect(pr1)
         .to.emit(core, 'RequestPosted')

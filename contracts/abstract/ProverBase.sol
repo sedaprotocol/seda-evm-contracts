@@ -5,9 +5,15 @@ import {IProver} from "../interfaces/IProver.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 abstract contract ProverBase is IProver {
-    bytes1 internal constant RESULT_DOMAIN_SEPARATOR = 0x00;
-    
+    error InvalidBatchHeight();
+    error InvalidPublicKeyFormat();
+    error InvalidSignature();
+    error InvalidValidatorProof();
+    error MismatchedSignaturesAndProofs();
+
     event BatchUpdated(uint256 indexed batchHeight, bytes32 batchHash);
+
+    bytes1 internal constant RESULT_DOMAIN_SEPARATOR = 0x00;
 
     /// @inheritdoc IProver
     function updateBatch(

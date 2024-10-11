@@ -73,11 +73,12 @@ describe('RequestHandler', () => {
         deployRequestHandlerFixture
       );
 
+      const requestId = await handler.deriveRequestId.staticCall(requests[0]);
       await handler.postRequest(requests[0]);
 
-      await expect(handler.postRequest(requests[0])).to.be.revertedWith(
-        'RequestHandler: Request already exists'
-      );
+      await expect(handler.postRequest(requests[0]))
+        .to.be.revertedWithCustomError(handler, 'RequestAlreadyExists')
+        .withArgs(requestId);
     });
 
     it('should emit a RequestPosted event', async () => {

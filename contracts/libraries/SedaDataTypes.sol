@@ -6,7 +6,7 @@ pragma solidity ^0.8.9;
 /// @title SedaDataTypes Library
 /// @notice Contains data structures and utility functions for the SEDA protocol
 library SedaDataTypes {
-    string constant VERSION = "0.0.1";
+    string public constant VERSION = "0.0.1";
 
     /// @notice Input parameters for creating a data request
     struct RequestInputs {
@@ -81,8 +81,8 @@ library SedaDataTypes {
     /// @notice Represents a batch of data request results
     /// @dev This struct is used in the batch verification process
     struct Batch {
-        uint256 batchHeight;
-        uint256 blockHeight;
+        uint64 batchHeight;
+        uint64 blockHeight;
         bytes32 validatorRoot;
         bytes32 resultsRoot;
         bytes32 provingMetadata;

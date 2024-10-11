@@ -9,23 +9,22 @@ import {ResultHandlerBase} from "../abstract/ResultHandlerBase.sol";
 contract ResultHandler is ResultHandlerBase {
     mapping(bytes32 => SedaDataTypes.Result) public results;
 
-    constructor(address sedaProverAddress) ResultHandlerBase(sedaProverAddress) {}
+    constructor(
+        address sedaProverAddress
+    ) ResultHandlerBase(sedaProverAddress) {}
 
     /// @inheritdoc ResultHandlerBase
     function postResult(
         SedaDataTypes.Result calldata result,
         bytes32[] calldata proof
     ) public virtual override(ResultHandlerBase) {
-        require(
-            results[result.drId].drId == bytes32(0),
-            "ResultHandler: Result already posted"
-        );
-
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
-        require(
-            sedaProver.verifyResultProof(resultId, proof),
-            "ResultHandler: Invalid result proof"
-        );
+        if (results[result.drId].drId != bytes32(0)) {
+            revert ResultAlreadyPosted(resultId);
+        }
+        if (!sedaProver.verifyResultProof(resultId, proof)) {
+            revert InvalidResultProof(resultId);
+        }
 
         results[result.drId] = result;
 
@@ -35,7 +34,12 @@ contract ResultHandler is ResultHandlerBase {
     /// @inheritdoc ResultHandlerBase
     function getResult(
         bytes32 resultId
-    ) public view override(ResultHandlerBase) returns (SedaDataTypes.Result memory) {
+    )
+        public
+        view
+        override(ResultHandlerBase)
+        returns (SedaDataTypes.Result memory)
+    {
         return results[resultId];
     }
 
