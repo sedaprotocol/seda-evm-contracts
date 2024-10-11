@@ -8,7 +8,10 @@
     "clean": "rimraf artifacts cache typechain-types",
     "compile": "hardhat compile",
     "deploy:prover": "hardhat ignition deploy ignition/modules/SedaProver.ts",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "test:gas": "REPORT_GAS=true hardhat test",
+    "lint:sol": "solhint 'contracts/**/*.sol' --ignore-path .solhintignore",
+    "lint:sol:fix": "solhint 'contracts/**/*.sol' --fix --ignore-path .solhintignore"
   },
   "author": "",
   "license": "ISC",
@@ -19,7 +22,8 @@
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "hardhat": "^2.22.10",
     "dotenv": "^16.4.5",
-    "rimraf": "^6.0.1"
+    "rimraf": "^6.0.1",
+    "solhint": "^5.0.3"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.2"
