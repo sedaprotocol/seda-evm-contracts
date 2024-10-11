@@ -85,7 +85,7 @@ export function generateDataFixtures(length: number): {
     execInputs: '0x',
     tallyProgramId: ethers.ZeroHash,
     tallyInputs: '0x',
-    replicationFactor: 3,
+    replicationFactor: 1,
     consensusFilter: '0x00',
     gasPrice: '0',
     gasLimit: 1000000,
