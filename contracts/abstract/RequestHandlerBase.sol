@@ -5,10 +5,6 @@ import {IRequestHandler} from "../interfaces/IRequestHandler.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 abstract contract RequestHandlerBase is IRequestHandler {
-    error RequestAlreadyExists(bytes32);
-
-    event RequestPosted(bytes32 indexed requestId);
-
     /// @inheritdoc IRequestHandler
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs

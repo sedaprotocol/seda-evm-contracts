@@ -7,8 +7,12 @@ import {ResultHandlerBase} from "../abstract/ResultHandlerBase.sol";
 /// @title ResultHandler
 /// @notice Implements the ResultHandlerBase for managing Seda protocol results
 contract ResultHandler is ResultHandlerBase {
+    // Mapping of request IDs to Result structs
     mapping(bytes32 => SedaDataTypes.Result) public results;
 
+    /// @notice Initializes the ResultHandler contract
+    /// @dev Sets up the contract with the provided Seda prover address
+    /// @param sedaProverAddress The address of the Seda prover contract
     constructor(
         address sedaProverAddress
     ) ResultHandlerBase(sedaProverAddress) {}
@@ -17,10 +21,10 @@ contract ResultHandler is ResultHandlerBase {
     function postResult(
         SedaDataTypes.Result calldata result,
         bytes32[] calldata proof
-    ) public virtual override(ResultHandlerBase) {
+    ) public virtual override(ResultHandlerBase) returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (results[result.drId].drId != bytes32(0)) {
-            revert ResultAlreadyPosted(resultId);
+            revert ResultAlreadyExists(resultId);
         }
         if (!sedaProver.verifyResultProof(resultId, proof)) {
             revert InvalidResultProof(resultId);
@@ -29,18 +33,24 @@ contract ResultHandler is ResultHandlerBase {
         results[result.drId] = result;
 
         emit ResultPosted(resultId);
+        return resultId;
     }
 
     /// @inheritdoc ResultHandlerBase
     function getResult(
-        bytes32 resultId
+        bytes32 requestId
     )
         public
         view
         override(ResultHandlerBase)
         returns (SedaDataTypes.Result memory)
     {
-        return results[resultId];
+        SedaDataTypes.Result memory result = results[requestId];
+        if (bytes(result.version).length == 0) {
+            revert ResultNotFound(requestId);
+        }
+
+        return results[requestId];
     }
 
     /// @notice Derives a result ID from the given result

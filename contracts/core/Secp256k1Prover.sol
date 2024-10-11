@@ -17,11 +17,16 @@ contract Secp256k1Prover is ProverBase {
     error ConsensusNotReached();
     error InvalidBlockHeight();
 
+    // Latest validated batch for verifying new batches and results
     SedaDataTypes.Batch public currentBatch;
 
+    // The percentage of voting power required for consensus (66.666666%)
     uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
+    // Domain separator for Secp256k1 Merkle Tree leaves
     bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
 
+    /// @notice Initializes the contract with the first batch
+    /// @param initialBatch The initial batch data
     constructor(SedaDataTypes.Batch memory initialBatch) {
         currentBatch = initialBatch;
         emit BatchUpdated(

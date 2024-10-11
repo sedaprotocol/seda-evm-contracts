@@ -6,14 +6,11 @@ import {IProver} from "../interfaces/IProver.sol";
 import {IResultHandler} from "../interfaces/IResultHandler.sol";
 
 abstract contract ResultHandlerBase is IResultHandler {
-    error ResultAlreadyPosted(bytes32);
-    error InvalidResultProof(bytes32);
-
     IProver public sedaProver;
 
-    // Event emitted when a Result is posted
-    event ResultPosted(bytes32 indexed resultId);
-
+    /// @notice Initializes the ResultHandlerBase contract
+    /// @dev Sets the address of the SEDA Prover contract
+    /// @param sedaProverAddress The address of the SEDA Prover contract
     constructor(address sedaProverAddress) {
         sedaProver = IProver(sedaProverAddress);
     }
@@ -22,10 +19,10 @@ abstract contract ResultHandlerBase is IResultHandler {
     function postResult(
         SedaDataTypes.Result calldata result,
         bytes32[] calldata proof
-    ) external virtual override(IResultHandler);
+    ) external virtual override(IResultHandler) returns (bytes32);
 
     /// @inheritdoc IResultHandler
     function getResult(
-        bytes32 resultId
+        bytes32 requestId
     ) external view virtual override(IResultHandler) returns (SedaDataTypes.Result memory);
 }

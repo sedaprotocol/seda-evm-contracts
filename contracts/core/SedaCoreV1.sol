@@ -28,7 +28,6 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
         uint256 limit
     ) public view returns (bytes32[] memory) {
         uint256 totalRequests = pendingRequests.length;
-
         if (offset >= totalRequests) {
             return new bytes32[](0);
         }
@@ -37,7 +36,6 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
             ? totalRequests - offset
             : limit;
         bytes32[] memory requests = new bytes32[](actualLimit);
-
         for (uint256 i = 0; i < actualLimit; i++) {
             requests[i] = pendingRequests[offset + i];
         }
@@ -52,6 +50,7 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
     ) public override(RequestHandler) returns (bytes32) {
         bytes32 requestId = super.postRequest(inputs);
         _addRequest(requestId);
+
         return requestId;
     }
 
@@ -60,9 +59,11 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
     function postResult(
         SedaDataTypes.Result calldata result,
         bytes32[] calldata proof
-    ) public override(ResultHandler) {
-        super.postResult(result, proof);
+    ) public override(ResultHandler) returns (bytes32) {
+        bytes32 resultId = super.postResult(result, proof);
         _removeRequest(result.drId);
+
+        return resultId;
     }
 
     /// @notice Adds a request ID to the pendingRequests array
