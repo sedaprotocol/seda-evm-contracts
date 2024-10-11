@@ -16,6 +16,9 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 contract Secp256k1Prover is ProverBase {
     // Default consensus percentage (2/3)
     uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
+
+    bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
+
     // Current Batch
     SedaDataTypes.Batch public currentBatch;
 
@@ -68,7 +71,11 @@ contract Secp256k1Prover is ProverBase {
                 "Invalid validator proof"
             );
             require(
-                _verifySignature(batchId, signatures[i], validatorProofs[i].publicKey),
+                _verifySignature(
+                    batchId,
+                    signatures[i],
+                    validatorProofs[i].publicKey
+                ),
                 "Invalid signature"
             );
             votingPower += validatorProofs[i].votingPower;
@@ -87,12 +94,8 @@ contract Secp256k1Prover is ProverBase {
         bytes32 resultId,
         bytes32[] calldata merkleProof
     ) public view override returns (bool) {
-        return
-            MerkleProof.verify(
-                merkleProof,
-                currentBatch.resultsRoot,
-                resultId
-            );
+        bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
+        return MerkleProof.verify(merkleProof, currentBatch.resultsRoot, leaf);
     }
 
     /// @notice Verifies a validator proof
@@ -102,7 +105,7 @@ contract Secp256k1Prover is ProverBase {
         SedaDataTypes.ValidatorProof memory proof
     ) internal view returns (bool) {
         bytes32 leaf = keccak256(
-            abi.encodePacked("SECP256K1", proof.publicKey, proof.votingPower)
+            abi.encodePacked(SECP256K1_DOMAIN_SEPARATOR, proof.publicKey, proof.votingPower)
         );
         return
             MerkleProof.verify(

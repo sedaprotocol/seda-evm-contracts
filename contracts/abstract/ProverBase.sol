@@ -5,6 +5,8 @@ import {IProver} from "../interfaces/IProver.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 abstract contract ProverBase is IProver {
+    bytes1 internal constant RESULT_DOMAIN_SEPARATOR = 0x00;
+    
     event BatchUpdated(uint256 indexed batchHeight, bytes32 batchHash);
 
     /// @inheritdoc IProver
