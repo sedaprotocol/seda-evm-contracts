@@ -7,17 +7,16 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 abstract contract RequestHandlerBase is IRequestHandler {
     // Event emitted when a Request is posted
     event RequestPosted(
-        bytes32 indexed requestId,
-        SedaDataTypes.Request request
+        bytes32 indexed requestId
     );
 
     /// @inheritdoc IRequestHandler
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) external virtual override returns (bytes32);
+    ) external virtual override(IRequestHandler) returns (bytes32);
 
     /// @inheritdoc IRequestHandler
     function getRequest(
         bytes32 requestId
-    ) external view virtual override returns (SedaDataTypes.Request memory);
+    ) external view virtual override(IRequestHandler) returns (SedaDataTypes.Request memory);
 }

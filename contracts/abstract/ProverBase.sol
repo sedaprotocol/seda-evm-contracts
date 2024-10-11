@@ -12,11 +12,11 @@ abstract contract ProverBase is IProver {
         SedaDataTypes.Batch calldata newBatch,
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
-    ) public virtual override;
+    ) public virtual override(IProver);
 
     /// @inheritdoc IProver
     function verifyResultProof(
         bytes32 resultId,
         bytes32[] calldata merkleProof
-    ) public view virtual override returns (bool);
+    ) public view virtual override(IProver) returns (bool);
 }

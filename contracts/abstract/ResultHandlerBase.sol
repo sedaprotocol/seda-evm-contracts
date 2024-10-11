@@ -9,7 +9,7 @@ abstract contract ResultHandlerBase is IResultHandler {
     IProver public sedaProver;
 
     // Event emitted when a Result is posted
-    event ResultPosted(bytes32 indexed resultId, SedaDataTypes.Result result);
+    event ResultPosted(bytes32 indexed resultId);
 
     constructor(address sedaProverAddress) {
         sedaProver = IProver(sedaProverAddress);
@@ -19,10 +19,10 @@ abstract contract ResultHandlerBase is IResultHandler {
     function postResult(
         SedaDataTypes.Result calldata result,
         bytes32[] calldata proof
-    ) external virtual override;
+    ) external virtual override(IResultHandler);
 
     /// @inheritdoc IResultHandler
     function getResult(
         bytes32 resultId
-    ) external view virtual override returns (SedaDataTypes.Result memory);
+    ) external view virtual override(IResultHandler) returns (SedaDataTypes.Result memory);
 }

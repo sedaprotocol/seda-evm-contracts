@@ -12,11 +12,11 @@ contract RequestHandler is RequestHandlerBase {
     /// @inheritdoc RequestHandlerBase
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) public override virtual returns (bytes32) {
+    ) public virtual override(RequestHandlerBase) returns (bytes32) {
         bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
 
         require(
-            requests[requestId].execProgramId == bytes32(0),
+            bytes(requests[requestId].version).length == 0,
             "RequestHandler: Request already exists"
         );
 
@@ -33,14 +33,14 @@ contract RequestHandler is RequestHandlerBase {
             memo: inputs.memo
         });
 
-        emit RequestPosted(requestId, requests[requestId]);
+        emit RequestPosted(requestId);
         return requestId;
     }
 
     /// @inheritdoc RequestHandlerBase
     function getRequest(
         bytes32 requestId
-    ) external view override returns (SedaDataTypes.Request memory) {
+    ) external view override(RequestHandlerBase) returns (SedaDataTypes.Request memory) {
         return requests[requestId];
     }
 

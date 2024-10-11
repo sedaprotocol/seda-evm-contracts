@@ -15,7 +15,7 @@ contract ResultHandler is ResultHandlerBase {
     function postResult(
         SedaDataTypes.Result calldata result,
         bytes32[] calldata proof
-    ) public override virtual {
+    ) public virtual override(ResultHandlerBase) {
         require(
             results[result.drId].drId == bytes32(0),
             "ResultHandler: Result already posted"
@@ -29,13 +29,13 @@ contract ResultHandler is ResultHandlerBase {
 
         results[result.drId] = result;
 
-        emit ResultPosted(resultId, result);
+        emit ResultPosted(resultId);
     }
 
     /// @inheritdoc ResultHandlerBase
     function getResult(
         bytes32 resultId
-    ) public view override returns (SedaDataTypes.Result memory) {
+    ) public view override(ResultHandlerBase) returns (SedaDataTypes.Result memory) {
         return results[resultId];
     }
 
