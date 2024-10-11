@@ -2,6 +2,15 @@ import { ethers } from 'hardhat';
 
 import type { SedaDataTypes } from '../typechain-types/contracts/libraries/SedaDataTypes';
 
+export const SEDA_DATA_TYPES_VERSION = '0.0.1';
+
+const RESULT_DOMAIN_SEPARATOR = '0x00';
+const SECP256K1_DOMAIN_SEPARATOR = '0x01';
+
+function padBigIntToBytes(value: bigint, byteLength: number): string {
+  return ethers.zeroPadValue(ethers.toBeArray(value), byteLength);
+}
+
 export function generateNewBatchWithId() {
   const newBatch: SedaDataTypes.BatchStruct = {
     batchHeight: 1,
@@ -11,72 +20,63 @@ export function generateNewBatchWithId() {
     provingMetadata: ethers.keccak256(ethers.toUtf8Bytes('new proving data')),
   };
 
-  const newBatchId = ethers.keccak256(
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      ['uint256', 'uint256', 'bytes32', 'bytes32', 'bytes32'],
-      [
-        newBatch.batchHeight,
-        newBatch.blockHeight,
-        newBatch.validatorRoot,
-        newBatch.resultsRoot,
-        newBatch.provingMetadata,
-      ]
-    )
-  );
+  const newBatchId = deriveBatchId(newBatch);
   return { newBatchId, newBatch };
 }
 
-export function deriveRequestId(request: SedaDataTypes.RequestInputsStruct): string {
+export function deriveBatchId(batch: SedaDataTypes.BatchStruct): string {
+  return ethers.keccak256(
+    ethers.AbiCoder.defaultAbiCoder().encode(
+      ['uint256', 'uint256', 'bytes32', 'bytes32', 'bytes32'],
+      [
+        batch.batchHeight,
+        batch.blockHeight,
+        batch.validatorRoot,
+        batch.resultsRoot,
+        batch.provingMetadata,
+      ]
+    )
+  );
+}
+
+export function deriveRequestId(
+  request: SedaDataTypes.RequestInputsStruct
+): string {
   return ethers.keccak256(
     ethers.concat([
-      ethers.keccak256(ethers.toUtf8Bytes('0.0.1')), // Hash the version string
+      ethers.keccak256(ethers.toUtf8Bytes(SEDA_DATA_TYPES_VERSION)),
       request.execProgramId,
       ethers.keccak256(request.execInputs),
       request.tallyProgramId,
       ethers.keccak256(request.tallyInputs),
-      ethers.zeroPadValue(
-        ethers.toBeArray(BigInt(request.replicationFactor)),
-        2
-      ),
+      padBigIntToBytes(BigInt(request.replicationFactor), 2),
       ethers.keccak256(request.consensusFilter),
-      ethers.zeroPadValue(ethers.toBeArray(BigInt(request.gasPrice)), 16),
-      ethers.zeroPadValue(ethers.toBeArray(BigInt(request.gasLimit)), 8),
+      padBigIntToBytes(BigInt(request.gasPrice), 16),
+      padBigIntToBytes(BigInt(request.gasLimit), 8),
       ethers.keccak256(request.memo),
     ])
   );
 }
 
-export function deriveDataResultId(dataResult: SedaDataTypes.ResultStruct): string {
+export function deriveDataResultId(
+  dataResult: SedaDataTypes.ResultStruct
+): string {
   return ethers.keccak256(
     ethers.concat([
-      ethers.keccak256(ethers.toUtf8Bytes('0.0.1')), // Hash the version string
+      ethers.keccak256(ethers.toUtf8Bytes(SEDA_DATA_TYPES_VERSION)),
       dataResult.drId,
-      dataResult.consensus ? new Uint8Array([1]) : new Uint8Array([0]),
+      new Uint8Array([dataResult.consensus ? 1 : 0]),
       new Uint8Array([Number(dataResult.exitCode)]),
       ethers.keccak256(dataResult.result),
-      ethers.zeroPadValue(ethers.toBeArray(BigInt(dataResult.blockHeight)), 8),
-      ethers.zeroPadValue(ethers.toBeArray(BigInt(dataResult.gasUsed)), 8),
+      padBigIntToBytes(BigInt(dataResult.blockHeight), 8),
+      padBigIntToBytes(BigInt(dataResult.gasUsed), 8),
       ethers.keccak256(dataResult.paybackAddress),
       ethers.keccak256(dataResult.sedaPayload),
     ])
   );
 }
 
-export function generateResults(length: number): Array<SedaDataTypes.ResultStruct> {
-  return Array.from({ length }, (_, i) => ( {
-    version: '0.0.1',
-    drId: ethers.keccak256(ethers.toUtf8Bytes(`DR_${i}`)),
-    consensus: true,
-    exitCode: 0,
-    result: ethers.keccak256(ethers.toUtf8Bytes('SUCCESS')),
-    blockHeight: 0,
-    gasUsed: 0,
-    paybackAddress: ethers.ZeroAddress,
-    sedaPayload: ethers.ZeroHash,
-  }));
-}
-
-export function generateRequestsAndResults(length: number): {
+export function generateDataFixtures(length: number): {
   requests: SedaDataTypes.RequestInputsStruct[];
   results: SedaDataTypes.ResultStruct[];
 } {
@@ -92,11 +92,11 @@ export function generateRequestsAndResults(length: number): {
     memo: `0x${i.toString(16).padStart(2, '0')}`,
   }));
 
-  const results = Array.from({ length }, (_, i) => {
-    const drId = deriveRequestId(requests[i]);
+  const results = requests.map((request) => {
+    const drId = deriveRequestId(request);
     return {
-      version: '0.0.1',
-      drId: drId,
+      version: SEDA_DATA_TYPES_VERSION,
+      drId,
       consensus: true,
       exitCode: 0,
       result: ethers.keccak256(ethers.toUtf8Bytes('SUCCESS')),
@@ -107,8 +107,22 @@ export function generateRequestsAndResults(length: number): {
     };
   });
 
-  return {
-    requests,
-    results,
-  };
+  return { requests, results };
+}
+
+export function computeResultLeafHash(resultId: string): string {
+  return ethers.solidityPackedKeccak256(
+    ['bytes1', 'bytes32'],
+    [RESULT_DOMAIN_SEPARATOR, ethers.getBytes(resultId)]
+  );
+}
+
+export function computeValidatorLeafHash(
+  validator: string,
+  votingPower: number
+): string {
+  return ethers.solidityPackedKeccak256(
+    ['bytes1', 'address', 'uint32'],
+    [SECP256K1_DOMAIN_SEPARATOR, validator, votingPower]
+  );
 }
