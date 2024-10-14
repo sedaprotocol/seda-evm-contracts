@@ -11,8 +11,6 @@ abstract contract ProverBase is IProver {
     error InvalidValidatorProof();
     error MismatchedSignaturesAndProofs();
 
-    event BatchUpdated(uint256 indexed batchHeight, bytes32 batchHash);
-
     bytes1 internal constant RESULT_DOMAIN_SEPARATOR = 0x00;
 
     /// @inheritdoc IProver

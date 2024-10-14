@@ -6,6 +6,8 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title IProver Interface
 /// @notice Interface for the Prover contract in the Seda protocol
 interface IProver {
+    event BatchUpdated(uint256 indexed batchHeight, bytes32 batchHash);
+
     /// @notice Updates a batch with new data and validator proofs
     /// @param newBatch The new batch data to be updated
     /// @param signatures Array of signatures validating the new batch

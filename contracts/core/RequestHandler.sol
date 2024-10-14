@@ -50,6 +50,7 @@ contract RequestHandler is RequestHandlerBase {
         returns (SedaDataTypes.Request memory)
     {
         SedaDataTypes.Request memory request = requests[requestId];
+        // Version field is always set
         if (bytes(request.version).length == 0) {
             revert RequestNotFound(requestId);
         }
