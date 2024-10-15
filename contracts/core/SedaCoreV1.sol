@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 import {ResultHandler} from "./ResultHandler.sol";
 import {RequestHandler} from "./RequestHandler.sol";
@@ -9,18 +10,22 @@ import {RequestHandler} from "./RequestHandler.sol";
 /// @notice Core contract for the Seda protocol, managing requests and results
 /// @dev Implements ResultHandler and RequestHandler functionalities, and manages active requests
 contract SedaCoreV1 is RequestHandler, ResultHandler {
-    // Array to store request IDs for iteration
-    bytes32[] public pendingRequests;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    // Mapping to store the position of each request ID in the pendingRequests array
-    mapping(bytes32 => uint256) public requestIndex;
+    // Enumerable Set to store the request IDs that are pending
+    // `pendingRequests` keeps track of all active data requests that have been posted but not yet fulfilled.
+    // This set is used to manage the lifecycle of requests, allowing easy retrieval and status tracking.
+    // When a request is posted, it is added to `pendingRequests`.
+    // When a result is posted and the request is fulfilled, it is removed from `pendingRequests`
+    EnumerableSet.Bytes32Set private pendingRequests;
 
     /// @notice Initializes the SedaCoreV1 contract
     /// @param sedaProverAddress The address of the Seda prover contract
     constructor(address sedaProverAddress) ResultHandler(sedaProverAddress) {}
 
     /// @notice Retrieves a list of active requests
-    /// @dev This function is gas-intensive due to iteration over the pendingRequests array
+    /// @dev This function is gas-intensive due to iteration over the pendingRequests array.
+    /// Users should be cautious when using high `limit` values in production environments, as it can result in high gas consumption.
     /// @param offset The starting index in the pendingRequests array
     /// @param limit The maximum number of requests to return
     /// @return An array of SedaDataTypes.Request structs
@@ -28,7 +33,7 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
         uint256 offset,
         uint256 limit
     ) public view returns (SedaDataTypes.Request[] memory) {
-        uint256 totalRequests = pendingRequests.length;
+        uint256 totalRequests = pendingRequests.length();
         if (offset >= totalRequests) {
             return new SedaDataTypes.Request[](0);
         }
@@ -36,9 +41,11 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
         uint256 actualLimit = (offset + limit > totalRequests)
             ? totalRequests - offset
             : limit;
-        SedaDataTypes.Request[] memory results = new SedaDataTypes.Request[](actualLimit);
+        SedaDataTypes.Request[] memory results = new SedaDataTypes.Request[](
+            actualLimit
+        );
         for (uint256 i = 0; i < actualLimit; i++) {
-            bytes32 requestId = pendingRequests[offset + i];
+            bytes32 requestId = pendingRequests.at(offset + i); // Get request ID
             results[i] = requests[requestId];
         }
 
@@ -68,30 +75,19 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
         return resultId;
     }
 
-    /// @notice Adds a request ID to the pendingRequests array
+    /// @notice Adds a request ID to the pendingRequests set
+    /// @dev This function is internal to ensure that only the contract's internal logic can add requests,
+    /// preventing unauthorized additions and maintaining proper state management.
     /// @param requestId The ID of the request to add
     function _addRequest(bytes32 requestId) internal {
-        pendingRequests.push(requestId);
-        requestIndex[requestId] = pendingRequests.length; // Store the new length of the array
+        pendingRequests.add(requestId); // Add request ID to the set
     }
 
-    /// @notice Removes a request ID from the pendingRequests array if it exists
+    /// @notice Removes a request ID from the pendingRequests set if it exists
+    /// @dev This function is internal to ensure that only the contract's internal logic can remove requests,
+    /// maintaining proper state transitions and preventing unauthorized removals.
     /// @param requestId The ID of the request to remove
     function _removeRequest(bytes32 requestId) internal {
-        uint256 index = requestIndex[requestId];
-        if (index == 0) {
-            return; // Request ID doesn't exist, do nothing
-        }
-
-        uint256 lastIndex = pendingRequests.length;
-        bytes32 lastRequestId = pendingRequests[lastIndex - 1];
-
-        // Swap the request to remove with the last request in the array
-        pendingRequests[index - 1] = lastRequestId;
-        requestIndex[lastRequestId] = index; // Update the mapping for the swapped request
-
-        // Remove the last element
-        pendingRequests.pop();
-        delete requestIndex[requestId];
+        pendingRequests.remove(requestId); // Remove request ID from the set
     }
 }
