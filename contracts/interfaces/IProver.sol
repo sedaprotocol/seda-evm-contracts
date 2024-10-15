@@ -6,13 +6,13 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title IProver Interface
 /// @notice Interface for the Prover contract in the Seda protocol
 interface IProver {
-    event BatchUpdated(uint256 indexed batchHeight, bytes32 batchHash);
+    event BatchPosted(uint256 indexed batchHeight, bytes32 batchHash);
 
-    /// @notice Updates a batch with new data and validator proofs
-    /// @param newBatch The new batch data to be updated
+    /// @notice Posts a new batch with new data and validator proofs
+    /// @param newBatch The new batch data to be posted
     /// @param signatures Array of signatures validating the new batch
     /// @param validatorProofs Array of validator proofs, each containing validator data and a Merkle proof
-    function updateBatch(
+    function postBatch(
         SedaDataTypes.Batch calldata newBatch,
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs

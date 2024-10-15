@@ -14,7 +14,7 @@ abstract contract ProverBase is IProver {
     bytes1 internal constant RESULT_DOMAIN_SEPARATOR = 0x00;
 
     /// @inheritdoc IProver
-    function updateBatch(
+    function postBatch(
         SedaDataTypes.Batch calldata newBatch,
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs

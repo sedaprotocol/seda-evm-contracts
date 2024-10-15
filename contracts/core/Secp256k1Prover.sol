@@ -29,14 +29,14 @@ contract Secp256k1Prover is ProverBase {
     /// @param initialBatch The initial batch data
     constructor(SedaDataTypes.Batch memory initialBatch) {
         currentBatch = initialBatch;
-        emit BatchUpdated(
+        emit BatchPosted(
             initialBatch.batchHeight,
             SedaDataTypes.deriveBatchId(initialBatch)
         );
     }
 
     /// @inheritdoc ProverBase
-    /// @notice Updates the current batch with new data, ensuring validity through consensus
+    /// @notice Posts a new batch with new data, ensuring validity through consensus
     /// @dev Validates a new batch by checking:
     ///   1. Higher batch and block heights than the current batch
     ///   2. Matching number of signatures and validator proofs
@@ -46,7 +46,7 @@ contract Secp256k1Prover is ProverBase {
     /// @param newBatch The new batch data to be validated and set as current
     /// @param signatures Array of signatures from validators approving the new batch
     /// @param validatorProofs Array of validator proofs corresponding to the signatures
-    function updateBatch(
+    function postBatch(
         SedaDataTypes.Batch calldata newBatch,
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
@@ -90,7 +90,7 @@ contract Secp256k1Prover is ProverBase {
 
         // Update current batch
         currentBatch = newBatch;
-        emit BatchUpdated(newBatch.batchHeight, batchId);
+        emit BatchPosted(newBatch.batchHeight, batchId);
     }
 
     /// @inheritdoc ProverBase

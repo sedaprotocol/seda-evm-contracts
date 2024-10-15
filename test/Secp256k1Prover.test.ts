@@ -99,7 +99,7 @@ describe('Secp256k1Prover', () => {
     });
   });
 
-  describe('updateBatch', () => {
+  describe('postBatch', () => {
     it('should update a batch with 1 validator (75% voting power)', async () => {
       const {
         prover,
@@ -111,7 +111,7 @@ describe('Secp256k1Prover', () => {
       const signatures = [
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
-      await prover.updateBatch(newBatch, signatures, [proofs[0]]);
+      await prover.postBatch(newBatch, signatures, [proofs[0]]);
 
       const updatedBatch = await prover.currentBatch();
       expect(updatedBatch.batchHeight).to.equal(1);
@@ -131,7 +131,7 @@ describe('Secp256k1Prover', () => {
           .map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
       );
 
-      await prover.updateBatch(newBatch, signatures, proofs.slice(1));
+      await prover.postBatch(newBatch, signatures, proofs.slice(1));
 
       const updatedBatch = await prover.currentBatch();
       compareBatches(updatedBatch, newBatch);
@@ -149,8 +149,8 @@ describe('Secp256k1Prover', () => {
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
 
-      await expect(prover.updateBatch(newBatch, signatures, [proofs[0]]))
-        .to.emit(prover, 'BatchUpdated')
+      await expect(prover.postBatch(newBatch, signatures, [proofs[0]]))
+        .to.emit(prover, 'BatchPosted')
         .withArgs(newBatch.batchHeight, newBatchId);
 
       const updatedBatch = await prover.currentBatch();
@@ -170,7 +170,7 @@ describe('Secp256k1Prover', () => {
       ];
 
       await expect(
-        prover.updateBatch(newBatch, signatures, [proofs[1]])
+        prover.postBatch(newBatch, signatures, [proofs[1]])
       ).to.be.revertedWithCustomError(prover, 'ConsensusNotReached');
 
       const currentBatch = await prover.currentBatch();
@@ -190,7 +190,7 @@ describe('Secp256k1Prover', () => {
       ];
 
       await expect(
-        prover.updateBatch(newBatch, signatures, proofs)
+        prover.postBatch(newBatch, signatures, proofs)
       ).to.be.revertedWithCustomError(prover, 'MismatchedSignaturesAndProofs');
     });
 
@@ -213,7 +213,7 @@ describe('Secp256k1Prover', () => {
       ];
 
       await expect(
-        prover.updateBatch(newBatch, signatures, invalidProofs)
+        prover.postBatch(newBatch, signatures, invalidProofs)
       ).to.be.revertedWithCustomError(prover, 'InvalidValidatorProof');
     });
 
@@ -230,7 +230,7 @@ describe('Secp256k1Prover', () => {
       ];
 
       await expect(
-        prover.updateBatch(newBatch, signatures, [proofs[0]])
+        prover.postBatch(newBatch, signatures, [proofs[0]])
       ).to.be.revertedWithCustomError(prover, 'InvalidSignature');
     });
 
@@ -248,7 +248,7 @@ describe('Secp256k1Prover', () => {
       ];
 
       await expect(
-        prover.updateBatch(newBatch, signatures, [proofs[0]])
+        prover.postBatch(newBatch, signatures, [proofs[0]])
       ).to.be.revertedWithCustomError(prover, 'InvalidBatchHeight');
     });
 
@@ -266,7 +266,7 @@ describe('Secp256k1Prover', () => {
       ];
 
       await expect(
-        prover.updateBatch(newBatch, signatures, [proofs[0]])
+        prover.postBatch(newBatch, signatures, [proofs[0]])
       ).to.be.revertedWithCustomError(prover, 'InvalidBlockHeight');
     });
 
@@ -282,7 +282,7 @@ describe('Secp256k1Prover', () => {
         wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
       );
 
-      await prover.updateBatch(newBatch, signatures, proofs);
+      await prover.postBatch(newBatch, signatures, proofs);
 
       const updatedBatch = await prover.currentBatch();
       compareBatches(updatedBatch, newBatch);
@@ -311,7 +311,7 @@ describe('Secp256k1Prover', () => {
       const signatures = [
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
-      await prover.updateBatch(newBatch, signatures, [data.validatorProofs[0]]);
+      await prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]);
 
       // Verify a valid proof
       const resultId = resultIds[1];
@@ -341,7 +341,7 @@ describe('Secp256k1Prover', () => {
       const signatures = [
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
-      await prover.updateBatch(newBatch, signatures, [data.validatorProofs[0]]);
+      await prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]);
 
       // Verify a proof for the wrong result ID
       const resultId = resultIds[0];
