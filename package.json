@@ -6,12 +6,14 @@
     "clean": "rimraf artifacts cache typechain-types",
     "compile": "hardhat compile",
     "deploy:prover": "hardhat ignition deploy ignition/modules/SedaProver.ts",
-    "test": "hardhat test",
-    "test:gas": "REPORT_GAS=true hardhat test",
+    "gen:testvectors": "tsx scripts/generateTestVectors.ts",
+    "lint": "bun run lint:ts && bun run lint:sol",
+    "lint:sol": "solhint 'contracts/**/*.sol' --ignore-path .solhintignore",
+    "lint:sol:fix": "solhint 'contracts/**/*.sol' --fix --ignore-path .solhintignore",
     "lint:ts": "bunx biome check .",
     "lint:ts:fix": "bunx biome check --write .",
-    "lint:sol": "solhint 'contracts/**/*.sol' --ignore-path .solhintignore",
-    "lint:sol:fix": "solhint 'contracts/**/*.sol' --fix --ignore-path .solhintignore"
+    "test": "hardhat test",
+    "test:gas": "REPORT_GAS=true hardhat test"
   },
   "author": "",
   "license": "ISC",
