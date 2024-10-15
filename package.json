@@ -5,8 +5,8 @@
   "scripts": {
     "clean": "rimraf artifacts cache typechain-types",
     "compile": "hardhat compile",
-    "deploy:prover": "hardhat ignition deploy ignition/modules/SedaProver.ts",
-    "gen:testvectors": "tsx scripts/generateTestVectors.ts",
+    "deploy:core:permissioned": "hardhat ignition deploy ignition/modules/SedaCorePermissioned.ts",
+    "gen:testvectors": "bun scripts/generateTestVectors.ts",
     "lint": "bun run lint:ts && bun run lint:sol",
     "lint:sol": "solhint 'contracts/**/*.sol' --ignore-path .solhintignore",
     "lint:sol:fix": "solhint 'contracts/**/*.sol' --fix --ignore-path .solhintignore",
