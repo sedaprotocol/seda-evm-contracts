@@ -2,10 +2,12 @@
 pragma solidity ^0.8.9;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
-import {RequestHandlerBase} from "../abstract/RequestHandlerBase.sol";
+
 import {IResultHandler} from "../interfaces/IResultHandler.sol";
+import {RequestHandlerBase} from "../abstract/RequestHandlerBase.sol";
+import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title SedaCorePermissioned
 /// @notice Core contract for the Seda protocol with permissioned access, managing requests and results
@@ -16,6 +18,8 @@ contract SedaCorePermissioned is
     AccessControl,
     Pausable
 {
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
     // Constants
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -24,8 +28,7 @@ contract SedaCorePermissioned is
     uint16 public maxReplicationFactor;
     mapping(bytes32 => SedaDataTypes.Request) public requests;
     mapping(bytes32 => SedaDataTypes.Result) public results;
-    bytes32[] public pendingRequests;
-    mapping(bytes32 => uint256) public requestIndex;
+    EnumerableSet.Bytes32Set private pendingRequests;
 
     /// @notice Contract constructor
     /// @param relayers The initial list of relayer addresses to be granted the RELAYER_ROLE
@@ -133,27 +136,30 @@ contract SedaCorePermissioned is
     }
 
     /// @notice Retrieves a list of pending request IDs
-    /// @param offset The starting index in the pendingRequests array
+    /// @param offset The starting index in the pendingRequests set
     /// @param limit The maximum number of request IDs to return
     /// @return An array of pending request IDs
     function getPendingRequests(
         uint256 offset,
         uint256 limit
-    ) external view returns (bytes32[] memory) {
-        uint256 totalRequests = pendingRequests.length;
+    ) public view returns (SedaDataTypes.Request[] memory) {
+        uint256 totalRequests = pendingRequests.length();
         if (offset >= totalRequests) {
-            return new bytes32[](0);
+            return new SedaDataTypes.Request[](0);
         }
 
         uint256 actualLimit = (offset + limit > totalRequests)
             ? totalRequests - offset
             : limit;
-        bytes32[] memory requestIds = new bytes32[](actualLimit);
+        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](
+            actualLimit
+        );
         for (uint256 i = 0; i < actualLimit; i++) {
-            requestIds[i] = pendingRequests[offset + i];
+            bytes32 requestId = pendingRequests.at(offset + i); // Get request ID
+            queriedPendingRequests[i] = requests[requestId];
         }
 
-        return requestIds;
+        return queriedPendingRequests;
     }
 
     /// @notice Adds a relayer
@@ -178,30 +184,15 @@ contract SedaCorePermissioned is
         _unpause();
     }
 
-    /// @notice Adds a request ID to the pendingRequests array
+    /// @notice Adds a request ID to the pendingRequests set
     /// @param requestId The ID of the request to add
     function _addPendingRequest(bytes32 requestId) internal {
-        pendingRequests.push(requestId);
-        requestIndex[requestId] = pendingRequests.length;
+        pendingRequests.add(requestId);
     }
 
-    /// @notice Removes a request ID from the pendingRequests array if it exists
+    /// @notice Removes a request ID from the pendingRequests set if it exists
     /// @param requestId The ID of the request to remove
     function _removePendingRequest(bytes32 requestId) internal {
-        uint256 index = requestIndex[requestId];
-        if (index == 0) {
-            return; // Request ID doesn't exist, do nothing
-        }
-
-        uint256 lastIndex = pendingRequests.length - 1;
-        bytes32 lastRequestId = pendingRequests[lastIndex];
-
-        // Swap the request to remove with the last request in the array
-        pendingRequests[index - 1] = lastRequestId;
-        requestIndex[lastRequestId] = index; // Update the mapping for the swapped request
-
-        // Remove the last element
-        pendingRequests.pop();
-        delete requestIndex[requestId];
+        pendingRequests.remove(requestId);
     }
 }

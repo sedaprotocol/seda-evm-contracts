@@ -41,15 +41,15 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
         uint256 actualLimit = (offset + limit > totalRequests)
             ? totalRequests - offset
             : limit;
-        SedaDataTypes.Request[] memory results = new SedaDataTypes.Request[](
+        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](
             actualLimit
         );
         for (uint256 i = 0; i < actualLimit; i++) {
             bytes32 requestId = pendingRequests.at(offset + i); // Get request ID
-            results[i] = requests[requestId];
+            queriedPendingRequests[i] = requests[requestId];
         }
 
-        return results;
+        return queriedPendingRequests;
     }
 
     /// @inheritdoc RequestHandler
@@ -80,7 +80,7 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
     /// preventing unauthorized additions and maintaining proper state management.
     /// @param requestId The ID of the request to add
     function _addRequest(bytes32 requestId) internal {
-        pendingRequests.add(requestId); // Add request ID to the set
+        pendingRequests.add(requestId);
     }
 
     /// @notice Removes a request ID from the pendingRequests set if it exists
@@ -88,6 +88,6 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
     /// maintaining proper state transitions and preventing unauthorized removals.
     /// @param requestId The ID of the request to remove
     function _removeRequest(bytes32 requestId) internal {
-        pendingRequests.remove(requestId); // Remove request ID from the set
+        pendingRequests.remove(requestId);
     }
 }

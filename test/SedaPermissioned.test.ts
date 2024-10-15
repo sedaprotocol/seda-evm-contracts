@@ -2,7 +2,11 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { compareRequests, compareResults } from './helpers';
+import {
+  compareRequests,
+  compareResults,
+  convertToRequestInputs,
+} from './helpers';
 import {
   SEDA_DATA_TYPES_VERSION,
   deriveDataResultId,
@@ -56,7 +60,7 @@ describe('SedaCorePermissioned', () => {
     // Verify the request is in the pending list
     const pendingRequests = await core.getPendingRequests(0, 10);
     expect(pendingRequests).to.have.lengthOf(1);
-    expect(pendingRequests[0]).to.equal(expectedRequestId);
+    compareRequests(pendingRequests[0], requests[0]);
 
     // Verify the request details
     const storedRequest = await core.getRequest(expectedRequestId);
@@ -122,26 +126,32 @@ describe('SedaCorePermissioned', () => {
       requestIds.push(requestId);
     }
 
-    let pending = await core.getPendingRequests(0, 10);
-    expect(pending).to.have.lengthOf(5);
-    expect(Array.from(pending)).to.have.members(requestIds);
+    let pending = (await core.getPendingRequests(0, 10)).map(
+      convertToRequestInputs
+    );
+    expect(pending.length).to.equal(5);
+    expect(pending).to.deep.include.members(requests);
 
     await core.connect(signers.relayer).postResult(results[0], []);
     await core.connect(signers.relayer).postResult(results[2], []);
 
-    pending = await core.getPendingRequests(0, 10);
-    expect(pending).to.have.lengthOf(3);
-    expect(Array.from(pending)).to.have.members([
-      requestIds[1],
-      requestIds[3],
-      requestIds[4],
+    pending = (await core.getPendingRequests(0, 10)).map(
+      convertToRequestInputs
+    );
+    expect(pending.length).to.equal(3);
+    expect(pending).to.deep.include.members([
+      requests[1],
+      requests[3],
+      requests[4],
     ]);
 
     await core.connect(signers.relayer).postResult(results[4], []);
 
-    pending = await core.getPendingRequests(0, 10);
+    pending = (await core.getPendingRequests(0, 10)).map(
+      convertToRequestInputs
+    );
     expect(pending).to.have.lengthOf(2);
-    expect(Array.from(pending)).to.have.members([requestIds[1], requestIds[3]]);
+    expect(pending).to.deep.include.members([requests[1], requests[3]]);
   });
 
   it('should only allow relayer to post data result', async () => {
