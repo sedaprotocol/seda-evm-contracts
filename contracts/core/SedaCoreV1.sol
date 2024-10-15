@@ -19,28 +19,30 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
     /// @param sedaProverAddress The address of the Seda prover contract
     constructor(address sedaProverAddress) ResultHandler(sedaProverAddress) {}
 
-    /// @notice Retrieves a list of active request IDs
-    /// @param offset The starting index in the requestIds array
-    /// @param limit The maximum number of request IDs to return
-    /// @return An array of request IDs
+    /// @notice Retrieves a list of active requests
+    /// @dev This function is gas-intensive due to iteration over the pendingRequests array
+    /// @param offset The starting index in the pendingRequests array
+    /// @param limit The maximum number of requests to return
+    /// @return An array of SedaDataTypes.Request structs
     function getPendingRequests(
         uint256 offset,
         uint256 limit
-    ) public view returns (bytes32[] memory) {
+    ) public view returns (SedaDataTypes.Request[] memory) {
         uint256 totalRequests = pendingRequests.length;
         if (offset >= totalRequests) {
-            return new bytes32[](0);
+            return new SedaDataTypes.Request[](0);
         }
 
         uint256 actualLimit = (offset + limit > totalRequests)
             ? totalRequests - offset
             : limit;
-        bytes32[] memory requests = new bytes32[](actualLimit);
+        SedaDataTypes.Request[] memory results = new SedaDataTypes.Request[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
-            requests[i] = pendingRequests[offset + i];
+            bytes32 requestId = pendingRequests[offset + i];
+            results[i] = requests[requestId];
         }
 
-        return requests;
+        return results;
     }
 
     /// @inheritdoc RequestHandler

@@ -2,6 +2,25 @@ import { expect } from 'chai';
 
 import type { SedaDataTypes } from '../typechain-types/contracts/libraries/SedaDataTypes';
 
+// Function to convert an unformatted tuple result to a formatted struct
+export function convertToRequestInputs(
+  // biome-ignore lint/suspicious/noExplicitAny: Explicit any type is necessary to handle the unformatted tuple result
+  request: any
+): SedaDataTypes.RequestInputsStruct {
+  return {
+    //version: unformatted[0],
+    execProgramId: request[1],
+    execInputs: request[2],
+    tallyProgramId: request[3],
+    tallyInputs: request[4].toString(),
+    replicationFactor: Number(request[5]),
+    consensusFilter: request[6].toString(),
+    gasPrice: request[7],
+    gasLimit: request[8],
+    memo: request[9],
+  };
+}
+
 // Helper function to compare two requests
 export const compareRequests = (
   actual: SedaDataTypes.RequestInputsStruct,

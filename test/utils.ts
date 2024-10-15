@@ -87,8 +87,8 @@ export function generateDataFixtures(length: number): {
     tallyInputs: '0x',
     replicationFactor: 1,
     consensusFilter: '0x00',
-    gasPrice: '0',
-    gasLimit: 1000000,
+    gasPrice: 0n,
+    gasLimit: 1000000n,
     memo: `0x${i.toString(16).padStart(2, '0')}`,
   }));
 

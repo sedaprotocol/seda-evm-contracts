@@ -3,7 +3,11 @@ import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { compareResults } from './helpers';
+import {
+  compareRequests,
+  compareResults,
+  convertToRequestInputs,
+} from './helpers';
 import {
   computeResultLeafHash,
   deriveDataResultId,
@@ -94,15 +98,12 @@ describe('SedaCoreV1', () => {
     it('should post a request and then post its result', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
-      const requestId = await core.postRequest.staticCall(data.requests[0]);
       await core.postRequest(data.requests[0]);
-
       let requests = await core.getPendingRequests(0, 1);
       expect(requests.length).to.equal(1);
-      expect(requests[0]).to.equal(requestId);
+      compareRequests(requests[0], data.requests[0]);
 
       await core.postResult(data.results[0], data.proofs[0]);
-
       requests = await core.getPendingRequests(0, 1);
       expect(requests.length).to.equal(0);
 
@@ -147,9 +148,7 @@ describe('SedaCoreV1', () => {
         data.requests.length
       );
       for (let i = 0; i < data.requests.length; i++) {
-        expect(allRequests[i]).to.equal(
-          await deriveRequestId(data.requests[i])
-        );
+        compareRequests(allRequests[i], data.requests[i]);
       }
     });
 
@@ -209,40 +208,48 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Post 5 requests
-      const requestIds = [];
-      for (const request of data.requests.slice(0, 5)) {
-        const requestId = await core.postRequest.staticCall(request);
+      const requests = data.requests.slice(0, 5);
+      // const requestIds = [];
+      for (const request of requests) {
+        // const requestId = await core.postRequest.staticCall(request);
         await core.postRequest(request);
-        requestIds.push(requestId);
+        // requestIds.push(requestId);
       }
 
       // Verify that all requests are pending
-      let pending = await core.getPendingRequests(0, 10);
+      // (order should be preserved because there are no removals)
+      let pending = (await core.getPendingRequests(0, 10)).map(
+        convertToRequestInputs
+      );
       expect(pending.length).to.equal(5);
-      expect(Array.from(pending)).to.have.members(requestIds);
+      expect(pending).to.deep.include.members(requests);
 
       // Post results for first and third requests
       await core.postResult(data.results[0], data.proofs[0]);
       await core.postResult(data.results[2], data.proofs[2]);
 
       // Expected remaining pending requests
-      const expectedPending = [requestIds[1], requestIds[3], requestIds[4]];
+      const expectedPending = [requests[1], requests[3], requests[4]];
 
-      // Retrieve pending requests
-      pending = await core.getPendingRequests(0, 10);
+      // Retrieve pending requests (order is not preserved because there were 2 removals)
+      pending = (await core.getPendingRequests(0, 10)).map(
+        convertToRequestInputs
+      );
       expect(pending.length).to.equal(3);
-      expect(Array.from(pending)).to.have.members(expectedPending);
+      expect(pending).to.deep.include.members(expectedPending);
 
       // Post another result
       await core.postResult(data.results[4], data.proofs[4]);
 
       // Expected remaining pending requests
-      const finalPending = [requestIds[1], requestIds[3]];
+      const finalPending = [requests[1], requests[3]];
 
       // Retrieve final pending requests
-      pending = await core.getPendingRequests(0, 10);
+      pending = (await core.getPendingRequests(0, 10)).map(
+        convertToRequestInputs
+      );
       expect(pending.length).to.equal(2);
-      expect(Array.from(pending)).to.have.members(finalPending);
+      expect(pending).to.deep.include.members(finalPending);
     });
 
     it('should correctly handle removing the last request', async () => {
@@ -263,17 +270,11 @@ describe('SedaCoreV1', () => {
       // Verify that the last request has been removed
       pendingRequests = await core.getPendingRequests(0, 3);
       expect(pendingRequests.length).to.equal(2);
-      expect(pendingRequests).to.not.include(
-        await core.deriveRequestId(data.requests[2])
-      );
+      expect(pendingRequests).to.not.include(data.requests[2]);
 
       // Verify the remaining requests are still in order
-      expect(pendingRequests[0]).to.equal(
-        await core.deriveRequestId(data.requests[0])
-      );
-      expect(pendingRequests[1]).to.equal(
-        await core.deriveRequestId(data.requests[1])
-      );
+      compareRequests(pendingRequests[0], data.requests[0]);
+      compareRequests(pendingRequests[1], data.requests[1]);
     });
   });
 });
