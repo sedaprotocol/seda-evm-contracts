@@ -35,32 +35,6 @@ const resultLeaves = resultIds.map(computeResultLeafHash);
 // Create the Merkle tree
 const resultsTree = SimpleMerkleTree.of(resultLeaves);
 
-// Create a JSON object with the data
-const dataJSON = {
-  requests: requests.map((request, index) => ({
-    requestId: requestIds[index],
-    execProgramId: request.execProgramId,
-    execInputs: request.execInputs,
-    tallyProgramId: request.tallyProgramId,
-    tallyInputs: request.tallyInputs,
-    replicationFactor: request.replicationFactor,
-    consensusFilter: request.consensusFilter,
-    gasPrice: ethers.formatUnits(request.gasPrice, 'gwei'),
-    gasLimit: request.gasLimit.toString(),
-    memo: request.memo,
-  })),
-  results: results.map((result, index) => ({
-    resultId: resultIds[index],
-    ...result,
-  })),
-  tree: {
-    root: resultsTree.root,
-    leaves: resultLeaves,
-  },
-  root: resultsTree.root,
-};
-
-// Alternative way to generate wallets
 const wallets = Array.from({ length: 10 }, (_, i) => {
   const seed = ethers.id(`validator${i}`);
   return new ethers.Wallet(seed.slice(2, 66));
@@ -79,9 +53,30 @@ const validatorLeaves = validators.map((v) =>
 // Create the Merkle tree for validators
 const validatorTree = SimpleMerkleTree.of(validatorLeaves);
 
-const validatorJSON = {
+// Create a JSON object with the data
+const dataJSON = {
+  requests: requests.map((request, index) => ({
+    requestId: requestIds[index],
+    execProgramId: request.execProgramId,
+    execInputs: request.execInputs,
+    tallyProgramId: request.tallyProgramId,
+    tallyInputs: request.tallyInputs,
+    replicationFactor: request.replicationFactor,
+    consensusFilter: request.consensusFilter,
+    gasPrice: ethers.formatUnits(request.gasPrice, 'gwei'),
+    gasLimit: request.gasLimit.toString(),
+    memo: request.memo,
+  })),
+  results: results.map((result, index) => ({
+    resultId: resultIds[index],
+    ...result,
+  })),
+  resultsTree: {
+    root: resultsTree.root,
+    leaves: resultLeaves,
+  },
   validators: validators,
-  tree: {
+  validatorsTree: {
     root: validatorTree.root,
     leaves: validatorLeaves,
   },
@@ -93,5 +88,4 @@ const validatorJSON = {
 };
 
 // Write the JSON data to files
-writeJsonToFile('results.json', dataJSON);
-writeJsonToFile('validators.json', validatorJSON);
+writeJsonToFile('test-vectors.json', dataJSON);

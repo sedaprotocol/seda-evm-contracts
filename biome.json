@@ -61,7 +61,8 @@
       "coverage.json",
       "package-lock.json",
       "pnpm-lock.yaml",
-      "yarn.lock"
+      "yarn.lock",
+      "test-vectors.json"
     ]
   }
 }
