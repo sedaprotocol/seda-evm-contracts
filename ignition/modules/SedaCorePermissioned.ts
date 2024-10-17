@@ -3,7 +3,7 @@ import { buildModule } from '@nomicfoundation/hardhat-ignition/modules';
 const SedaProverModule = buildModule('SedaCorePermissioned', (m) => {
   // Constructor arguments
   const relayers = [m.getAccount(0)];
-  const maxReplicationFactor = m.getParameter('maxReplicationFactor', 1);
+  const maxReplicationFactor = m.getParameter('maxReplicationFactor');
 
   // Deploy SedaDataTypes library
   const dataTypesLib = m.library('SedaDataTypes');

@@ -1,0 +1,14 @@
+{
+  "SedaCoreV1": {
+    "initialBatch": {
+      "batchHeight": 0,
+      "blockHeight": 0,
+      "validatorRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "resultsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "provingMetadata": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "SedaCorePermissioned": {
+    "maxReplicationFactor": 1
+  }
+}
