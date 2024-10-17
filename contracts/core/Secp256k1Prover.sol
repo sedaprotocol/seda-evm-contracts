@@ -75,7 +75,7 @@ contract Secp256k1Prover is ProverBase {
                 !_verifySignature(
                     batchId,
                     signatures[i],
-                    validatorProofs[i].publicKey
+                    validatorProofs[i].identity
                 )
             ) {
                 revert InvalidSignature();
@@ -113,7 +113,7 @@ contract Secp256k1Prover is ProverBase {
         bytes32 leaf = keccak256(
             abi.encodePacked(
                 SECP256K1_DOMAIN_SEPARATOR,
-                proof.publicKey,
+                proof.identity,
                 proof.votingPower
             )
         );
@@ -128,20 +128,22 @@ contract Secp256k1Prover is ProverBase {
     /// @notice Verifies a signature against a message hash and public key
     /// @param messageHash The hash of the message that was signed
     /// @param signature The signature to verify
-    /// @param publicKey The Secp256k1 public key of the signer (uncompressed without prefix 0x04)
+    /// @param addressBytes The Secp256k1 address signer
     /// @return bool Returns true if the signature is valid, false otherwise
     function _verifySignature(
         bytes32 messageHash,
         bytes calldata signature,
-        bytes memory publicKey
+        bytes memory addressBytes
     ) internal pure returns (bool) {
-        // Ensure the public key is the correct length (64 bytes)
-        if (publicKey.length != 64) {
-            revert InvalidPublicKeyFormat(publicKey.length);
+        if (addressBytes.length != 20) {
+            revert InvalidPublicKeyFormat(addressBytes.length);
         }
-
         // If the public key is a full public key (64 or 65 bytes)
-        address signer = address(uint160(uint256(keccak256(publicKey))));
+        address signer;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            signer := mload(add(addressBytes, 20))
+        }
         return ECDSA.recover(messageHash, signature) == signer;
     }
 }

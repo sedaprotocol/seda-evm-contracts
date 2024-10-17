@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { ethers } from 'hardhat';
+
 import {
   computeResultLeafHash,
   computeValidatorLeafHash,
@@ -48,12 +49,10 @@ const dataJSON = {
     gasLimit: request.gasLimit.toString(),
     memo: request.memo,
   })),
-  requestIds: requestIds,
   results: results.map((result, index) => ({
     resultId: resultIds[index],
     ...result,
   })),
-  resultIds: resultIds,
   tree: {
     root: resultsTree.root,
     leaves: resultLeaves,
@@ -68,13 +67,13 @@ const wallets = Array.from({ length: 10 }, (_, i) => {
 });
 
 const validators = wallets.map((wallet, _index) => ({
-  public_key: wallet.address,
-  voting_power: 10_000_000,
+  identity: wallet.address,
+  votingPower: 10_000_000,
 }));
 
 // Create validator leaves for the Merkle tree
 const validatorLeaves = validators.map((v) =>
-  computeValidatorLeafHash(v.public_key, v.voting_power)
+  computeValidatorLeafHash(v.identity, v.votingPower)
 );
 
 // Create the Merkle tree for validators
@@ -89,6 +88,7 @@ const validatorJSON = {
   wallets: wallets.map((wallet) => ({
     address: wallet.address,
     privateKey: wallet.privateKey,
+    publicKey: wallet.signingKey.publicKey,
   })),
 };
 

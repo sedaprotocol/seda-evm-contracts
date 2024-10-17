@@ -20,10 +20,7 @@ describe('Secp256k1Prover', () => {
       return new ethers.Wallet(seed.slice(2, 66));
     });
 
-    // Remove the "uncompressed" prefix (0x04) from the public key
-    const validators = wallets.map(
-      (wallet) => `0x${wallet.signingKey.publicKey.slice(4)}`
-    );
+    const validators = wallets.map((wallet) => wallet.address);
     const votingPowers = Array(wallets.length).fill(1_000_000);
     votingPowers[0] = 75_000_000;
     votingPowers[1] = 25_000_000;
@@ -41,7 +38,7 @@ describe('Secp256k1Prover', () => {
     const validatorProofs = validators.map((validator, index) => {
       const proof = validatorTree.getProof(index);
       return {
-        publicKey: validator,
+        identity: validator,
         votingPower: votingPowers[index],
         merkleProof: proof,
       };

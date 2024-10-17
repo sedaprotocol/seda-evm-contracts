@@ -91,7 +91,7 @@ library SedaDataTypes {
     /// @notice Proof structure for validator verification
     /// @dev Used in the validator set verification process
     struct ValidatorProof {
-        bytes publicKey;
+        bytes identity;
         uint32 votingPower;
         bytes32[] merkleProof;
     }
