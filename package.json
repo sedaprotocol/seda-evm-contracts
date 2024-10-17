@@ -13,7 +13,7 @@
     "lint:ts": "bunx biome check .",
     "lint:ts:fix": "bunx biome check --write .",
     "test": "hardhat test",
-    "test:gas": "REPORT_GAS=true hardhat test"
+    "test:gas": "REPORT_GAS=true bun run test --grep \"[Gg]as.*[Aa]nalysis\""
   },
   "author": "",
   "license": "ISC",

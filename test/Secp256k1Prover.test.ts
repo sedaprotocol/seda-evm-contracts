@@ -338,4 +338,48 @@ describe('Secp256k1Prover', () => {
       expect(isValid).to.be.false;
     });
   });
+
+  describe('gas analysis', () => {
+    // Worst case scenario: 67 validators (each validator has 1%, but we only need 2/3 of them to update a batch)
+    it('67 validators', async () => {
+      const {
+        prover,
+        wallets,
+        data: { validatorProofs: proofs },
+      } = await deployProverFixture(67);
+
+      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const signatures = await Promise.all(
+        wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
+      );
+
+      await prover.postBatch(newBatch, signatures, proofs);
+
+      const updatedBatch = await prover.currentBatch();
+      compareBatches(updatedBatch, newBatch);
+    });
+
+    // Average case scenario: 20 validators (chains usually have 20 validators holding > 2/3 of the voting power)
+    it('20 validators', async () => {
+      const {
+        prover,
+        wallets,
+        data: { validatorProofs: proofs },
+      } = await deployProverFixture(100);
+
+      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const signatures = await Promise.all(
+        wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
+      );
+
+      await prover.postBatch(
+        newBatch,
+        signatures.slice(0, 20),
+        proofs.slice(0, 20)
+      );
+
+      const updatedBatch = await prover.currentBatch();
+      compareBatches(updatedBatch, newBatch);
+    });
+  });
 });
