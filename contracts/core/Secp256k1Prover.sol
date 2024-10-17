@@ -128,23 +128,20 @@ contract Secp256k1Prover is ProverBase {
     /// @notice Verifies a signature against a message hash and public key
     /// @param messageHash The hash of the message that was signed
     /// @param signature The signature to verify
-    /// @param publicKey The public key of the signer
+    /// @param publicKey The Secp256k1 public key of the signer (uncompressed without prefix 0x04)
     /// @return bool Returns true if the signature is valid, false otherwise
     function _verifySignature(
         bytes32 messageHash,
         bytes calldata signature,
-        bytes calldata publicKey
+        bytes memory publicKey
     ) internal pure returns (bool) {
-        if (publicKey.length == 20) {
-            // If the public key is already an address (20 bytes)
-            address signer = address(bytes20(publicKey));
-            return ECDSA.recover(messageHash, signature) == signer;
-        } else if (publicKey.length == 64 || publicKey.length == 65) {
-            // If the public key is a full public key (64 or 65 bytes)
-            address signer = address(uint160(uint256(keccak256(publicKey))));
-            return ECDSA.recover(messageHash, signature) == signer;
-        } else {
-            revert InvalidPublicKeyFormat();
+        // Ensure the public key is the correct length (64 bytes)
+        if (publicKey.length != 64) {
+            revert InvalidPublicKeyFormat(publicKey.length);
         }
+
+        // If the public key is a full public key (64 or 65 bytes)
+        address signer = address(uint160(uint256(keccak256(publicKey))));
+        return ECDSA.recover(messageHash, signature) == signer;
     }
 }

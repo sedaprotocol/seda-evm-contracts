@@ -14,36 +14,24 @@ import {
 import { compareBatches } from './helpers';
 
 describe('Secp256k1Prover', () => {
-  async function deployProverFixture() {
-    // Create wallets from the given private keys in decimal format
-    const privateKeysDec = [
-      '19364754072319078679550301671505040179035858431960811629105035944776133510182',
-      '68619014097430004589532778183241588574857414830238493947312392711069044622953',
-      '58435399889922176161880059996414222578881241975318132253376082907538942305313',
-      '64770165991303981399885074754284222540880024302873026014683458694822777728452',
-    ];
-
-    const wallets = privateKeysDec.map((pkDec) => {
-      const pkHex = BigInt(pkDec).toString(16).padStart(64, '0');
-      return new ethers.Wallet(`0x${pkHex}`);
+  async function deployProverFixture(length = 4) {
+    const wallets = Array.from({ length }, (_, i) => {
+      const seed = ethers.id(`validator${i}`);
+      return new ethers.Wallet(seed.slice(2, 66));
     });
 
-    // // Alternative way to generate wallets
-    // const wallets = Array.from({ length: 4 }, (_, i) => {
-    //     const seed = ethers.id(`validator${i}`);
-    //     return new ethers.Wallet(seed.slice(2, 66));
-    // });
+    // Remove the "uncompressed" prefix (0x04) from the public key
+    const validators = wallets.map(
+      (wallet) => `0x${wallet.signingKey.publicKey.slice(4)}`
+    );
+    const votingPowers = Array(wallets.length).fill(1_000_000);
+    votingPowers[0] = 75_000_000;
+    votingPowers[1] = 25_000_000;
+    votingPowers[2] = 25_000_000;
+    votingPowers[3] = 25_000_000;
 
-    const validators = wallets.map((wallet) => wallet.address);
-    const votingPowers = [75_000_000, 25_000_000, 25_000_000, 25_000_000];
-
-    const validatorLeaves = validators.map(
-      (validator, index) =>
-        computeValidatorLeafHash(validator, votingPowers[index])
-      // ethers.solidityPackedKeccak256(
-      //   ['string', 'address', 'uint32'],
-      //   ['SECP256K1', validator, votingPowers[index]]
-      // )
+    const validatorLeaves = validators.map((validator, index) =>
+      computeValidatorLeafHash(validator, votingPowers[index])
     );
 
     // Validators: Create merkle tree and proofs
@@ -270,7 +258,7 @@ describe('Secp256k1Prover', () => {
       ).to.be.revertedWithCustomError(prover, 'InvalidBlockHeight');
     });
 
-    it('should update a batch with all 4 validators (100% voting power)', async () => {
+    it('should update a batch with all validators (100% voting power)', async () => {
       const {
         prover,
         wallets,

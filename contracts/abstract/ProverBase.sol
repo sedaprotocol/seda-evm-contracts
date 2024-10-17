@@ -6,7 +6,7 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 abstract contract ProverBase is IProver {
     error InvalidBatchHeight();
-    error InvalidPublicKeyFormat();
+    error InvalidPublicKeyFormat(uint256);
     error InvalidSignature();
     error InvalidValidatorProof();
     error MismatchedSignaturesAndProofs();

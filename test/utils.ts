@@ -122,7 +122,7 @@ export function computeValidatorLeafHash(
   votingPower: number
 ): string {
   return ethers.solidityPackedKeccak256(
-    ['bytes1', 'address', 'uint32'],
+    ['bytes1', 'bytes', 'uint32'],
     [SECP256K1_DOMAIN_SEPARATOR, validator, votingPower]
   );
 }
