@@ -20,14 +20,14 @@ describe('Secp256k1Prover', () => {
       return new ethers.Wallet(seed.slice(2, 66));
     });
 
-    const validators = wallets.map((wallet) => wallet.address);
+    const validatorAddresses = wallets.map((wallet) => wallet.address);
     const votingPowers = Array(wallets.length).fill(1_000_000);
     votingPowers[0] = 75_000_000;
     votingPowers[1] = 25_000_000;
     votingPowers[2] = 25_000_000;
     votingPowers[3] = 25_000_000;
 
-    const validatorLeaves = validators.map((validator, index) =>
+    const validatorLeaves = validatorAddresses.map((validator, index) =>
       computeValidatorLeafHash(validator, votingPowers[index])
     );
 
@@ -35,10 +35,10 @@ describe('Secp256k1Prover', () => {
     const validatorTree = SimpleMerkleTree.of(validatorLeaves, {
       sortLeaves: true,
     });
-    const validatorProofs = validators.map((validator, index) => {
+    const validatorProofs = validatorAddresses.map((signer, index) => {
       const proof = validatorTree.getProof(index);
       return {
-        identity: validator,
+        signer,
         votingPower: votingPowers[index],
         merkleProof: proof,
       };
