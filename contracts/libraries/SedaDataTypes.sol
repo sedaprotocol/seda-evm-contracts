@@ -91,8 +91,8 @@ library SedaDataTypes {
     /// @notice Proof structure for validator verification
     /// @dev Used in the validator set verification process
     struct ValidatorProof {
-        address signer;
         uint32 votingPower;
+        address signer;
         bytes32[] merkleProof;
     }
 
