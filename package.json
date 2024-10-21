@@ -17,7 +17,7 @@
     "test:gas": "REPORT_GAS=true bun run test --grep \"[Gg]as.*[Aa]nalysis\""
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "",
   "devDependencies": {
     "@biomejs/biome": "^1.9.2",
