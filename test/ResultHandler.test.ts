@@ -179,4 +179,25 @@ describe('ResultHandler', () => {
         .withArgs(nonExistentId);
     });
   });
+
+  describe('verifyResult', () => {
+    it('should successfully verify a valid result', async () => {
+      const { handler, data } = await loadFixture(deployResultHandlerFixture);
+
+      const resultId = await handler.verifyResult(
+        data.results[0],
+        data.proofs[0]
+      );
+      expect(resultId).to.equal(deriveDataResultId(data.results[0]));
+    });
+
+    it('should fail to verify a result with invalid proof', async () => {
+      const { handler, data } = await loadFixture(deployResultHandlerFixture);
+
+      const resultId = deriveDataResultId(data.results[1]);
+      await expect(handler.verifyResult(data.results[1], data.proofs[0]))
+        .to.be.revertedWithCustomError(handler, 'InvalidResultProof')
+        .withArgs(resultId);
+    });
+  });
 });

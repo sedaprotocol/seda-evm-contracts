@@ -41,11 +41,12 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
         uint256 actualLimit = (offset + limit > totalRequests)
             ? totalRequests - offset
             : limit;
-        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](
-            actualLimit
-        );
+        SedaDataTypes.Request[]
+            memory queriedPendingRequests = new SedaDataTypes.Request[](
+                actualLimit
+            );
         for (uint256 i = 0; i < actualLimit; i++) {
-            bytes32 requestId = pendingRequests.at(offset + i); // Get request ID
+            bytes32 requestId = pendingRequests.at(offset + i);
             queriedPendingRequests[i] = requests[requestId];
         }
 

@@ -53,6 +53,22 @@ contract ResultHandler is ResultHandlerBase {
         return results[requestId];
     }
 
+    /// @notice Verifies the result without storing it
+    /// @param result The result to verify
+    /// @param proof The proof associated with the result
+    /// @return A boolean indicating whether the result is valid
+    function verifyResult(
+        SedaDataTypes.Result calldata result,
+        bytes32[] calldata proof
+    ) public view returns (bytes32) {
+        bytes32 resultId = SedaDataTypes.deriveResultId(result);
+        if (!sedaProver.verifyResultProof(resultId, proof)) {
+            revert InvalidResultProof(resultId);
+        }
+
+        return resultId;
+    }
+
     /// @notice Derives a result ID from the given result
     /// @param result The result data
     /// @return The derived result ID
