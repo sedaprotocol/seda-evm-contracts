@@ -83,7 +83,7 @@ library SedaDataTypes {
     struct Batch {
         uint64 batchHeight;
         uint64 blockHeight;
-        bytes32 validatorRoot;
+        bytes32 validatorsRoot;
         bytes32 resultsRoot;
         bytes32 provingMetadata;
     }
@@ -105,7 +105,7 @@ library SedaDataTypes {
                 abi.encode(
                     batch.batchHeight,
                     batch.blockHeight,
-                    batch.validatorRoot,
+                    batch.validatorsRoot,
                     batch.resultsRoot,
                     batch.provingMetadata
                 )

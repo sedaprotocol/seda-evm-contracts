@@ -24,6 +24,25 @@ export function generateNewBatchWithId() {
   return { newBatchId, newBatch };
 }
 
+export function generateBatchWithId(
+  batchHeight: number,
+  blockHeight: number,
+  validatorRoot: string,
+  resultsRoot: string,
+  provingMetadata: string
+) {
+  const newBatch: SedaDataTypes.BatchStruct = {
+    batchHeight,
+    blockHeight,
+    validatorRoot,
+    resultsRoot,
+    provingMetadata,
+  };
+
+  const newBatchId = deriveBatchId(newBatch);
+  return { newBatchId, newBatch };
+}
+
 export function deriveBatchId(batch: SedaDataTypes.BatchStruct): string {
   return ethers.keccak256(
     ethers.AbiCoder.defaultAbiCoder().encode(

@@ -15,20 +15,26 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 ///      - Sufficient voting power to meet the consensus threshold
 contract Secp256k1Prover is ProverBase {
     error ConsensusNotReached();
-    error InvalidBlockHeight();
 
-    // Latest validated batch for verifying new batches and results
-    SedaDataTypes.Batch public currentBatch;
-
-    // The percentage of voting power required for consensus (66.666666%)
+    // The percentage of voting power required for consensus (66.666666%, represented as parts per 100,000,000)
     uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
     // Domain separator for Secp256k1 Merkle Tree leaves
     bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
 
-    /// @notice Initializes the contract with the first batch
+    // Mapping to store results roots by their batch height
+    mapping(uint64 => bytes32) public batchToResultsRoot;
+
+    // The height of the last processed batch
+    uint64 public lastBatchHeight;
+    // The validator root of the last processed batch
+    bytes32 public lastValidatorsRoot;
+
+    /// @notice Initializes the contract with a predefined batch size
     /// @param initialBatch The initial batch data
     constructor(SedaDataTypes.Batch memory initialBatch) {
-        currentBatch = initialBatch;
+        batchToResultsRoot[initialBatch.batchHeight] = initialBatch.resultsRoot;
+        lastBatchHeight = initialBatch.batchHeight;
+        lastValidatorsRoot = initialBatch.validatorsRoot;
         emit BatchPosted(
             initialBatch.batchHeight,
             SedaDataTypes.deriveBatchId(initialBatch)
@@ -38,7 +44,7 @@ contract Secp256k1Prover is ProverBase {
     /// @inheritdoc ProverBase
     /// @notice Posts a new batch with new data, ensuring validity through consensus
     /// @dev Validates a new batch by checking:
-    ///   1. Higher batch and block heights than the current batch
+    ///   1. Higher batch height than the current batch
     ///   2. Matching number of signatures and validator proofs
     ///   3. Valid validator proofs (verified against the batch's validator root)
     ///   4. Valid signatures (signed by the corresponding validators)
@@ -52,11 +58,8 @@ contract Secp256k1Prover is ProverBase {
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
     ) public override {
         // Check that new batch invariants hold
-        if (newBatch.batchHeight <= currentBatch.batchHeight) {
+        if (newBatch.batchHeight <= lastBatchHeight) {
             revert InvalidBatchHeight();
-        }
-        if (newBatch.blockHeight <= currentBatch.blockHeight) {
-            revert InvalidBlockHeight();
         }
         if (signatures.length != validatorProofs.length) {
             revert MismatchedSignaturesAndProofs();
@@ -68,7 +71,9 @@ contract Secp256k1Prover is ProverBase {
         // Check that all validator proofs are valid and accumulate voting power
         uint64 votingPower = 0;
         for (uint256 i = 0; i < validatorProofs.length; i++) {
-            if (!_verifyValidatorProof(validatorProofs[i])) {
+            if (
+                !_verifyValidatorProof(validatorProofs[i], lastValidatorsRoot)
+            ) {
                 revert InvalidValidatorProof();
             }
             if (
@@ -89,27 +94,44 @@ contract Secp256k1Prover is ProverBase {
         }
 
         // Update current batch
-        currentBatch = newBatch;
+        lastBatchHeight = newBatch.batchHeight;
+        lastValidatorsRoot = newBatch.validatorsRoot;
+        batchToResultsRoot[newBatch.batchHeight] = newBatch.resultsRoot;
         emit BatchPosted(newBatch.batchHeight, batchId);
     }
 
     /// @inheritdoc ProverBase
+    /// @dev Verifies the result proof for the most recent batch.
     function verifyResultProof(
         bytes32 resultId,
         bytes32[] calldata merkleProof
     ) public view override returns (bool) {
+        return verifyResultProofForBatch(lastBatchHeight, resultId, merkleProof);
+    }
+
+    /// @notice Verifies a result proof for the given batchHeight
+    /// @param batchHeight The height of the batch to verify the result proof for
+    /// @param resultId The ID of the result to verify
+    /// @param merkleProof The merkle proof to verify
+    /// @return bool Returns true if the result proof is valid, false otherwise
+    function verifyResultProofForBatch(
+        uint64 batchHeight,
+        bytes32 resultId,
+        bytes32[] calldata merkleProof
+    ) public view returns (bool) {
         bytes32 leaf = keccak256(
             abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId)
         );
-        return MerkleProof.verify(merkleProof, currentBatch.resultsRoot, leaf);
+        return MerkleProof.verify(merkleProof, batchToResultsRoot[batchHeight], leaf);
     }
 
     /// @notice Verifies a validator proof
     /// @param proof The validator proof to verify
     /// @return bool Returns true if the proof is valid, false otherwise
     function _verifyValidatorProof(
-        SedaDataTypes.ValidatorProof memory proof
-    ) internal view returns (bool) {
+        SedaDataTypes.ValidatorProof memory proof,
+        bytes32 lastValidatorRoot
+    ) internal pure returns (bool) {
         bytes32 leaf = keccak256(
             abi.encodePacked(
                 SECP256K1_DOMAIN_SEPARATOR,
@@ -117,12 +139,8 @@ contract Secp256k1Prover is ProverBase {
                 proof.votingPower
             )
         );
-        return
-            MerkleProof.verify(
-                proof.merkleProof,
-                currentBatch.validatorRoot,
-                leaf
-            );
+
+        return MerkleProof.verify(proof.merkleProof, lastValidatorRoot, leaf);
     }
 
     /// @notice Verifies a signature against a message hash and its address
