@@ -1,18 +1,17 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
+import type { Wallet } from 'ethers';
 import { ethers } from 'hardhat';
+import type { SedaDataTypes } from '../typechain-types/contracts/libraries';
 import {
   computeResultLeafHash,
   computeValidatorLeafHash,
   deriveBatchId,
   deriveDataResultId,
-  generateBatchWithId,
   generateDataFixtures,
   generateNewBatchWithId,
 } from './utils';
-
-import { compareBatches } from './helpers';
 
 describe('Secp256k1Prover', () => {
   async function deployProverFixture(length = 4) {
@@ -33,11 +32,11 @@ describe('Secp256k1Prover', () => {
     );
 
     // Validators: Create merkle tree and proofs
-    const validatorTree = SimpleMerkleTree.of(validatorLeaves, {
+    const validatorsTree = SimpleMerkleTree.of(validatorLeaves, {
       sortLeaves: true,
     });
     const validatorProofs = validators.map((signer, index) => {
-      const proof = validatorTree.getProof(index);
+      const proof = validatorsTree.getProof(index);
       return {
         signer,
         votingPower: votingPowers[index],
@@ -62,9 +61,10 @@ describe('Secp256k1Prover', () => {
     const initialBatch = {
       batchHeight: 0,
       blockHeight: 0,
-      validatorRoot: validatorTree.root,
+      validatorsRoot: validatorsTree.root,
       resultsRoot: resultsTree.root,
-      provingMetadata: ethers.ZeroHash,
+      provingMetadata:
+        '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
     };
 
     const data = {
@@ -90,126 +90,130 @@ describe('Secp256k1Prover', () => {
     return { prover, wallets, data };
   }
 
+  // Add a helper function to generate and sign a new batch
+  async function generateAndSignBatch(
+    wallets: Wallet[],
+    initialBatch: SedaDataTypes.BatchStruct,
+    signerIndices = [0]
+  ) {
+    const { newBatchId, newBatch } = generateNewBatchWithId(initialBatch);
+    const signatures = await Promise.all(
+      signerIndices.map(
+        (i) => wallets[i].signingKey.sign(newBatchId).serialized
+      )
+    );
+    return { newBatchId, newBatch, signatures };
+  }
+
   describe('getCurrentBatch', () => {
     it('should return the current batch', async () => {
       const {
         prover,
         data: { initialBatch },
       } = await loadFixture(deployProverFixture);
-      const currentBatch = await prover.getCurrentBatch();
-      compareBatches(currentBatch, initialBatch);
+      const lastBatchHeight = await prover.lastBatchHeight();
+      expect(lastBatchHeight).to.equal(initialBatch.batchHeight);
     });
   });
 
   describe('postBatch', () => {
     it('should update a batch with 1 validator (75% voting power)', async () => {
-      const {
-        prover,
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+
+      const { newBatch, signatures } = await generateAndSignBatch(
         wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+        data.initialBatch,
+        [0]
+      );
+      await prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
-      const signatures = [
-        await wallets[0].signingKey.sign(newBatchId).serialized,
-      ];
-      await prover.postBatch(newBatch, signatures, [proofs[0]]);
-
-      const lastBatch = await prover.getCurrentBatch();
-      compareBatches(lastBatch, newBatch);
+      const lastBatchHeight = await prover.lastBatchHeight();
+      const lastValidatorsRoot = await prover.lastValidatorsRoot();
+      expect(lastBatchHeight).to.equal(newBatch.batchHeight);
+      expect(lastValidatorsRoot).to.equal(newBatch.validatorsRoot);
     });
 
     it('should update a batch with 3 validators (75% voting power)', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
-      const signatures = await Promise.all(
-        wallets
-          .slice(1)
-          .map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
+      const { newBatch, signatures } = await generateAndSignBatch(
+        wallets,
+        data.initialBatch,
+        [1, 2, 3]
+      );
+      await prover.postBatch(
+        newBatch,
+        signatures,
+        data.validatorProofs.slice(1)
       );
 
-      await prover.postBatch(newBatch, signatures, proofs.slice(1));
-
-      const lastBatch = await prover.getCurrentBatch();
-      compareBatches(lastBatch, newBatch);
+      const lastBatchHeight = await prover.lastBatchHeight();
+      const lastValidatorsRoot = await prover.lastValidatorsRoot();
+      expect(lastBatchHeight).to.equal(newBatch.batchHeight);
+      expect(lastValidatorsRoot).to.equal(newBatch.validatorsRoot);
     });
 
     it('should emit a BatchUpdated event', async () => {
-      const {
-        prover,
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+
+      const { newBatch, signatures, newBatchId } = await generateAndSignBatch(
         wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+        data.initialBatch,
+        [0]
+      );
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
-      const signatures = [
-        await wallets[0].signingKey.sign(newBatchId).serialized,
-      ];
-
-      await expect(prover.postBatch(newBatch, signatures, [proofs[0]]))
+      await expect(
+        prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])
+      )
         .to.emit(prover, 'BatchPosted')
         .withArgs(newBatch.batchHeight, newBatchId);
-
-      const lastBatchHeight = (await prover.getCurrentBatch()).batchHeight;
-      expect(lastBatchHeight).to.equal(newBatch.batchHeight);
     });
 
     it('should fail to update a batch with 1 validator (25% voting power)', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const { newBatchId, newBatch } = generateNewBatchWithId(
+        data.initialBatch
+      );
       const signatures = [
         await wallets[1].signingKey.sign(newBatchId).serialized,
       ];
 
       await expect(
-        prover.postBatch(newBatch, signatures, [proofs[1]])
+        prover.postBatch(newBatch, signatures, [data.validatorProofs[1]])
       ).to.be.revertedWithCustomError(prover, 'ConsensusNotReached');
 
-      const lastBatchHeight = (await prover.getCurrentBatch()).batchHeight;
-      expect(lastBatchHeight).to.equal(0);
+      const lastBatchHeight = await prover.lastBatchHeight();
+      expect(lastBatchHeight).to.equal(data.initialBatch.batchHeight);
     });
 
     it('should fail to update a batch if mismatching signatures and proofs', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const { newBatchId, newBatch } = generateNewBatchWithId(
+        data.initialBatch
+      );
       const signatures = [
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
 
       await expect(
-        prover.postBatch(newBatch, signatures, proofs)
+        prover.postBatch(newBatch, signatures, data.validatorProofs)
       ).to.be.revertedWithCustomError(prover, 'MismatchedSignaturesAndProofs');
     });
 
     it('should fail to update a batch if invalid merkle proof', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const { newBatchId, newBatch } = generateNewBatchWithId(
+        data.initialBatch
+      );
       const signatures = [
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
       const invalidProofs = [
         {
-          ...proofs[0],
+          ...data.validatorProofs[0],
           merkleProof: [],
         },
       ];
@@ -220,55 +224,49 @@ describe('Secp256k1Prover', () => {
     });
 
     it('should fail to update a batch if invalid signature', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const { newBatchId, newBatch } = generateNewBatchWithId(
+        data.initialBatch
+      );
       const signatures = [
         await wallets[1].signingKey.sign(newBatchId).serialized,
       ];
 
       await expect(
-        prover.postBatch(newBatch, signatures, [proofs[0]])
+        prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])
       ).to.be.revertedWithCustomError(prover, 'InvalidSignature');
     });
 
     it('should fail to update a batch with lower batch height', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const { newBatchId, newBatch } = generateNewBatchWithId(
+        data.initialBatch
+      );
       newBatch.batchHeight = 0; // Set to current batch height
       const signatures = [
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
 
       await expect(
-        prover.postBatch(newBatch, signatures, [proofs[0]])
+        prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])
       ).to.be.revertedWithCustomError(prover, 'InvalidBatchHeight');
     });
 
     it('should update a batch with all validators (100% voting power)', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await loadFixture(deployProverFixture);
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
+      const { newBatchId, newBatch } = generateNewBatchWithId(
+        data.initialBatch
+      );
       const signatures = await Promise.all(
         wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
       );
 
-      await prover.postBatch(newBatch, signatures, proofs);
+      await prover.postBatch(newBatch, signatures, data.validatorProofs);
 
-      const lastBatchHeight = (await prover.getCurrentBatch()).batchHeight;
+      const lastBatchHeight = await prover.lastBatchHeight();
       expect(lastBatchHeight).to.equal(newBatch.batchHeight);
     });
   });
@@ -279,28 +277,27 @@ describe('Secp256k1Prover', () => {
 
       // Generate a mock result and its proof
       const { results } = generateDataFixtures(10);
-      const resultIds = results.slice(-2).map(deriveDataResultId);
+      const resultIds = results.map(deriveDataResultId);
       const resultLeaves = resultIds.map(computeResultLeafHash);
       const resultsTree = SimpleMerkleTree.of(resultLeaves);
-      const newBatch = {
-        batchHeight: 1,
-        blockHeight: 1,
-        validatorRoot: ethers.ZeroHash,
-        resultsRoot: resultsTree.root,
-        provingMetadata: ethers.ZeroHash,
-      };
-      const newBatchId = deriveBatchId(newBatch);
 
-      // Update the batch
+      // Create a batch with results
+      const batch = {
+        ...data.initialBatch,
+        batchHeight: 1,
+        resultsRoot: resultsTree.root,
+      };
+      const newBatchId = deriveBatchId(batch);
       const signatures = [
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
-      await prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]);
+      await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
 
       // Verify a valid proof
-      const resultId = resultIds[1];
-      const proof = resultsTree.getProof(1);
-      const isValid = await prover.verifyResultProof(resultId, proof);
+      const isValid = await prover.verifyResultProof(
+        resultIds[1],
+        resultsTree.getProof(1)
+      );
       expect(isValid).to.be.true;
     });
 
@@ -309,179 +306,126 @@ describe('Secp256k1Prover', () => {
 
       // Generate a mock result and its proof
       const { results } = generateDataFixtures(10);
-      const resultIds = results.slice(-2).map(deriveDataResultId);
+      const resultIds = results.map(deriveDataResultId);
       const resultLeaves = resultIds.map(computeResultLeafHash);
       const resultsTree = SimpleMerkleTree.of(resultLeaves);
-      const newBatch = {
-        batchHeight: 1,
-        blockHeight: 1,
-        validatorRoot: ethers.ZeroHash,
-        resultsRoot: resultsTree.root,
-        provingMetadata: ethers.ZeroHash,
-      };
-      const newBatchId = deriveBatchId(newBatch);
 
-      // Update the batch
+      // Create a batch with results
+      const batch = {
+        ...data.initialBatch,
+        batchHeight: 1,
+        resultsRoot: resultsTree.root,
+      };
+      const newBatchId = deriveBatchId(batch);
       const signatures = [
         await wallets[0].signingKey.sign(newBatchId).serialized,
       ];
-      await prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]);
+      await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
 
-      // Verify a proof for the wrong result ID
-      const resultId = resultIds[0];
-      const proof = resultsTree.getProof(1);
-      const isValid = await prover.verifyResultProof(resultId, proof);
+      // Verify an invalid proof
+      const isValid = await prover.verifyResultProof(
+        resultIds[0],
+        resultsTree.getProof(1)
+      );
       expect(isValid).to.be.false;
     });
   });
 
-  describe('gas analysis', () => {
-    // Worst case scenario: 67 validators (each validator has 1%, but we only need 2/3 of them to update a batch)
-    it('67 validators', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await deployProverFixture(67);
+  describe('verifyResultProofForBatch', () => {
+    it('should verify a valid result proof', async () => {
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
-      const signatures = await Promise.all(
-        wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
+      // Generate a mock result and its proof
+      const { results } = generateDataFixtures(10);
+      const resultIds = results.map(deriveDataResultId);
+      const resultLeaves = resultIds.map(computeResultLeafHash);
+      const resultsTree = SimpleMerkleTree.of(resultLeaves);
+
+      // Create a batch with results
+      const batch = {
+        ...data.initialBatch,
+        batchHeight: 1,
+        resultsRoot: resultsTree.root,
+      };
+      const newBatchId = deriveBatchId(batch);
+      const signatures = [
+        await wallets[0].signingKey.sign(newBatchId).serialized,
+      ];
+      await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
+
+      // Verify a valid proof
+      const resultBatch = await prover.verifyResultProofForBatch(
+        batch.batchHeight,
+        resultIds[0],
+        resultsTree.getProof(0)
       );
-
-      await prover.postBatch(newBatch, signatures, proofs);
-
-      const lastBatchHeight = (await prover.getCurrentBatch()).batchHeight;
-      expect(lastBatchHeight).to.equal(newBatch.batchHeight);
+      expect(resultBatch).to.be.true;
     });
 
-    // Average case scenario: 20 validators (chains usually have 20 validators holding > 2/3 of the voting power)
-    it('20 validators', async () => {
-      const {
-        prover,
-        wallets,
-        data: { validatorProofs: proofs },
-      } = await deployProverFixture(100);
+    it('should reject an invalid result proof', async () => {
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId();
-      const signatures = await Promise.all(
-        wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
+      // Generate a mock result and its proof
+      const { results } = generateDataFixtures(10);
+      const resultIds = results.map(deriveDataResultId);
+      const resultLeaves = resultIds.map(computeResultLeafHash);
+      const resultsTree = SimpleMerkleTree.of(resultLeaves);
+
+      // Create a new batch with no results
+      const batch1 = {
+        ...data.initialBatch,
+        batchHeight: 1,
+        resultsRoot: ethers.ZeroHash,
+      };
+      const newBatchId1 = deriveBatchId(batch1);
+      const signatures1 = [
+        await wallets[0].signingKey.sign(newBatchId1).serialized,
+      ];
+      await prover.postBatch(batch1, signatures1, [data.validatorProofs[0]]);
+
+      // Verify an invalid proof
+      const resultBatch1 = await prover.verifyResultProofForBatch(
+        batch1.batchHeight,
+        resultIds[0],
+        resultsTree.getProof(0)
       );
-
-      await prover.postBatch(
-        newBatch,
-        signatures.slice(0, 20),
-        proofs.slice(0, 20)
-      );
-
-      const lastBatchHeight = (await prover.getCurrentBatch()).batchHeight;
-      expect(lastBatchHeight).to.equal(newBatch.batchHeight);
+      expect(resultBatch1).to.be.false;
     });
   });
 
-  describe('postBatch (multiple batch support)', () => {
-    it('should post several batches sequentially and verify result proofs', async () => {
-      const { prover, wallets, data } = await deployProverFixture(100);
+  describe('gas analysis', () => {
+    async function runGasAnalysis(validatorCount: number, batchCount: number) {
+      const { prover, wallets, data } =
+        await deployProverFixture(validatorCount);
 
-      // Helper function to post a batch
-      async function postBatch(batchHeight: number, resultsRoot: string) {
-        const { newBatchId, newBatch } = generateBatchWithId(
-          batchHeight,
-          batchHeight,
-          data.initialBatch.validatorRoot,
-          resultsRoot,
-          ethers.ZeroHash
-        );
-
+      for (let i = 1; i <= batchCount; i++) {
+        const newBatch = {
+          ...data.initialBatch,
+          batchHeight: i,
+          blockHeight: i,
+        };
+        const newBatchId = deriveBatchId(newBatch);
         const signatures = await Promise.all(
           wallets
-            .slice(0, 20)
+            .slice(0, validatorCount)
             .map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
         );
-
         await prover.postBatch(
           newBatch,
           signatures,
-          data.validatorProofs.slice(0, 20)
+          data.validatorProofs.slice(0, validatorCount)
         );
-
         const lastBatchHeight = await prover.lastBatchHeight();
-        expect(lastBatchHeight).to.be.equal(newBatch.batchHeight);
+        expect(lastBatchHeight).to.equal(newBatch.batchHeight);
       }
+    }
 
-      // Helper function to verify result proof for a range of batches
-      async function verifyResultProofRange(
-        start: number,
-        end: number,
-        expectedResult: boolean
-      ) {
-        for (let i = start; i <= end; i++) {
-          expect(
-            await prover.verifyResultProofForBatch(
-              i,
-              deriveDataResultId(data.results[0]),
-              data.resultProofs[0]
-            )
-          ).to.equal(expectedResult);
-        }
-      }
+    it.skip('67 validators', async () => {
+      await runGasAnalysis(67, 100);
+    });
 
-      // Post initial batches with valid results root
-      for (let i = 1; i <= 9; i++) {
-        await postBatch(i, data.initialBatch.resultsRoot);
-      }
-
-      // Verify result proof is valid
-      expect(
-        await prover.verifyResultProof(
-          deriveDataResultId(data.results[0]),
-          data.resultProofs[0]
-        )
-      ).to.be.true;
-
-      // Post batches with zero results root
-      for (let i = 10; i <= 15; i++) {
-        await postBatch(i, ethers.ZeroHash);
-      }
-
-      // Verify result proof is invalid because of new batches with zero results root
-      expect(
-        await prover.verifyResultProof(
-          deriveDataResultId(data.results[0]),
-          data.resultProofs[0]
-        )
-      ).to.be.false;
-
-      // Verify result proofs for different batch ranges
-      await verifyResultProofRange(0, 5, true);
-      await verifyResultProofRange(6, 9, true);
-      await verifyResultProofRange(10, 15, false);
-
-      // Post more batches with zero results root
-      for (let i = 16; i <= 100; i++) {
-        await postBatch(i, ethers.ZeroHash);
-      }
-
-      // Verify result proof is now invalid (too many batches with zero results root)
-      expect(
-        await prover.verifyResultProof(
-          deriveDataResultId(data.results[0]),
-          data.resultProofs[0]
-        )
-      ).to.be.false;
-
-      // Post final batches with valid results root
-      for (let i = 101; i <= 200; i++) {
-        await postBatch(i, data.initialBatch.resultsRoot);
-      }
-
-      // Final verification
-      expect(
-        await prover.verifyResultProof(
-          deriveDataResultId(data.results[0]),
-          data.resultProofs[0]
-        )
-      ).to.be.true;
+    it('20 validators', async () => {
+      await runGasAnalysis(20, 100);
     });
   });
 });

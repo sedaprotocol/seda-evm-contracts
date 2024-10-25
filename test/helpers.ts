@@ -52,15 +52,3 @@ export const compareResults = (
   expect(actual.paybackAddress).to.equal(expected.paybackAddress);
   expect(actual.sedaPayload).to.equal(expected.sedaPayload);
 };
-
-// Helper function to compare two batches
-export const compareBatches = (
-  actual: SedaDataTypes.BatchStruct,
-  expected: SedaDataTypes.BatchStruct
-) => {
-  expect(actual.batchHeight).to.equal(expected.batchHeight);
-  expect(actual.blockHeight).to.equal(expected.blockHeight);
-  expect(actual.validatorRoot).to.equal(expected.validatorRoot);
-  expect(actual.resultsRoot).to.equal(expected.resultsRoot);
-  expect(actual.provingMetadata).to.equal(expected.provingMetadata);
-};

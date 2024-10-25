@@ -11,32 +11,13 @@ function padBigIntToBytes(value: bigint, byteLength: number): string {
   return ethers.zeroPadValue(ethers.toBeArray(value), byteLength);
 }
 
-export function generateNewBatchWithId() {
-  const newBatch: SedaDataTypes.BatchStruct = {
-    batchHeight: 1,
-    blockHeight: 100,
-    validatorRoot: ethers.keccak256(ethers.toUtf8Bytes('new validator root')),
-    resultsRoot: ethers.keccak256(ethers.toUtf8Bytes('new results root')),
-    provingMetadata: ethers.keccak256(ethers.toUtf8Bytes('new proving data')),
-  };
-
-  const newBatchId = deriveBatchId(newBatch);
-  return { newBatchId, newBatch };
-}
-
-export function generateBatchWithId(
-  batchHeight: number,
-  blockHeight: number,
-  validatorRoot: string,
-  resultsRoot: string,
-  provingMetadata: string
+export function generateNewBatchWithId(
+  initialBatch: SedaDataTypes.BatchStruct
 ) {
   const newBatch: SedaDataTypes.BatchStruct = {
-    batchHeight,
-    blockHeight,
-    validatorRoot,
-    resultsRoot,
-    provingMetadata,
+    ...initialBatch,
+    batchHeight: BigInt(initialBatch.batchHeight) + BigInt(1),
+    blockHeight: BigInt(initialBatch.blockHeight) + BigInt(1),
   };
 
   const newBatchId = deriveBatchId(newBatch);
@@ -50,7 +31,7 @@ export function deriveBatchId(batch: SedaDataTypes.BatchStruct): string {
       [
         batch.batchHeight,
         batch.blockHeight,
-        batch.validatorRoot,
+        batch.validatorsRoot,
         batch.resultsRoot,
         batch.provingMetadata,
       ]

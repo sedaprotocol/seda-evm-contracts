@@ -31,7 +31,7 @@ describe('ResultHandler', () => {
     const initialBatch = {
       batchHeight: 0,
       blockHeight: 0,
-      validatorRoot: ethers.ZeroHash,
+      validatorsRoot: ethers.ZeroHash,
       resultsRoot: tree.root,
       provingMetadata: ethers.ZeroHash,
     };
