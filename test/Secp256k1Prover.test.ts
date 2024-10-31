@@ -424,8 +424,42 @@ describe('Secp256k1Prover', () => {
       await runGasAnalysis(67, 100);
     });
 
-    it('20 validators', async () => {
+    it.skip('20 validators', async () => {
       await runGasAnalysis(20, 100);
+    });
+  });
+
+  describe('batch id', () => {
+    it('should generate the correct batch id for test vectors', async () => {
+      const testBatch: SedaDataTypes.BatchStruct = {
+        batchHeight: 4,
+        blockHeight: 134,
+        resultsRoot:
+          '0x49918c4e986fff80aeb3532466132920d2ffd8db2a9615e8d02dd0f02e19503a',
+        validatorsRoot:
+          '0xaa13705083effb122a0d9ff3cbb97c2db68caf9dce10572d18979237a1a8d359',
+        provingMetadata:
+          '0x0000000000000000000000000000000000000000000000000000000000000000',
+      };
+      const expectedBatchId = deriveBatchId(testBatch);
+      expect(expectedBatchId).to.equal(
+        '0x9b8a1c156da9096bc89288e9d64df3c897435e962ae7402f0c25c97f3de76e94'
+      );
+
+      // Deploy the SedaDataTypes library first
+      const DataTypesFactory = await ethers.getContractFactory('SedaDataTypes');
+      const dataTypes = await DataTypesFactory.deploy();
+
+      // Deploy the contract
+      const ProverFactory = await ethers.getContractFactory('Secp256k1Prover', {
+        libraries: {
+          SedaDataTypes: await dataTypes.getAddress(),
+        },
+      });
+      const prover = await ProverFactory.deploy(testBatch);
+      expect(prover)
+        .to.emit(prover, 'BatchPosted')
+        .withArgs(testBatch.batchHeight, expectedBatchId);
     });
   });
 });

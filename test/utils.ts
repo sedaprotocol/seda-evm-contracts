@@ -26,16 +26,13 @@ export function generateNewBatchWithId(
 
 export function deriveBatchId(batch: SedaDataTypes.BatchStruct): string {
   return ethers.keccak256(
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      ['uint256', 'uint256', 'bytes32', 'bytes32', 'bytes32'],
-      [
-        batch.batchHeight,
-        batch.blockHeight,
-        batch.validatorsRoot,
-        batch.resultsRoot,
-        batch.provingMetadata,
-      ]
-    )
+    ethers.concat([
+      padBigIntToBytes(BigInt(batch.batchHeight), 8),
+      padBigIntToBytes(BigInt(batch.blockHeight), 8),
+      batch.validatorsRoot,
+      batch.resultsRoot,
+      batch.provingMetadata,
+    ])
   );
 }
 
