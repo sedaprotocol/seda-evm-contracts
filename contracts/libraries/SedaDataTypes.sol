@@ -102,9 +102,9 @@ library SedaDataTypes {
     function deriveBatchId(Batch calldata batch) public pure returns (bytes32) {
         return
             keccak256(
-                abi.encode(
-                    batch.batchHeight,
-                    batch.blockHeight,
+                bytes.concat(
+                    bytes8(batch.batchHeight),
+                    bytes8(batch.blockHeight), 
                     batch.validatorsRoot,
                     batch.resultsRoot,
                     batch.provingMetadata
