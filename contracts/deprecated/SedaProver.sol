@@ -102,7 +102,8 @@ contract SedaProver is AccessControl {
     error NotAdmin();
     error NotRelayer();
     error NotPendingAdmin();
-
+    error DataRequestAlreadyPosted(bytes32 id);
+    
     /// @param _admin The address of the initial admin of this contract
     /// @param _relayers The addresses of the initial relayers
     constructor(address _admin, address[] memory _relayers, uint16 _maxReplicationFactor) {
@@ -174,6 +175,10 @@ contract SedaProver is AccessControl {
             "Replication factor must be greater than zero and not exceed the allowed maximum"
         );
         bytes32 dr_id = generateDataRequestId(inputs);
+
+        if (data_request_pool[dr_id].replication_factor != 0) {
+            revert DataRequestAlreadyPosted(dr_id);
+        }
 
         SedaDataTypes.DataRequest memory data_request = SedaDataTypes.DataRequest(
             SedaDataTypes.VERSION,
