@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+// solhint-disable var-name-mixedcase
+// solhint-disable gas-custom-errors
+
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @dev DEPRECATED: This contract is no longer in use and has been replaced by a newer version.
 ///      Please refer to the latest documentation for the current implementation.
 library SedaDataTypes {
-    string constant VERSION = "0.0.1";
+    string public constant VERSION = "0.0.1";
 
     struct DataRequestInputs {
         /// Identifier of DR WASM binary
@@ -86,7 +89,7 @@ contract SedaProver is AccessControl {
     bytes32 public constant ADMIN = keccak256("ADMIN");
     address public admin;
     address public pendingAdmin;
-    uint16 internal maxReplicationFactor;
+    uint16 public maxReplicationFactor;
 
     // DR ID => DataRequest
     mapping(bytes32 => SedaDataTypes.DataRequest) public data_request_pool;
@@ -170,6 +173,7 @@ contract SedaProver is AccessControl {
 
     /// @notice Post a data request
     function postDataRequest(SedaDataTypes.DataRequestInputs calldata inputs) public returns (bytes32) {
+        //solhint-disable-next-line reason-string
         require(
             inputs.replication_factor > 0 && inputs.replication_factor <= maxReplicationFactor,
             "Replication factor must be greater than zero and not exceed the allowed maximum"
