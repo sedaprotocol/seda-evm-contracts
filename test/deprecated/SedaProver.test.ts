@@ -1,16 +1,13 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { SedaProver } from "../../typechain-types";
-
-describe("SedaProver", () => {
+describe('SedaProver', () => {
   const MAX_REPLICATION_FACTOR = 10;
 
   async function deployFixture() {
     const [admin, relayer, user] = await ethers.getSigners();
 
-    const SedaProver = await ethers.getContractFactory("SedaProver");
+    const SedaProver = await ethers.getContractFactory('SedaProver');
     const prover = await SedaProver.deploy(
       admin.address,
       [relayer.address],
@@ -21,45 +18,51 @@ describe("SedaProver", () => {
   }
 
   const createMockRequest = (index: number) => ({
-    dr_binary_id: "0x541d1faf3b6e167ea5369928a24a0019f4167ca430da20a271c5a7bc5fa2657a",
-    dr_inputs: "0x1234",
-    tally_binary_id: "0x541d1faf3b6e167ea5369928a24a0019f4167ca430da20a271c5a7bc5fa2657a",
-    tally_inputs: "0x5678",
+    dr_binary_id:
+      '0x541d1faf3b6e167ea5369928a24a0019f4167ca430da20a271c5a7bc5fa2657a',
+    dr_inputs: '0x1234',
+    tally_binary_id:
+      '0x541d1faf3b6e167ea5369928a24a0019f4167ca430da20a271c5a7bc5fa2657a',
+    tally_inputs: '0x5678',
     replication_factor: 1,
-    consensus_filter: "0x00",
+    consensus_filter: '0x00',
     gas_price: 1000n,
     gas_limit: 100000n,
-    memo: ethers.hexlify(ethers.toUtf8Bytes(index.toString()))
+    memo: `0x${index.toString(16).padStart(2, '0')}`,
   });
 
   const createMockResult = (drId: string) => ({
-    version: "0.0.1",
+    version: '0.0.1',
     dr_id: drId,
     consensus: true,
     exit_code: 0,
-    result: "0xabcd",
+    result: '0xabcd',
     block_height: 100n,
     gas_used: 50000n,
-    payback_address: "0x",
-    seda_payload: "0x"
+    payback_address: '0x',
+    seda_payload: '0x',
   });
 
-  describe("Data Request Operations", () => {
-
-    it("should allow anyone to post a data request", async () => {
+  describe('Data Request Operations', () => {
+    it('should allow anyone to post a data request', async () => {
       const { prover, user } = await loadFixture(deployFixture);
       const mockRequest = createMockRequest(0);
 
-      await expect(prover.connect(user).postDataRequest(mockRequest)).to.emit(prover, 'DataRequestPosted');
+      await expect(prover.connect(user).postDataRequest(mockRequest)).to.emit(
+        prover,
+        'DataRequestPosted'
+      );
 
       const drId = await prover.generateDataRequestId(mockRequest);
       const storedRequest = await prover.getDataRequest(drId);
       expect(storedRequest.dr_binary_id).to.equal(mockRequest.dr_binary_id);
     });
 
-    it("should handle multiple data requests and results", async () => {
+    it('should handle multiple data requests and results', async () => {
       const { prover, relayer } = await loadFixture(deployFixture);
-      const requests = Array.from({ length: 5 }, (_, index) => createMockRequest(index));
+      const requests = Array.from({ length: 5 }, (_, index) =>
+        createMockRequest(index)
+      );
 
       // Post all requests
       const drIds = await Promise.all(
@@ -84,15 +87,20 @@ describe("SedaProver", () => {
     });
   });
 
-  describe("Data Request Pool", () => {
-    it("should correctly maintain data requests in the pool", async () => {
+  describe('Data Request Pool', () => {
+    it('should correctly maintain data requests in the pool', async () => {
       const { prover, user } = await loadFixture(deployFixture);
-      const requests = Array.from({ length: 3 }, (_, index) => createMockRequest(index));
+      const requests = Array.from({ length: 3 }, (_, index) =>
+        createMockRequest(index)
+      );
 
       // Post requests
       await Promise.all(
         requests.map(async (req) => {
-          await expect(prover.connect(user).postDataRequest(req)).to.emit(prover, 'DataRequestPosted');
+          await expect(prover.connect(user).postDataRequest(req)).to.emit(
+            prover,
+            'DataRequestPosted'
+          );
         })
       );
 
@@ -116,6 +124,37 @@ describe("SedaProver", () => {
       poolSize = await prover.getDataRequestsFromPool(4, 5);
       expect(poolSize.length).to.equal(0);
     });
-  });
 
+    it('should maintain pool integrity when adding duplicated data request', async () => {
+      const { prover, relayer } = await loadFixture(deployFixture);
+      const requests = Array.from({ length: 3 }, (_, index) =>
+        createMockRequest(index)
+      );
+
+      // Post all requests and collect their IDs
+      const drIds = await Promise.all(
+        requests.map(async (req) => {
+          await prover.postDataRequest(req);
+          return prover.generateDataRequestId(req);
+        })
+      );
+      await expect(
+        prover.postDataRequest(requests[0])
+      ).to.be.revertedWithCustomError(prover, 'DataRequestAlreadyPosted');
+
+      // Verify initial pool state
+      let poolRequests = await prover.getDataRequestsFromPool(0, 10);
+      expect(poolRequests.length).to.equal(3);
+
+      const mockResult = createMockResult(drIds[0]);
+      await expect(prover.connect(relayer).postDataResult(mockResult)).to.emit(
+        prover,
+        'DataResultPosted'
+      );
+
+      // Verify initial pool state
+      poolRequests = await prover.getDataRequestsFromPool(0, 10);
+      expect(poolRequests.length).to.equal(2);
+    });
+  });
 });
