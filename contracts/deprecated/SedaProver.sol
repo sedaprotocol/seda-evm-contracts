@@ -252,6 +252,9 @@ contract SedaProver is AccessControl {
         view
         returns (SedaDataTypes.DataRequest[] memory)
     {
+        if (position > data_request_pool_array.length) {
+          return new SedaDataTypes.DataRequest[](0);
+        }
         // Compute the actual limit, taking into account the array size
         uint128 actualLimit = (position + limit > data_request_pool_array.length)
             ? (uint128(data_request_pool_array.length) - position)
