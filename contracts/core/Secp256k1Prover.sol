@@ -130,7 +130,7 @@ contract Secp256k1Prover is ProverBase {
     /// @return bool Returns true if the proof is valid, false otherwise
     function _verifyValidatorProof(
         SedaDataTypes.ValidatorProof memory proof,
-        bytes32 lastValidatorRoot
+        bytes32 validatorsRoot
     ) internal pure returns (bool) {
         bytes32 leaf = keccak256(
             abi.encodePacked(
@@ -140,7 +140,7 @@ contract Secp256k1Prover is ProverBase {
             )
         );
 
-        return MerkleProof.verify(proof.merkleProof, lastValidatorRoot, leaf);
+        return MerkleProof.verify(proof.merkleProof, validatorsRoot, leaf);
     }
 
     /// @notice Verifies a signature against a message hash and its address
