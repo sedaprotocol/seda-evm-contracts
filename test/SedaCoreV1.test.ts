@@ -75,7 +75,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Attempt to post a result without a corresponding request
-      await expect(core.postResult(data.results[0], data.proofs[0])).to.not.be.reverted;
+      await expect(core.postResult(data.results[0], 0, data.proofs[0])).to.not.be.reverted;
 
       // Verify that the result was posted
       const postedResult = await core.getResult(data.results[0].drId);
@@ -93,7 +93,7 @@ describe('SedaCoreV1', () => {
       expect(requests.length).to.equal(1);
       compareRequests(requests[0], data.requests[0]);
 
-      await core.postResult(data.results[0], data.proofs[0]);
+      await core.postResult(data.results[0], 0, data.proofs[0]);
       requests = await core.getPendingRequests(0, 1);
       expect(requests.length).to.equal(0);
 
@@ -112,7 +112,7 @@ describe('SedaCoreV1', () => {
       expect(requests.length).to.equal(data.requests.length);
 
       for (let i = 0; i < data.results.length / 2; i++) {
-        await core.postResult(data.results[i], data.proofs[i]);
+        await core.postResult(data.results[i], 0, data.proofs[i]);
       }
 
       requests = await core.getPendingRequests(0, 10);
@@ -180,7 +180,7 @@ describe('SedaCoreV1', () => {
         await core.postRequest(request);
       }
 
-      const gasUsed = await core.postResult.estimateGas(data.results[2], data.proofs[2]);
+      const gasUsed = await core.postResult.estimateGas(data.results[2], 0, data.proofs[2]);
 
       // This is rough esimate
       expect(gasUsed).to.be.lessThan(250000);
@@ -205,8 +205,8 @@ describe('SedaCoreV1', () => {
       expect(pending).to.deep.include.members(requests);
 
       // Post results for first and third requests
-      await core.postResult(data.results[0], data.proofs[0]);
-      await core.postResult(data.results[2], data.proofs[2]);
+      await core.postResult(data.results[0], 0, data.proofs[0]);
+      await core.postResult(data.results[2], 0, data.proofs[2]);
 
       // Expected remaining pending requests
       const expectedPending = [requests[1], requests[3], requests[4]];
@@ -217,7 +217,7 @@ describe('SedaCoreV1', () => {
       expect(pending).to.deep.include.members(expectedPending);
 
       // Post another result
-      await core.postResult(data.results[4], data.proofs[4]);
+      await core.postResult(data.results[4], 0, data.proofs[4]);
 
       // Expected remaining pending requests
       const finalPending = [requests[1], requests[3]];
@@ -241,7 +241,7 @@ describe('SedaCoreV1', () => {
       expect(pendingRequests.length).to.equal(3);
 
       // Post the result for the last request
-      await core.postResult(data.results[2], data.proofs[2]);
+      await core.postResult(data.results[2], 0, data.proofs[2]);
 
       // Verify that the last request has been removed
       pendingRequests = await core.getPendingRequests(0, 3);

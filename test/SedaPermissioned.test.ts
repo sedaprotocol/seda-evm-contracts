@@ -58,7 +58,7 @@ describe('SedaCorePermissioned', () => {
     const requestId = deriveRequestId(requests[0]);
     await expect(core.getResult(requestId)).to.be.revertedWithCustomError(core, 'ResultNotFound').withArgs(requestId);
 
-    await expect(core.connect(signers.relayer).postResult(results[0], []))
+    await expect(core.connect(signers.relayer).postResult(results[0], 0, []))
       .to.emit(core, 'ResultPosted')
       .withArgs(deriveDataResultId(results[0]));
 
@@ -108,14 +108,14 @@ describe('SedaCorePermissioned', () => {
     expect(pending.length).to.equal(5);
     expect(pending).to.deep.include.members(requests);
 
-    await core.connect(signers.relayer).postResult(results[0], []);
-    await core.connect(signers.relayer).postResult(results[2], []);
+    await core.connect(signers.relayer).postResult(results[0], 0, []);
+    await core.connect(signers.relayer).postResult(results[2], 0, []);
 
     pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
     expect(pending.length).to.equal(3);
     expect(pending).to.deep.include.members([requests[1], requests[3], requests[4]]);
 
-    await core.connect(signers.relayer).postResult(results[4], []);
+    await core.connect(signers.relayer).postResult(results[4], 0, []);
 
     pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
     expect(pending).to.have.lengthOf(2);
@@ -128,15 +128,15 @@ describe('SedaCorePermissioned', () => {
 
     await core.connect(signers.relayer).postRequest(requests[0]);
 
-    await expect(core.connect(signers.admin).postResult(results[0], [])).to.be.revertedWithCustomError(
+    await expect(core.connect(signers.admin).postResult(results[0], 0, [])).to.be.revertedWithCustomError(
       core,
       'AccessControlUnauthorizedAccount',
     );
-    await expect(core.connect(signers.anyone).postResult(results[0], [])).to.be.revertedWithCustomError(
+    await expect(core.connect(signers.anyone).postResult(results[0], 0, [])).to.be.revertedWithCustomError(
       core,
       'AccessControlUnauthorizedAccount',
     );
-    await expect(core.connect(signers.relayer).postResult(results[0], [])).to.not.be.reverted;
+    await expect(core.connect(signers.relayer).postResult(results[0], 0, [])).to.not.be.reverted;
   });
 
   it('should manage relayers correctly', async () => {
@@ -169,7 +169,7 @@ describe('SedaCorePermissioned', () => {
     const storedRequest = await core.getRequest(requestId);
     compareRequests(storedRequest, requests[0]);
 
-    await core.connect(signers.relayer).postResult(results[0], []);
+    await core.connect(signers.relayer).postResult(results[0], 0, []);
 
     const storedResult = await core.getResult(requestId);
     compareResults(storedResult, results[0]);
@@ -186,7 +186,7 @@ describe('SedaCorePermissioned', () => {
     const result = results[0];
 
     const requestId = await core.postRequest.staticCall(request);
-    const resultId = await core.connect(signers.relayer).postResult.staticCall(result, []);
+    const resultId = await core.connect(signers.relayer).postResult.staticCall(result, 0, []);
 
     expect(requestId).to.equal(deriveRequestId(request));
     expect(resultId).to.equal(deriveDataResultId(result));
@@ -285,11 +285,11 @@ describe('SedaCorePermissioned', () => {
     expect(pending).to.have.lengthOf(5);
 
     // Post results in a different order: 2, 4, 1, 3, 5
-    await core.connect(signers.relayer).postResult(results[1], []);
-    await core.connect(signers.relayer).postResult(results[3], []);
-    await core.connect(signers.relayer).postResult(results[0], []);
-    await core.connect(signers.relayer).postResult(results[2], []);
-    await core.connect(signers.relayer).postResult(results[4], []);
+    await core.connect(signers.relayer).postResult(results[1], 0, []);
+    await core.connect(signers.relayer).postResult(results[3], 0, []);
+    await core.connect(signers.relayer).postResult(results[0], 0, []);
+    await core.connect(signers.relayer).postResult(results[2], 0, []);
+    await core.connect(signers.relayer).postResult(results[4], 0, []);
 
     pending = await core.getPendingRequests(0, 10);
     expect(pending).to.be.empty;

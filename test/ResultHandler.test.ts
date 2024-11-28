@@ -78,7 +78,7 @@ describe('ResultHandler', () => {
     it('should successfully post a result and read it back', async () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
-      await handler.postResult(data.results[0], data.proofs[0]);
+      await handler.postResult(data.results[0], 0, data.proofs[0]);
 
       const postedResult = await handler.getResult(data.results[0].drId);
       compareResults(postedResult, data.results[0]);
@@ -87,10 +87,10 @@ describe('ResultHandler', () => {
     it('should fail to post a result that already exists', async () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
-      await handler.postResult(data.results[0], data.proofs[0]);
+      await handler.postResult(data.results[0], 0, data.proofs[0]);
 
       const resultId = deriveDataResultId(data.results[0]);
-      await expect(handler.postResult(data.results[0], data.proofs[0]))
+      await expect(handler.postResult(data.results[0], 0, data.proofs[0]))
         .to.be.revertedWithCustomError(handler, 'ResultAlreadyExists')
         .withArgs(resultId);
     });
@@ -99,7 +99,7 @@ describe('ResultHandler', () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
       const resultId = deriveDataResultId(data.results[1]);
-      await expect(handler.postResult(data.results[1], data.proofs[0]))
+      await expect(handler.postResult(data.results[1], 0, data.proofs[0]))
         .to.be.revertedWithCustomError(handler, 'InvalidResultProof')
         .withArgs(resultId);
     });
@@ -107,7 +107,7 @@ describe('ResultHandler', () => {
     it('should emit a ResultPosted event', async () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
-      await expect(handler.postResult(data.results[0], data.proofs[0]))
+      await expect(handler.postResult(data.results[0], 0, data.proofs[0]))
         .to.emit(handler, 'ResultPosted')
         .withArgs(deriveDataResultId(data.results[0]));
     });
@@ -116,7 +116,7 @@ describe('ResultHandler', () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
       const resultId = deriveDataResultId(data.results[0]);
-      await expect(handler.postResult(data.results[0], []))
+      await expect(handler.postResult(data.results[0], 0, []))
         .to.be.revertedWithCustomError(handler, 'InvalidResultProof')
         .withArgs(resultId);
     });
@@ -126,7 +126,7 @@ describe('ResultHandler', () => {
 
       const invalidResult = { ...data.results[0], drId: ethers.ZeroHash };
       const resultId = deriveDataResultId(invalidResult);
-      await expect(handler.postResult(invalidResult, data.proofs[0]))
+      await expect(handler.postResult(invalidResult, 0, data.proofs[0]))
         .to.be.revertedWithCustomError(handler, 'InvalidResultProof')
         .withArgs(resultId);
     });
@@ -145,7 +145,7 @@ describe('ResultHandler', () => {
     it('should return the correct result for an existing result id', async () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
-      await handler.postResult(data.results[0], data.proofs[0]);
+      await handler.postResult(data.results[0], 0, data.proofs[0]);
       const retrievedResult = await handler.getResult(data.results[0].drId);
 
       compareResults(retrievedResult, data.results[0]);
@@ -155,8 +155,8 @@ describe('ResultHandler', () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
       // Post two results
-      await handler.postResult(data.results[0], data.proofs[0]);
-      await handler.postResult(data.results[1], data.proofs[1]);
+      await handler.postResult(data.results[0], 0, data.proofs[0]);
+      await handler.postResult(data.results[1], 0, data.proofs[1]);
 
       // Retrieve and verify both results
       const retrievedResult1 = await handler.getResult(data.results[0].drId);
@@ -177,7 +177,7 @@ describe('ResultHandler', () => {
     it('should successfully verify a valid result', async () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
-      const resultId = await handler.verifyResult(data.results[0], data.proofs[0]);
+      const resultId = await handler.verifyResult(data.results[0], 0, data.proofs[0]);
       expect(resultId).to.equal(deriveDataResultId(data.results[0]));
     });
 
@@ -185,7 +185,7 @@ describe('ResultHandler', () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
       const resultId = deriveDataResultId(data.results[1]);
-      await expect(handler.verifyResult(data.results[1], data.proofs[0]))
+      await expect(handler.verifyResult(data.results[1], 0, data.proofs[0]))
         .to.be.revertedWithCustomError(handler, 'InvalidResultProof')
         .withArgs(resultId);
     });
