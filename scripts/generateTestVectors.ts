@@ -46,9 +46,7 @@ const validators = wallets.map((wallet, _index) => ({
 }));
 
 // Create validator leaves for the Merkle tree
-const validatorLeaves = validators.map((v) =>
-  computeValidatorLeafHash(v.identity, v.votingPower)
-);
+const validatorLeaves = validators.map((v) => computeValidatorLeafHash(v.identity, v.votingPower));
 
 // Create the Merkle tree for validators
 const validatorTree = SimpleMerkleTree.of(validatorLeaves);
@@ -59,12 +57,13 @@ const dataJSON = {
     requestId: requestIds[index],
     execProgramId: request.execProgramId,
     execInputs: request.execInputs,
+    execGasLimit: request.execGasLimit.toString(),
     tallyProgramId: request.tallyProgramId,
     tallyInputs: request.tallyInputs,
+    tallyGasLimit: request.tallyGasLimit.toString(),
     replicationFactor: request.replicationFactor,
     consensusFilter: request.consensusFilter,
     gasPrice: ethers.formatUnits(request.gasPrice, 'gwei'),
-    gasLimit: request.gasLimit.toString(),
     memo: request.memo,
   })),
   results: results.map((result, index) => ({

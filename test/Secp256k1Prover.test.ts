@@ -28,7 +28,7 @@ describe('Secp256k1Prover', () => {
     votingPowers[3] = 25_000_000;
 
     const validatorLeaves = validators.map((validator, index) =>
-      computeValidatorLeafHash(validator, votingPowers[index])
+      computeValidatorLeafHash(validator, votingPowers[index]),
     );
 
     // Validators: Create merkle tree and proofs
@@ -46,9 +46,7 @@ describe('Secp256k1Prover', () => {
 
     // Results: Create merkle tree and proofs
     const { requests, results } = generateDataFixtures(2);
-    const resultsLeaves = results
-      .map(deriveDataResultId)
-      .map(computeResultLeafHash);
+    const resultsLeaves = results.map(deriveDataResultId).map(computeResultLeafHash);
 
     const resultsTree = SimpleMerkleTree.of(resultsLeaves, {
       sortLeaves: true,
@@ -63,8 +61,7 @@ describe('Secp256k1Prover', () => {
       blockHeight: 0,
       validatorsRoot: validatorsTree.root,
       resultsRoot: resultsTree.root,
-      provingMetadata:
-        '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+      provingMetadata: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
     };
 
     const data = {
@@ -91,17 +88,9 @@ describe('Secp256k1Prover', () => {
   }
 
   // Add a helper function to generate and sign a new batch
-  async function generateAndSignBatch(
-    wallets: Wallet[],
-    initialBatch: SedaDataTypes.BatchStruct,
-    signerIndices = [0]
-  ) {
+  async function generateAndSignBatch(wallets: Wallet[], initialBatch: SedaDataTypes.BatchStruct, signerIndices = [0]) {
     const { newBatchId, newBatch } = generateNewBatchWithId(initialBatch);
-    const signatures = await Promise.all(
-      signerIndices.map(
-        (i) => wallets[i].signingKey.sign(newBatchId).serialized
-      )
-    );
+    const signatures = await Promise.all(signerIndices.map((i) => wallets[i].signingKey.sign(newBatchId).serialized));
     return { newBatchId, newBatch, signatures };
   }
 
@@ -120,11 +109,7 @@ describe('Secp256k1Prover', () => {
     it('should update a batch with 1 validator (75% voting power)', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatch, signatures } = await generateAndSignBatch(
-        wallets,
-        data.initialBatch,
-        [0]
-      );
+      const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
       await prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]);
 
       const lastBatchHeight = await prover.lastBatchHeight();
@@ -136,16 +121,8 @@ describe('Secp256k1Prover', () => {
     it('should update a batch with 3 validators (75% voting power)', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatch, signatures } = await generateAndSignBatch(
-        wallets,
-        data.initialBatch,
-        [1, 2, 3]
-      );
-      await prover.postBatch(
-        newBatch,
-        signatures,
-        data.validatorProofs.slice(1)
-      );
+      const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [1, 2, 3]);
+      await prover.postBatch(newBatch, signatures, data.validatorProofs.slice(1));
 
       const lastBatchHeight = await prover.lastBatchHeight();
       const lastValidatorsRoot = await prover.lastValidatorsRoot();
@@ -156,15 +133,9 @@ describe('Secp256k1Prover', () => {
     it('should emit a BatchUpdated event', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatch, signatures, newBatchId } = await generateAndSignBatch(
-        wallets,
-        data.initialBatch,
-        [0]
-      );
+      const { newBatch, signatures, newBatchId } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
 
-      await expect(
-        prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])
-      )
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]))
         .to.emit(prover, 'BatchPosted')
         .withArgs(newBatch.batchHeight, newBatchId);
     });
@@ -172,16 +143,13 @@ describe('Secp256k1Prover', () => {
     it('should fail to update a batch with 1 validator (25% voting power)', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId(
-        data.initialBatch
-      );
-      const signatures = [
-        await wallets[1].signingKey.sign(newBatchId).serialized,
-      ];
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
+      const signatures = [await wallets[1].signingKey.sign(newBatchId).serialized];
 
-      await expect(
-        prover.postBatch(newBatch, signatures, [data.validatorProofs[1]])
-      ).to.be.revertedWithCustomError(prover, 'ConsensusNotReached');
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[1]])).to.be.revertedWithCustomError(
+        prover,
+        'ConsensusNotReached',
+      );
 
       const lastBatchHeight = await prover.lastBatchHeight();
       expect(lastBatchHeight).to.equal(data.initialBatch.batchHeight);
@@ -190,27 +158,20 @@ describe('Secp256k1Prover', () => {
     it('should fail to update a batch if mismatching signatures and proofs', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId(
-        data.initialBatch
-      );
-      const signatures = [
-        await wallets[0].signingKey.sign(newBatchId).serialized,
-      ];
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
+      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
 
-      await expect(
-        prover.postBatch(newBatch, signatures, data.validatorProofs)
-      ).to.be.revertedWithCustomError(prover, 'MismatchedSignaturesAndProofs');
+      await expect(prover.postBatch(newBatch, signatures, data.validatorProofs)).to.be.revertedWithCustomError(
+        prover,
+        'MismatchedSignaturesAndProofs',
+      );
     });
 
     it('should fail to update a batch if invalid merkle proof', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId(
-        data.initialBatch
-      );
-      const signatures = [
-        await wallets[0].signingKey.sign(newBatchId).serialized,
-      ];
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
+      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
       const invalidProofs = [
         {
           ...data.validatorProofs[0],
@@ -218,51 +179,42 @@ describe('Secp256k1Prover', () => {
         },
       ];
 
-      await expect(
-        prover.postBatch(newBatch, signatures, invalidProofs)
-      ).to.be.revertedWithCustomError(prover, 'InvalidValidatorProof');
+      await expect(prover.postBatch(newBatch, signatures, invalidProofs)).to.be.revertedWithCustomError(
+        prover,
+        'InvalidValidatorProof',
+      );
     });
 
     it('should fail to update a batch if invalid signature', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId(
-        data.initialBatch
-      );
-      const signatures = [
-        await wallets[1].signingKey.sign(newBatchId).serialized,
-      ];
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
+      const signatures = [await wallets[1].signingKey.sign(newBatchId).serialized];
 
-      await expect(
-        prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])
-      ).to.be.revertedWithCustomError(prover, 'InvalidSignature');
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])).to.be.revertedWithCustomError(
+        prover,
+        'InvalidSignature',
+      );
     });
 
     it('should fail to update a batch with lower batch height', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId(
-        data.initialBatch
-      );
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
       newBatch.batchHeight = 0; // Set to current batch height
-      const signatures = [
-        await wallets[0].signingKey.sign(newBatchId).serialized,
-      ];
+      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
 
-      await expect(
-        prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])
-      ).to.be.revertedWithCustomError(prover, 'InvalidBatchHeight');
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])).to.be.revertedWithCustomError(
+        prover,
+        'InvalidBatchHeight',
+      );
     });
 
     it('should update a batch with all validators (100% voting power)', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatchId, newBatch } = generateNewBatchWithId(
-        data.initialBatch
-      );
-      const signatures = await Promise.all(
-        wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
-      );
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
+      const signatures = await Promise.all(wallets.map((wallet) => wallet.signingKey.sign(newBatchId).serialized));
 
       await prover.postBatch(newBatch, signatures, data.validatorProofs);
 
@@ -288,16 +240,11 @@ describe('Secp256k1Prover', () => {
         resultsRoot: resultsTree.root,
       };
       const newBatchId = deriveBatchId(batch);
-      const signatures = [
-        await wallets[0].signingKey.sign(newBatchId).serialized,
-      ];
+      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
       await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
 
       // Verify a valid proof
-      const isValid = await prover.verifyResultProof(
-        resultIds[1],
-        resultsTree.getProof(1)
-      );
+      const isValid = await prover.verifyResultProof(resultIds[1], resultsTree.getProof(1));
       expect(isValid).to.be.true;
     });
 
@@ -317,16 +264,11 @@ describe('Secp256k1Prover', () => {
         resultsRoot: resultsTree.root,
       };
       const newBatchId = deriveBatchId(batch);
-      const signatures = [
-        await wallets[0].signingKey.sign(newBatchId).serialized,
-      ];
+      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
       await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
 
       // Verify an invalid proof
-      const isValid = await prover.verifyResultProof(
-        resultIds[0],
-        resultsTree.getProof(1)
-      );
+      const isValid = await prover.verifyResultProof(resultIds[0], resultsTree.getProof(1));
       expect(isValid).to.be.false;
     });
   });
@@ -348,16 +290,14 @@ describe('Secp256k1Prover', () => {
         resultsRoot: resultsTree.root,
       };
       const newBatchId = deriveBatchId(batch);
-      const signatures = [
-        await wallets[0].signingKey.sign(newBatchId).serialized,
-      ];
+      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
       await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
 
       // Verify a valid proof
       const resultBatch = await prover.verifyResultProofForBatch(
         batch.batchHeight,
         resultIds[0],
-        resultsTree.getProof(0)
+        resultsTree.getProof(0),
       );
       expect(resultBatch).to.be.true;
     });
@@ -378,16 +318,14 @@ describe('Secp256k1Prover', () => {
         resultsRoot: ethers.ZeroHash,
       };
       const newBatchId1 = deriveBatchId(batch1);
-      const signatures1 = [
-        await wallets[0].signingKey.sign(newBatchId1).serialized,
-      ];
+      const signatures1 = [await wallets[0].signingKey.sign(newBatchId1).serialized];
       await prover.postBatch(batch1, signatures1, [data.validatorProofs[0]]);
 
       // Verify an invalid proof
       const resultBatch1 = await prover.verifyResultProofForBatch(
         batch1.batchHeight,
         resultIds[0],
-        resultsTree.getProof(0)
+        resultsTree.getProof(0),
       );
       expect(resultBatch1).to.be.false;
     });
@@ -395,8 +333,7 @@ describe('Secp256k1Prover', () => {
 
   describe('gas analysis', () => {
     async function runGasAnalysis(validatorCount: number, batchCount: number) {
-      const { prover, wallets, data } =
-        await deployProverFixture(validatorCount);
+      const { prover, wallets, data } = await deployProverFixture(validatorCount);
 
       for (let i = 1; i <= batchCount; i++) {
         const newBatch = {
@@ -406,25 +343,19 @@ describe('Secp256k1Prover', () => {
         };
         const newBatchId = deriveBatchId(newBatch);
         const signatures = await Promise.all(
-          wallets
-            .slice(0, validatorCount)
-            .map((wallet) => wallet.signingKey.sign(newBatchId).serialized)
+          wallets.slice(0, validatorCount).map((wallet) => wallet.signingKey.sign(newBatchId).serialized),
         );
-        await prover.postBatch(
-          newBatch,
-          signatures,
-          data.validatorProofs.slice(0, validatorCount)
-        );
+        await prover.postBatch(newBatch, signatures, data.validatorProofs.slice(0, validatorCount));
         const lastBatchHeight = await prover.lastBatchHeight();
         expect(lastBatchHeight).to.equal(newBatch.batchHeight);
       }
     }
 
-    it.skip('67 validators', async () => {
+    it('67 validators', async () => {
       await runGasAnalysis(67, 100);
     });
 
-    it.skip('20 validators', async () => {
+    it('20 validators', async () => {
       await runGasAnalysis(20, 100);
     });
   });
@@ -434,17 +365,12 @@ describe('Secp256k1Prover', () => {
       const testBatch: SedaDataTypes.BatchStruct = {
         batchHeight: 4,
         blockHeight: 134,
-        resultsRoot:
-          '0x49918c4e986fff80aeb3532466132920d2ffd8db2a9615e8d02dd0f02e19503a',
-        validatorsRoot:
-          '0xaa13705083effb122a0d9ff3cbb97c2db68caf9dce10572d18979237a1a8d359',
-        provingMetadata:
-          '0x0000000000000000000000000000000000000000000000000000000000000000',
+        resultsRoot: '0x49918c4e986fff80aeb3532466132920d2ffd8db2a9615e8d02dd0f02e19503a',
+        validatorsRoot: '0xaa13705083effb122a0d9ff3cbb97c2db68caf9dce10572d18979237a1a8d359',
+        provingMetadata: '0x0000000000000000000000000000000000000000000000000000000000000000',
       };
       const expectedBatchId = deriveBatchId(testBatch);
-      expect(expectedBatchId).to.equal(
-        '0x9b8a1c156da9096bc89288e9d64df3c897435e962ae7402f0c25c97f3de76e94'
-      );
+      expect(expectedBatchId).to.equal('0x9b8a1c156da9096bc89288e9d64df3c897435e962ae7402f0c25c97f3de76e94');
 
       // Deploy the SedaDataTypes library first
       const DataTypesFactory = await ethers.getContractFactory('SedaDataTypes');
@@ -457,9 +383,7 @@ describe('Secp256k1Prover', () => {
         },
       });
       const prover = await ProverFactory.deploy(testBatch);
-      expect(prover)
-        .to.emit(prover, 'BatchPosted')
-        .withArgs(testBatch.batchHeight, expectedBatchId);
+      expect(prover).to.emit(prover, 'BatchPosted').withArgs(testBatch.batchHeight, expectedBatchId);
     });
   });
 });

@@ -1,18 +1,8 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import {
-  compareRequests,
-  compareResults,
-  convertToRequestInputs,
-} from './helpers';
-import {
-  SEDA_DATA_TYPES_VERSION,
-  deriveDataResultId,
-  deriveRequestId,
-  generateDataFixtures,
-} from './utils';
+import { compareRequests, compareResults, convertToRequestInputs } from './helpers';
+import { deriveDataResultId, deriveRequestId, generateDataFixtures } from './utils';
 
 describe('SedaCorePermissioned', () => {
   const MAX_REPLICATION_FACTOR = 1;
@@ -28,16 +18,10 @@ describe('SedaCorePermissioned', () => {
     const SedaDataTypes = await ethers.getContractFactory('SedaDataTypes');
     const dataTypes = await SedaDataTypes.deploy();
 
-    const PermissionedFactory = await ethers.getContractFactory(
-      'SedaCorePermissioned',
-      {
-        libraries: { SedaDataTypes: await dataTypes.getAddress() },
-      }
-    );
-    const core = await PermissionedFactory.deploy(
-      [relayer.address],
-      MAX_REPLICATION_FACTOR
-    );
+    const PermissionedFactory = await ethers.getContractFactory('SedaCorePermissioned', {
+      libraries: { SedaDataTypes: await dataTypes.getAddress() },
+    });
+    const core = await PermissionedFactory.deploy([relayer.address], MAX_REPLICATION_FACTOR);
 
     return { core, signers };
   }
@@ -48,9 +32,7 @@ describe('SedaCorePermissioned', () => {
     const inputs = requests[0];
 
     // Check the request ID before posting
-    const expectedRequestId = await core
-      .connect(signers.anyone)
-      .postRequest.staticCall(inputs);
+    const expectedRequestId = await core.connect(signers.anyone).postRequest.staticCall(inputs);
 
     // Post the request
     await expect(core.connect(signers.anyone).postRequest(inputs))
@@ -74,9 +56,7 @@ describe('SedaCorePermissioned', () => {
     await core.connect(signers.relayer).postRequest(requests[0]);
 
     const requestId = deriveRequestId(requests[0]);
-    await expect(core.getResult(requestId))
-      .to.be.revertedWithCustomError(core, 'ResultNotFound')
-      .withArgs(requestId);
+    await expect(core.getResult(requestId)).to.be.revertedWithCustomError(core, 'ResultNotFound').withArgs(requestId);
 
     await expect(core.connect(signers.relayer).postResult(results[0], []))
       .to.emit(core, 'ResultPosted')
@@ -119,37 +99,25 @@ describe('SedaCorePermissioned', () => {
 
     const requestIds = [];
     for (const request of requests) {
-      const requestId = await core
-        .connect(signers.relayer)
-        .postRequest.staticCall(request);
+      const requestId = await core.connect(signers.relayer).postRequest.staticCall(request);
       await core.connect(signers.relayer).postRequest(request);
       requestIds.push(requestId);
     }
 
-    let pending = (await core.getPendingRequests(0, 10)).map(
-      convertToRequestInputs
-    );
+    let pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
     expect(pending.length).to.equal(5);
     expect(pending).to.deep.include.members(requests);
 
     await core.connect(signers.relayer).postResult(results[0], []);
     await core.connect(signers.relayer).postResult(results[2], []);
 
-    pending = (await core.getPendingRequests(0, 10)).map(
-      convertToRequestInputs
-    );
+    pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
     expect(pending.length).to.equal(3);
-    expect(pending).to.deep.include.members([
-      requests[1],
-      requests[3],
-      requests[4],
-    ]);
+    expect(pending).to.deep.include.members([requests[1], requests[3], requests[4]]);
 
     await core.connect(signers.relayer).postResult(results[4], []);
 
-    pending = (await core.getPendingRequests(0, 10)).map(
-      convertToRequestInputs
-    );
+    pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
     expect(pending).to.have.lengthOf(2);
     expect(pending).to.deep.include.members([requests[1], requests[3]]);
   });
@@ -160,45 +128,42 @@ describe('SedaCorePermissioned', () => {
 
     await core.connect(signers.relayer).postRequest(requests[0]);
 
-    await expect(
-      core.connect(signers.admin).postResult(results[0], [])
-    ).to.be.revertedWithCustomError(core, 'AccessControlUnauthorizedAccount');
-    await expect(
-      core.connect(signers.anyone).postResult(results[0], [])
-    ).to.be.revertedWithCustomError(core, 'AccessControlUnauthorizedAccount');
-    await expect(core.connect(signers.relayer).postResult(results[0], [])).to
-      .not.be.reverted;
+    await expect(core.connect(signers.admin).postResult(results[0], [])).to.be.revertedWithCustomError(
+      core,
+      'AccessControlUnauthorizedAccount',
+    );
+    await expect(core.connect(signers.anyone).postResult(results[0], [])).to.be.revertedWithCustomError(
+      core,
+      'AccessControlUnauthorizedAccount',
+    );
+    await expect(core.connect(signers.relayer).postResult(results[0], [])).to.not.be.reverted;
   });
 
   it('should manage relayers correctly', async () => {
     const { core, signers } = await loadFixture(deployFixture);
 
-    await expect(
-      core.connect(signers.anyone).addRelayer(signers.anyone.address)
-    ).to.be.revertedWithCustomError(core, 'AccessControlUnauthorizedAccount');
+    await expect(core.connect(signers.anyone).addRelayer(signers.anyone.address)).to.be.revertedWithCustomError(
+      core,
+      'AccessControlUnauthorizedAccount',
+    );
 
     await core.connect(signers.admin).addRelayer(signers.anyone.address);
-    expect(
-      await core.hasRole(await core.RELAYER_ROLE(), signers.anyone.address)
-    ).to.be.true;
+    expect(await core.hasRole(await core.RELAYER_ROLE(), signers.anyone.address)).to.be.true;
 
-    await expect(
-      core.connect(signers.anyone).removeRelayer(signers.anyone.address)
-    ).to.be.revertedWithCustomError(core, 'AccessControlUnauthorizedAccount');
+    await expect(core.connect(signers.anyone).removeRelayer(signers.anyone.address)).to.be.revertedWithCustomError(
+      core,
+      'AccessControlUnauthorizedAccount',
+    );
 
     await core.connect(signers.admin).removeRelayer(signers.anyone.address);
-    expect(
-      await core.hasRole(await core.RELAYER_ROLE(), signers.anyone.address)
-    ).to.be.false;
+    expect(await core.hasRole(await core.RELAYER_ROLE(), signers.anyone.address)).to.be.false;
   });
 
   it('should get request and result data correctly', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(1);
 
-    const requestId = await core
-      .connect(signers.relayer)
-      .postRequest.staticCall(requests[0]);
+    const requestId = await core.connect(signers.relayer).postRequest.staticCall(requests[0]);
     await core.connect(signers.relayer).postRequest(requests[0]);
 
     const storedRequest = await core.getRequest(requestId);
@@ -210,14 +175,8 @@ describe('SedaCorePermissioned', () => {
     compareResults(storedResult, results[0]);
 
     const nonExistentId = ethers.randomBytes(32);
-    await expect(core.getRequest(nonExistentId)).to.be.revertedWithCustomError(
-      core,
-      'RequestNotFound'
-    );
-    await expect(core.getResult(nonExistentId)).to.be.revertedWithCustomError(
-      core,
-      'ResultNotFound'
-    );
+    await expect(core.getRequest(nonExistentId)).to.be.revertedWithCustomError(core, 'RequestNotFound');
+    await expect(core.getResult(nonExistentId)).to.be.revertedWithCustomError(core, 'ResultNotFound');
   });
 
   it('should generate correct request and result IDs', async () => {
@@ -227,9 +186,7 @@ describe('SedaCorePermissioned', () => {
     const result = results[0];
 
     const requestId = await core.postRequest.staticCall(request);
-    const resultId = await core
-      .connect(signers.relayer)
-      .postResult.staticCall(result, []);
+    const resultId = await core.connect(signers.relayer).postResult.staticCall(result, []);
 
     expect(requestId).to.equal(deriveRequestId(request));
     expect(resultId).to.equal(deriveDataResultId(result));
@@ -243,13 +200,15 @@ describe('SedaCorePermissioned', () => {
       ...requests[0],
       replicationFactor: MAX_REPLICATION_FACTOR + 1,
     };
-    await expect(
-      core.connect(signers.relayer).postRequest(invalidRequest1)
-    ).to.be.revertedWithCustomError(core, 'InvalidReplicationFactor');
+    await expect(core.connect(signers.relayer).postRequest(invalidRequest1)).to.be.revertedWithCustomError(
+      core,
+      'InvalidReplicationFactor',
+    );
     const invalidRequest2 = { ...requests[0], replicationFactor: 0 };
-    await expect(
-      core.connect(signers.relayer).postRequest(invalidRequest2)
-    ).to.be.revertedWithCustomError(core, 'InvalidReplicationFactor');
+    await expect(core.connect(signers.relayer).postRequest(invalidRequest2)).to.be.revertedWithCustomError(
+      core,
+      'InvalidReplicationFactor',
+    );
   });
 
   it('should allow admin to set max replication factor', async () => {
@@ -257,16 +216,10 @@ describe('SedaCorePermissioned', () => {
     const newMaxReplicationFactor = 5;
 
     await expect(
-      core
-        .connect(signers.anyone)
-        .setMaxReplicationFactor(newMaxReplicationFactor)
+      core.connect(signers.anyone).setMaxReplicationFactor(newMaxReplicationFactor),
     ).to.be.revertedWithCustomError(core, 'AccessControlUnauthorizedAccount');
 
-    await expect(
-      core
-        .connect(signers.admin)
-        .setMaxReplicationFactor(newMaxReplicationFactor)
-    ).to.not.be.reverted;
+    await expect(core.connect(signers.admin).setMaxReplicationFactor(newMaxReplicationFactor)).to.not.be.reverted;
 
     expect(await core.maxReplicationFactor()).to.equal(newMaxReplicationFactor);
   });
@@ -275,24 +228,26 @@ describe('SedaCorePermissioned', () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests } = generateDataFixtures(1);
 
-    await expect(
-      core.connect(signers.anyone).pause()
-    ).to.be.revertedWithCustomError(core, 'AccessControlUnauthorizedAccount');
+    await expect(core.connect(signers.anyone).pause()).to.be.revertedWithCustomError(
+      core,
+      'AccessControlUnauthorizedAccount',
+    );
 
     await core.connect(signers.admin).pause();
 
-    await expect(
-      core.connect(signers.anyone).postRequest(requests[0])
-    ).to.be.revertedWithCustomError(core, 'EnforcedPause');
+    await expect(core.connect(signers.anyone).postRequest(requests[0])).to.be.revertedWithCustomError(
+      core,
+      'EnforcedPause',
+    );
 
-    await expect(
-      core.connect(signers.anyone).unpause()
-    ).to.be.revertedWithCustomError(core, 'AccessControlUnauthorizedAccount');
+    await expect(core.connect(signers.anyone).unpause()).to.be.revertedWithCustomError(
+      core,
+      'AccessControlUnauthorizedAccount',
+    );
 
     await core.connect(signers.admin).unpause();
 
-    await expect(core.connect(signers.anyone).postRequest(requests[0])).to.not
-      .be.reverted;
+    await expect(core.connect(signers.anyone).postRequest(requests[0])).to.not.be.reverted;
   });
 
   it('should handle getPendingRequests with various offsets and limits', async () => {

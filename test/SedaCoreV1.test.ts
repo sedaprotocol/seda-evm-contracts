@@ -3,17 +3,8 @@ import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import {
-  compareRequests,
-  compareResults,
-  convertToRequestInputs,
-} from './helpers';
-import {
-  computeResultLeafHash,
-  deriveDataResultId,
-  deriveRequestId,
-  generateDataFixtures,
-} from './utils';
+import { compareRequests, compareResults, convertToRequestInputs } from './helpers';
+import { computeResultLeafHash, deriveDataResultId, deriveRequestId, generateDataFixtures } from './utils';
 
 describe('SedaCoreV1', () => {
   async function deployCoreFixture() {
@@ -84,8 +75,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Attempt to post a result without a corresponding request
-      await expect(core.postResult(data.results[0], data.proofs[0])).to.not.be
-        .reverted;
+      await expect(core.postResult(data.results[0], data.proofs[0])).to.not.be.reverted;
 
       // Verify that the result was posted
       const postedResult = await core.getResult(data.results[0].drId);
@@ -143,10 +133,7 @@ describe('SedaCoreV1', () => {
         await core.postRequest(request);
       }
 
-      const allRequests = await core.getPendingRequests(
-        0,
-        data.requests.length
-      );
+      const allRequests = await core.getPendingRequests(0, data.requests.length);
       for (let i = 0; i < data.requests.length; i++) {
         compareRequests(allRequests[i], data.requests[i]);
       }
@@ -176,9 +163,7 @@ describe('SedaCoreV1', () => {
 
       const pr1 = await core.postRequest(data.requests[0]);
 
-      await expect(
-        core.postRequest(data.requests[0])
-      ).to.be.revertedWithCustomError(core, 'RequestAlreadyExists');
+      await expect(core.postRequest(data.requests[0])).to.be.revertedWithCustomError(core, 'RequestAlreadyExists');
 
       expect(pr1)
         .to.emit(core, 'RequestPosted')
@@ -195,10 +180,7 @@ describe('SedaCoreV1', () => {
         await core.postRequest(request);
       }
 
-      const gasUsed = await core.postResult.estimateGas(
-        data.results[2],
-        data.proofs[2]
-      );
+      const gasUsed = await core.postResult.estimateGas(data.results[2], data.proofs[2]);
 
       // This is rough esimate
       expect(gasUsed).to.be.lessThan(250000);
@@ -218,9 +200,7 @@ describe('SedaCoreV1', () => {
 
       // Verify that all requests are pending
       // (order should be preserved because there are no removals)
-      let pending = (await core.getPendingRequests(0, 10)).map(
-        convertToRequestInputs
-      );
+      let pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
       expect(pending.length).to.equal(5);
       expect(pending).to.deep.include.members(requests);
 
@@ -232,9 +212,7 @@ describe('SedaCoreV1', () => {
       const expectedPending = [requests[1], requests[3], requests[4]];
 
       // Retrieve pending requests (order is not preserved because there were 2 removals)
-      pending = (await core.getPendingRequests(0, 10)).map(
-        convertToRequestInputs
-      );
+      pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
       expect(pending.length).to.equal(3);
       expect(pending).to.deep.include.members(expectedPending);
 
@@ -245,9 +223,7 @@ describe('SedaCoreV1', () => {
       const finalPending = [requests[1], requests[3]];
 
       // Retrieve final pending requests
-      pending = (await core.getPendingRequests(0, 10)).map(
-        convertToRequestInputs
-      );
+      pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
       expect(pending.length).to.equal(2);
       expect(pending).to.deep.include.members(finalPending);
     });

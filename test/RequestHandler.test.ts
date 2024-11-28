@@ -3,11 +3,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import { compareRequests } from './helpers';
-import {
-  SEDA_DATA_TYPES_VERSION,
-  deriveRequestId,
-  generateDataFixtures,
-} from './utils';
+import { deriveRequestId, generateDataFixtures } from './utils';
 
 describe('RequestHandler', () => {
   async function deployRequestHandlerFixture() {
@@ -18,14 +14,11 @@ describe('RequestHandler', () => {
     const dataTypes = await DataTypesFactory.deploy();
 
     // Deploy the RequestHandler contract
-    const RequestHandlerFactory = await ethers.getContractFactory(
-      'RequestHandler',
-      {
-        libraries: {
-          SedaDataTypes: await dataTypes.getAddress(),
-        },
-      }
-    );
+    const RequestHandlerFactory = await ethers.getContractFactory('RequestHandler', {
+      libraries: {
+        SedaDataTypes: await dataTypes.getAddress(),
+      },
+    });
     const handler = await RequestHandlerFactory.deploy();
 
     return { handler, requests };
@@ -33,9 +26,7 @@ describe('RequestHandler', () => {
 
   describe('deriveRequestId', () => {
     it('should generate consistent data request IDs', async () => {
-      const { handler, requests } = await loadFixture(
-        deployRequestHandlerFixture
-      );
+      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestIdFromUtils = deriveRequestId(requests[0]);
       const requestId = await handler.deriveRequestId.staticCall(requests[0]);
@@ -44,9 +35,7 @@ describe('RequestHandler', () => {
     });
 
     it('should generate different IDs for different requests', async () => {
-      const { handler, requests } = await loadFixture(
-        deployRequestHandlerFixture
-      );
+      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const id1 = await handler.deriveRequestId.staticCall(requests[0]);
       const id2 = await handler.deriveRequestId.staticCall(requests[1]);
@@ -57,9 +46,7 @@ describe('RequestHandler', () => {
 
   describe('postRequest', () => {
     it('should successfully post a request and read it back', async () => {
-      const { handler, requests } = await loadFixture(
-        deployRequestHandlerFixture
-      );
+      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestId = await handler.postRequest.staticCall(requests[0]);
       await handler.postRequest(requests[0]);
@@ -69,9 +56,7 @@ describe('RequestHandler', () => {
     });
 
     it('should fail to post a request that already exists', async () => {
-      const { handler, requests } = await loadFixture(
-        deployRequestHandlerFixture
-      );
+      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestId = await handler.deriveRequestId.staticCall(requests[0]);
       await handler.postRequest(requests[0]);
@@ -82,27 +67,22 @@ describe('RequestHandler', () => {
     });
 
     it('should emit a RequestPosted event', async () => {
-      const { handler, requests } = await loadFixture(
-        deployRequestHandlerFixture
-      );
+      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestId = await handler.deriveRequestId.staticCall(requests[0]);
 
-      await expect(handler.postRequest(requests[0]))
-        .to.emit(handler, 'RequestPosted')
-        .withArgs(requestId);
+      await expect(handler.postRequest(requests[0])).to.emit(handler, 'RequestPosted').withArgs(requestId);
     });
 
     it('should revert when replicationFactor is 0', async () => {
-      const { handler, requests } = await loadFixture(
-        deployRequestHandlerFixture
-      );
+      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const invalidRequest = { ...requests[0], replicationFactor: 0 };
 
-      await expect(
-        handler.postRequest(invalidRequest)
-      ).to.be.revertedWithCustomError(handler, 'InvalidReplicationFactor');
+      await expect(handler.postRequest(invalidRequest)).to.be.revertedWithCustomError(
+        handler,
+        'InvalidReplicationFactor',
+      );
     });
   });
 
@@ -118,9 +98,7 @@ describe('RequestHandler', () => {
     });
 
     it('should return the correct request for an existing request id', async () => {
-      const { handler, requests } = await loadFixture(
-        deployRequestHandlerFixture
-      );
+      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestId = await handler.postRequest.staticCall(requests[0]);
       await handler.postRequest(requests[0]);

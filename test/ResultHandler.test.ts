@@ -4,11 +4,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import { compareResults } from './helpers';
-import {
-  computeResultLeafHash,
-  deriveDataResultId,
-  generateDataFixtures,
-} from './utils';
+import { computeResultLeafHash, deriveDataResultId, generateDataFixtures } from './utils';
 
 describe('ResultHandler', () => {
   async function deployResultHandlerFixture() {
@@ -48,14 +44,11 @@ describe('ResultHandler', () => {
     });
     const prover = await ProverFactory.deploy(initialBatch);
 
-    const ResultHandlerFactory = await ethers.getContractFactory(
-      'ResultHandler',
-      {
-        libraries: {
-          SedaDataTypes: await dataTypes.getAddress(),
-        },
-      }
-    );
+    const ResultHandlerFactory = await ethers.getContractFactory('ResultHandler', {
+      libraries: {
+        SedaDataTypes: await dataTypes.getAddress(),
+      },
+    });
     const handler = await ResultHandlerFactory.deploy(prover.getAddress());
 
     return { handler, data };
@@ -184,10 +177,7 @@ describe('ResultHandler', () => {
     it('should successfully verify a valid result', async () => {
       const { handler, data } = await loadFixture(deployResultHandlerFixture);
 
-      const resultId = await handler.verifyResult(
-        data.results[0],
-        data.proofs[0]
-      );
+      const resultId = await handler.verifyResult(data.results[0], data.proofs[0]);
       expect(resultId).to.equal(deriveDataResultId(data.results[0]));
     });
 
