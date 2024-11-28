@@ -10,16 +10,13 @@
     "node": {
       "version": "lts",
       "nodeGypDependencies": true
-    }
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {}
   },
   "customizations": {
     "vscode": {
       "settings": {},
-      "extensions": [
-        "NomicFoundation.hardhat-solidity",
-        "biomejs.biome",
-        "Tyriar.sort-lines"
-      ]
+      "extensions": ["NomicFoundation.hardhat-solidity", "biomejs.biome", "Tyriar.sort-lines"]
     }
   },
   "postCreateCommand": "bun install"
