@@ -27,12 +27,13 @@ contract RequestHandler is RequestHandlerBase {
             version: SedaDataTypes.VERSION,
             execProgramId: inputs.execProgramId,
             execInputs: inputs.execInputs,
+            execGasLimit: inputs.execGasLimit,
             tallyProgramId: inputs.tallyProgramId,
             tallyInputs: inputs.tallyInputs,
+            tallyGasLimit: inputs.tallyGasLimit,
             replicationFactor: inputs.replicationFactor,
             consensusFilter: inputs.consensusFilter,
             gasPrice: inputs.gasPrice,
-            gasLimit: inputs.gasLimit,
             memo: inputs.memo
         });
 

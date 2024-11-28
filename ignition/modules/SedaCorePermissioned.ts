@@ -9,13 +9,9 @@ const SedaProverModule = buildModule('SedaCorePermissioned', (m) => {
   const dataTypesLib = m.library('SedaDataTypes');
 
   // Deploy SedaCorePermissioned contract with the library
-  const coreContract = m.contract(
-    'SedaCorePermissioned',
-    [relayers, maxReplicationFactor],
-    {
-      libraries: { SedaDataTypes: dataTypesLib },
-    }
-  );
+  const coreContract = m.contract('SedaCorePermissioned', [relayers, maxReplicationFactor], {
+    libraries: { SedaDataTypes: dataTypesLib },
+  });
 
   return { coreContract };
 });

@@ -14,18 +14,20 @@ library SedaDataTypes {
         bytes32 execProgramId;
         /// Inputs for Execution WASM binary
         bytes execInputs;
+        /// Maximum of gas units for DR Execution
+        uint64 execGasLimit;
         /// Identifier of Tally WASM binary
         bytes32 tallyProgramId;
         /// Inputs for Tally WASM binary
         bytes tallyInputs;
+        /// Maximum of gas units for DR Tally
+        uint64 tallyGasLimit;
         /// Amount of required DR executors
         uint16 replicationFactor;
         /// Filter applied before tally execution
         bytes consensusFilter;
         /// Amount of SEDA tokens per gas unit
         uint128 gasPrice;
-        /// Maximum of gas units to be used by data request executors
-        uint64 gasLimit;
         /// Public info attached to DR
         bytes memo;
     }
@@ -39,18 +41,20 @@ library SedaDataTypes {
         bytes32 execProgramId;
         /// Inputs for Execution WASM binary
         bytes execInputs;
+        /// Maximum of gas units for DR Execution
+        uint64 execGasLimit;
         /// Identifier of Tally WASM binary
         bytes32 tallyProgramId;
         /// Inputs for Tally WASM binary
         bytes tallyInputs;
+        /// Maximum of gas units for DR Tally
+        uint64 tallyGasLimit;
         /// Amount of required DR executors
         uint16 replicationFactor;
         /// Filter to be applied before tally execution
         bytes consensusFilter;
         /// Amount of SEDA tokens per gas unit
         uint128 gasPrice;
-        /// Maximum of gas units to be used by data request executors
-        uint64 gasLimit;
         /// Public info attached to DR
         bytes memo;
     }
@@ -69,6 +73,8 @@ library SedaDataTypes {
         bytes result;
         /// Block Height at which data request was finalized
         uint64 blockHeight;
+        /// The timestamp of the block the data result is included
+        uint64 blockTimestamp;
         /// Gas used by the complete data request execution
         uint64 gasUsed;
         // Fields from Data Request Execution
@@ -104,7 +110,7 @@ library SedaDataTypes {
             keccak256(
                 bytes.concat(
                     bytes8(batch.batchHeight),
-                    bytes8(batch.blockHeight), 
+                    bytes8(batch.blockHeight),
                     batch.validatorsRoot,
                     batch.resultsRoot,
                     batch.provingMetadata
@@ -127,6 +133,7 @@ library SedaDataTypes {
                     bytes1(result.exitCode),
                     keccak256(result.result),
                     bytes8(result.blockHeight),
+                    bytes8(result.blockTimestamp),
                     bytes8(result.gasUsed),
                     keccak256(result.paybackAddress),
                     keccak256(result.sedaPayload)
@@ -146,12 +153,13 @@ library SedaDataTypes {
                     keccak256(bytes(SedaDataTypes.VERSION)),
                     inputs.execProgramId,
                     keccak256(inputs.execInputs),
+                    bytes8(inputs.execGasLimit),
                     inputs.tallyProgramId,
                     keccak256(inputs.tallyInputs),
+                    bytes8(inputs.tallyGasLimit),
                     bytes2(inputs.replicationFactor),
                     keccak256(inputs.consensusFilter),
                     bytes16(inputs.gasPrice),
-                    bytes8(inputs.gasLimit),
                     keccak256(inputs.memo)
                 )
             );
