@@ -68,9 +68,10 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
     /// @dev Overrides the base implementation to also remove the request ID from the pendingRequests array if it exists
     function postResult(
         SedaDataTypes.Result calldata result,
+        uint64 batchHeight,
         bytes32[] calldata proof
     ) public override(ResultHandler) returns (bytes32) {
-        bytes32 resultId = super.postResult(result, proof);
+        bytes32 resultId = super.postResult(result, batchHeight, proof);
         _removeRequest(result.drId);
 
         return resultId;

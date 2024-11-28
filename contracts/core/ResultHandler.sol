@@ -20,13 +20,14 @@ contract ResultHandler is ResultHandlerBase {
     /// @inheritdoc ResultHandlerBase
     function postResult(
         SedaDataTypes.Result calldata result,
+        uint64 batchHeight,
         bytes32[] calldata proof
     ) public virtual override(ResultHandlerBase) returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (results[result.drId].drId != bytes32(0)) {
             revert ResultAlreadyExists(resultId);
         }
-        if (!sedaProver.verifyResultProof(resultId, proof)) {
+        if (!sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
             revert InvalidResultProof(resultId);
         }
 
@@ -55,14 +56,16 @@ contract ResultHandler is ResultHandlerBase {
 
     /// @notice Verifies the result without storing it
     /// @param result The result to verify
+    /// @param batchHeight The height of the batch the result belongs to
     /// @param proof The proof associated with the result
     /// @return A boolean indicating whether the result is valid
     function verifyResult(
         SedaDataTypes.Result calldata result,
+        uint64 batchHeight,
         bytes32[] calldata proof
     ) public view returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
-        if (!sedaProver.verifyResultProof(resultId, proof)) {
+        if (!sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
             revert InvalidResultProof(resultId);
         }
 

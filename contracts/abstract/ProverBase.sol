@@ -22,6 +22,7 @@ abstract contract ProverBase is IProver {
     /// @inheritdoc IProver
     function verifyResultProof(
         bytes32 resultId,
+        uint64 batchHeight,
         bytes32[] calldata merkleProof
     ) public view virtual override(IProver) returns (bool);
 }

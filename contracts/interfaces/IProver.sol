@@ -20,10 +20,12 @@ interface IProver {
 
     /// @notice Verifies a result Merkle proof
     /// @param resultId The ID of the result to verify
+    /// @param batchHeight The height of the batch to verify the result proof for
     /// @param merkleProof The Merkle proof to be verified
     /// @return bool Returns true if the Merkle proof is valid, false otherwise
     function verifyResultProof(
         bytes32 resultId,
+        uint64 batchHeight,
         bytes32[] calldata merkleProof
     ) external view returns (bool);
 }

@@ -14,9 +14,11 @@ interface IResultHandler {
 
     /// @notice Posts a new result with a proof
     /// @param inputs The result data to be posted
+    /// @param batchHeight The height of the batch the result belongs to
     /// @param proof The proof associated with the result
     function postResult(
         SedaDataTypes.Result calldata inputs,
+        uint64 batchHeight,
         bytes32[] memory proof
     ) external returns (bytes32);
 

@@ -18,6 +18,7 @@ abstract contract ResultHandlerBase is IResultHandler {
     /// @inheritdoc IResultHandler
     function postResult(
         SedaDataTypes.Result calldata result,
+        uint64 batchHeight,
         bytes32[] calldata proof
     ) external virtual override(IResultHandler) returns (bytes32);
 

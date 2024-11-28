@@ -101,24 +101,11 @@ contract Secp256k1Prover is ProverBase {
     }
 
     /// @inheritdoc ProverBase
-    /// @dev Verifies the result proof for the most recent batch.
     function verifyResultProof(
         bytes32 resultId,
+        uint64 batchHeight,
         bytes32[] calldata merkleProof
     ) public view override returns (bool) {
-        return verifyResultProofForBatch(lastBatchHeight, resultId, merkleProof);
-    }
-
-    /// @notice Verifies a result proof for the given batchHeight
-    /// @param batchHeight The height of the batch to verify the result proof for
-    /// @param resultId The ID of the result to verify
-    /// @param merkleProof The merkle proof to verify
-    /// @return bool Returns true if the result proof is valid, false otherwise
-    function verifyResultProofForBatch(
-        uint64 batchHeight,
-        bytes32 resultId,
-        bytes32[] calldata merkleProof
-    ) public view returns (bool) {
         bytes32 leaf = keccak256(
             abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId)
         );
