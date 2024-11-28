@@ -2,8 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const DEFAULT_TEST_MNEMONIC =
-  'test test test test test test test test test test test junk';
+const DEFAULT_TEST_MNEMONIC = 'test test test test test test test test test test test junk';
 
 export const getEnv = (name: string, defaultValue?: string): string => {
   const value = process.env[name];

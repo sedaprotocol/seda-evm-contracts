@@ -11,8 +11,13 @@ interface NetworkConfig {
   etherscan?: {
     apiKey: string;
     apiUrl: string;
-    explorerUrl: string;
+    browserUrl: string;
   };
+  maxFeePerGas?: number;
+  maxPriorityFeePerGas?: number;
+  gas?: number;
+  gasPrice?: number;
+  minGasPrice?: number;
 }
 
 export type Networks = Record<string, NetworkConfig>;
