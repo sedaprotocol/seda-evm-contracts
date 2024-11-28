@@ -10,6 +10,9 @@ const gasReporterConfig = {
 };
 
 const config: HardhatUserConfig = {
+  sourcify: {
+    enabled: false,
+  },
   solidity: {
     version: '0.8.25',
     settings: {
