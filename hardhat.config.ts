@@ -1,6 +1,7 @@
 import type { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 import { getEtherscanConfig, getNetworksConfig } from './config';
+import '@openzeppelin/hardhat-upgrades';
 
 const gasReporterConfig = {
   currency: 'USD',
@@ -14,7 +15,7 @@ const config: HardhatUserConfig = {
     enabled: false,
   },
   solidity: {
-    version: '0.8.25',
+    version: '0.8.24',
     settings: {
       optimizer: {
         enabled: true,

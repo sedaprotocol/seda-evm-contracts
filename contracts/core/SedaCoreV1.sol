@@ -2,9 +2,9 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {RequestHandler} from "./handlers/RequestHandler.sol";
+import {ResultHandler} from "./handlers/ResultHandler.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
-import {ResultHandler} from "./ResultHandler.sol";
-import {RequestHandler} from "./RequestHandler.sol";
 
 /// @title SedaCoreV1
 /// @notice Core contract for the Seda protocol, managing requests and results

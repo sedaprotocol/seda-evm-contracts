@@ -6,7 +6,7 @@ pragma solidity ^0.8.9;
 /// @title SedaDataTypes Library
 /// @notice Contains data structures and utility functions for the SEDA protocol
 library SedaDataTypes {
-    string public constant VERSION = "0.0.1";
+    string internal constant VERSION = "0.0.1";
 
     /// @notice Input parameters for creating a data request
     struct RequestInputs {
@@ -105,7 +105,7 @@ library SedaDataTypes {
     /// @notice Derives a unique batch ID from a Batch struct
     /// @param batch The Batch struct to derive the ID from
     /// @return The derived batch ID
-    function deriveBatchId(Batch calldata batch) public pure returns (bytes32) {
+    function deriveBatchId(Batch memory batch) internal pure returns (bytes32) {
         return
             keccak256(
                 bytes.concat(
@@ -122,8 +122,8 @@ library SedaDataTypes {
     /// @param result The Result struct to derive the ID from
     /// @return The derived result ID
     function deriveResultId(
-        SedaDataTypes.Result calldata result
-    ) public pure returns (bytes32) {
+        Result memory result
+    ) internal pure returns (bytes32) {
         return
             keccak256(
                 bytes.concat(
@@ -145,8 +145,8 @@ library SedaDataTypes {
     /// @param inputs The RequestInputs struct to derive the ID from
     /// @return The derived request ID
     function deriveRequestId(
-        SedaDataTypes.RequestInputs calldata inputs
-    ) public pure returns (bytes32) {
+        RequestInputs memory inputs
+    ) internal pure returns (bytes32) {
         return
             keccak256(
                 bytes.concat(

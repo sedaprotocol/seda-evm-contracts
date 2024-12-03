@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IRequestHandler} from "../interfaces/IRequestHandler.sol";
-import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
+import {IRequestHandler} from "../../interfaces/IRequestHandler.sol";
+import {SedaDataTypes} from "../../libraries/SedaDataTypes.sol";
 
 abstract contract RequestHandlerBase is IRequestHandler {
     /// @inheritdoc IRequestHandler

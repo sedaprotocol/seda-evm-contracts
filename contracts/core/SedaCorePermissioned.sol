@@ -6,7 +6,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IResultHandler} from "../interfaces/IResultHandler.sol";
-import {RequestHandlerBase} from "../abstract/RequestHandlerBase.sol";
+import {RequestHandlerBase} from "./abstract/RequestHandlerBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title SedaCorePermissioned

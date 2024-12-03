@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
-import {IProver} from "../interfaces/IProver.sol";
-import {IResultHandler} from "../interfaces/IResultHandler.sol";
+import {IProver} from "../../interfaces/IProver.sol";
+import {IResultHandler} from "../../interfaces/IResultHandler.sol";
+import {SedaDataTypes} from "../../libraries/SedaDataTypes.sol";
 
 abstract contract ResultHandlerBase is IResultHandler {
     IProver public sedaProver;
