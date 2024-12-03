@@ -73,16 +73,15 @@ describe('Secp256k1Prover', () => {
     };
 
     // Deploy the SedaDataTypes library first
-    const DataTypesFactory = await ethers.getContractFactory('SedaDataTypes');
-    const dataTypes = await DataTypesFactory.deploy();
+    // const DataTypesFactory = await ethers.getContractFactory('SedaDataTypes');
+    // const dataTypes = await DataTypesFactory.deploy();
 
     // Deploy the contract
-    const ProverFactory = await ethers.getContractFactory('Secp256k1Prover', {
-      libraries: {
-        SedaDataTypes: await dataTypes.getAddress(),
-      },
-    });
-    const prover = await ProverFactory.deploy(initialBatch);
+    const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
+    const prover = await ProverFactory.deploy();
+    await prover.initialize(initialBatch);
+
+    // const prover = await upgrades.deployProxy(ProverFactory, [initialBatch]);
 
     return { prover, wallets, data };
   }
@@ -100,7 +99,7 @@ describe('Secp256k1Prover', () => {
         prover,
         data: { initialBatch },
       } = await loadFixture(deployProverFixture);
-      const lastBatchHeight = await prover.lastBatchHeight();
+      const lastBatchHeight = await prover.getLastBatchHeight();
       expect(lastBatchHeight).to.equal(initialBatch.batchHeight);
     });
   });
@@ -112,8 +111,8 @@ describe('Secp256k1Prover', () => {
       const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
       await prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]);
 
-      const lastBatchHeight = await prover.lastBatchHeight();
-      const lastValidatorsRoot = await prover.lastValidatorsRoot();
+      const lastBatchHeight = await prover.getLastBatchHeight();
+      const lastValidatorsRoot = await prover.getLastValidatorsRoot();
       expect(lastBatchHeight).to.equal(newBatch.batchHeight);
       expect(lastValidatorsRoot).to.equal(newBatch.validatorsRoot);
     });
@@ -124,8 +123,8 @@ describe('Secp256k1Prover', () => {
       const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [1, 2, 3]);
       await prover.postBatch(newBatch, signatures, data.validatorProofs.slice(1));
 
-      const lastBatchHeight = await prover.lastBatchHeight();
-      const lastValidatorsRoot = await prover.lastValidatorsRoot();
+      const lastBatchHeight = await prover.getLastBatchHeight();
+      const lastValidatorsRoot = await prover.getLastValidatorsRoot();
       expect(lastBatchHeight).to.equal(newBatch.batchHeight);
       expect(lastValidatorsRoot).to.equal(newBatch.validatorsRoot);
     });
@@ -151,7 +150,7 @@ describe('Secp256k1Prover', () => {
         'ConsensusNotReached',
       );
 
-      const lastBatchHeight = await prover.lastBatchHeight();
+      const lastBatchHeight = await prover.getLastBatchHeight();
       expect(lastBatchHeight).to.equal(data.initialBatch.batchHeight);
     });
 
@@ -218,7 +217,7 @@ describe('Secp256k1Prover', () => {
 
       await prover.postBatch(newBatch, signatures, data.validatorProofs);
 
-      const lastBatchHeight = await prover.lastBatchHeight();
+      const lastBatchHeight = await prover.getLastBatchHeight();
       expect(lastBatchHeight).to.equal(newBatch.batchHeight);
     });
   });
@@ -338,7 +337,7 @@ describe('Secp256k1Prover', () => {
           wallets.slice(0, validatorCount).map((wallet) => wallet.signingKey.sign(newBatchId).serialized),
         );
         await prover.postBatch(newBatch, signatures, data.validatorProofs.slice(0, validatorCount));
-        const lastBatchHeight = await prover.lastBatchHeight();
+        const lastBatchHeight = await prover.getLastBatchHeight();
         expect(lastBatchHeight).to.equal(newBatch.batchHeight);
       }
     }
@@ -364,17 +363,11 @@ describe('Secp256k1Prover', () => {
       const expectedBatchId = deriveBatchId(testBatch);
       expect(expectedBatchId).to.equal('0x9b8a1c156da9096bc89288e9d64df3c897435e962ae7402f0c25c97f3de76e94');
 
-      // Deploy the SedaDataTypes library first
-      const DataTypesFactory = await ethers.getContractFactory('SedaDataTypes');
-      const dataTypes = await DataTypesFactory.deploy();
-
       // Deploy the contract
-      const ProverFactory = await ethers.getContractFactory('Secp256k1Prover', {
-        libraries: {
-          SedaDataTypes: await dataTypes.getAddress(),
-        },
-      });
-      const prover = await ProverFactory.deploy(testBatch);
+      const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
+      const prover = await ProverFactory.deploy();
+      await prover.initialize(testBatch);
+
       expect(prover).to.emit(prover, 'BatchPosted').withArgs(testBatch.batchHeight, expectedBatchId);
     });
   });

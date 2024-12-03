@@ -25,17 +25,11 @@ describe('SedaCoreV1', () => {
       provingMetadata: ethers.ZeroHash,
     };
 
-    const DataTypesFactory = await ethers.getContractFactory('SedaDataTypes');
-    const dataTypes = await DataTypesFactory.deploy();
+    const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
+    const prover = await ProverFactory.deploy();
+    await prover.initialize(initialBatch);
 
-    const ProverFactory = await ethers.getContractFactory('Secp256k1Prover', {
-      libraries: { SedaDataTypes: await dataTypes.getAddress() },
-    });
-    const prover = await ProverFactory.deploy(initialBatch);
-
-    const CoreFactory = await ethers.getContractFactory('SedaCoreV1', {
-      libraries: { SedaDataTypes: await dataTypes.getAddress() },
-    });
+    const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
     const core = await CoreFactory.deploy(await prover.getAddress());
 
     return { prover, core, data };

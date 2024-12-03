@@ -9,16 +9,8 @@ describe('RequestHandler', () => {
   async function deployRequestHandlerFixture() {
     const { requests } = generateDataFixtures(4);
 
-    // Deploy the SedaDataTypes library first
-    const DataTypesFactory = await ethers.getContractFactory('SedaDataTypes');
-    const dataTypes = await DataTypesFactory.deploy();
-
     // Deploy the RequestHandler contract
-    const RequestHandlerFactory = await ethers.getContractFactory('RequestHandler', {
-      libraries: {
-        SedaDataTypes: await dataTypes.getAddress(),
-      },
-    });
+    const RequestHandlerFactory = await ethers.getContractFactory('RequestHandler');
     const handler = await RequestHandlerFactory.deploy();
 
     return { handler, requests };

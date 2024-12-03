@@ -69,6 +69,17 @@ export function deriveDataResultId(dataResult: SedaDataTypes.ResultStruct): stri
   );
 }
 
+export function computeResultLeafHash(resultId: string): string {
+  return ethers.solidityPackedKeccak256(['bytes1', 'bytes32'], [RESULT_DOMAIN_SEPARATOR, ethers.getBytes(resultId)]);
+}
+
+export function computeValidatorLeafHash(validator: string, votingPower: number): string {
+  return ethers.solidityPackedKeccak256(
+    ['bytes1', 'bytes', 'uint32'],
+    [SECP256K1_DOMAIN_SEPARATOR, validator, votingPower],
+  );
+}
+
 export function generateDataFixtures(length: number): {
   requests: SedaDataTypes.RequestInputsStruct[];
   results: SedaDataTypes.ResultStruct[];
@@ -103,15 +114,4 @@ export function generateDataFixtures(length: number): {
   });
 
   return { requests, results };
-}
-
-export function computeResultLeafHash(resultId: string): string {
-  return ethers.solidityPackedKeccak256(['bytes1', 'bytes32'], [RESULT_DOMAIN_SEPARATOR, ethers.getBytes(resultId)]);
-}
-
-export function computeValidatorLeafHash(validator: string, votingPower: number): string {
-  return ethers.solidityPackedKeccak256(
-    ['bytes1', 'bytes', 'uint32'],
-    [SECP256K1_DOMAIN_SEPARATOR, validator, votingPower],
-  );
 }

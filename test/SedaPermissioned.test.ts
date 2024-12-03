@@ -15,12 +15,7 @@ describe('SedaCorePermissioned', () => {
       anyone,
     };
 
-    const SedaDataTypes = await ethers.getContractFactory('SedaDataTypes');
-    const dataTypes = await SedaDataTypes.deploy();
-
-    const PermissionedFactory = await ethers.getContractFactory('SedaCorePermissioned', {
-      libraries: { SedaDataTypes: await dataTypes.getAddress() },
-    });
+    const PermissionedFactory = await ethers.getContractFactory('SedaCorePermissioned');
     const core = await PermissionedFactory.deploy([relayer.address], MAX_REPLICATION_FACTOR);
 
     return { core, signers };
