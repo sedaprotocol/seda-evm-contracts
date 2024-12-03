@@ -5,24 +5,20 @@ const SedaCoreV1Module = buildModule('SedaCoreV1', (m) => {
   // Constructor arguments
   const initialBatch = m.getParameter('initialBatch');
 
-  // Deploy SedaDataTypes library
-  const dataTypesLib = m.library('SedaDataTypes');
-
   // Deploy Secp256k1Prover contract
-  const proverContract = m.contract('Secp256k1Prover', [initialBatch], {
-    libraries: {
-      SedaDataTypes: dataTypesLib,
-    },
-  });
+  const proverContract = m.contract('Secp256k1ProverV1');
+
+  // Initialize the UUPS upgradeable contract
+  m.call(
+    proverContract,
+    'initialize',
+    [initialBatch]
+  );
 
   // Deploy SedaCoreV1 contract
-  const coreV1Contract = m.contract('SedaCoreV1', [proverContract], {
-    libraries: {
-      SedaDataTypes: dataTypesLib,
-    },
-  });
+  const coreV1Contract = m.contract('SedaCoreV1', [proverContract]);
 
-  return { dataTypesLib, proverContract, coreV1Contract };
+  return { proverContract, coreV1Contract };
 });
 
 export default SedaCoreV1Module;
