@@ -7,16 +7,13 @@ const SedaCoreV1Module = buildModule('SedaCoreV1', (m) => {
 
   // Deploy Secp256k1Prover contract
   const proverContract = m.contract('Secp256k1ProverV1');
-
   // Initialize the UUPS upgradeable contract
-  m.call(
-    proverContract,
-    'initialize',
-    [initialBatch]
-  );
+  m.call(proverContract, 'initialize', [initialBatch]);
 
   // Deploy SedaCoreV1 contract
-  const coreV1Contract = m.contract('SedaCoreV1', [proverContract]);
+  const coreV1Contract = m.contract('SedaCoreV1');
+  // Initialize the UUPS upgradeable contract
+  m.call(coreV1Contract, 'initialize', [proverContract]);
 
   return { proverContract, coreV1Contract };
 });
