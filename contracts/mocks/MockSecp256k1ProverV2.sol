@@ -10,7 +10,7 @@ contract MockSecp256k1ProverV2 is Secp256k1ProverV1 {
     error ContractNotUpgradeable();
 
     bytes32 private constant V2_STORAGE_SLOT =
-        keccak256("secp256k1prover.v2.storage");
+        keccak256(abi.encode(uint256(keccak256("secp256k1prover.v2.storage")) - 1)) & ~bytes32(uint256(0xff));
 
     struct V2Storage {
         string version;

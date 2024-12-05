@@ -17,12 +17,7 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 ///      - Increasing batch and block heights
 ///      - Valid validator proofs and signatures
 ///      - Sufficient voting power to meet the consensus threshold
-contract Secp256k1ProverV1 is
-    ProverBase,
-    Initializable,
-    UUPSUpgradeable,
-    OwnableUpgradeable
-{
+contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, OwnableUpgradeable {
     // ============ Errors ============
     // Error thrown when consensus is not reached
     error ConsensusNotReached();
@@ -34,10 +29,8 @@ contract Secp256k1ProverV1 is
     // Domain separator for Secp256k1 Merkle Tree leaves
     bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
     // Constant storage slot for the state following the ERC-7201 standard
-    bytes32 private constant STORAGE_SLOT =
-        keccak256(
-            abi.encode(uint256(keccak256("secp256k1prover.v1.storage")) - 1)
-        ) & ~bytes32(uint256(0xff));
+    bytes32 private constant PROVER_V1_STORAGE_SLOT =
+        keccak256(abi.encode(uint256(keccak256("secp256k1prover.v1.storage")) - 1)) & ~bytes32(uint256(0xff));
 
     // ============ Storage ============
 
@@ -53,23 +46,17 @@ contract Secp256k1ProverV1 is
     /// @notice Initializes the contract with initial batch data
     /// @dev Sets up the contract's initial state and initializes inherited contracts
     /// @param initialBatch The initial batch data containing height, validators root, and results root
-    function initialize(
-        SedaDataTypes.Batch memory initialBatch
-    ) public initializer {
+    function initialize(SedaDataTypes.Batch memory initialBatch) public initializer {
         // Initialize inherited contracts
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
 
         // Existing initialization code
         Secp256k1ProverStorage storage s = _storage();
-        s.batchToResultsRoot[initialBatch.batchHeight] = initialBatch
-            .resultsRoot;
+        s.batchToResultsRoot[initialBatch.batchHeight] = initialBatch.resultsRoot;
         s.lastBatchHeight = initialBatch.batchHeight;
         s.lastValidatorsRoot = initialBatch.validatorsRoot;
-        emit BatchPosted(
-            initialBatch.batchHeight,
-            SedaDataTypes.deriveBatchId(initialBatch)
-        );
+        emit BatchPosted(initialBatch.batchHeight, SedaDataTypes.deriveBatchId(initialBatch));
     }
 
     // ============ External Functions ============
@@ -105,18 +92,10 @@ contract Secp256k1ProverV1 is
         // Check that all validator proofs are valid and accumulate voting power
         uint64 votingPower = 0;
         for (uint256 i = 0; i < validatorProofs.length; i++) {
-            if (
-                !_verifyValidatorProof(validatorProofs[i], s.lastValidatorsRoot)
-            ) {
+            if (!_verifyValidatorProof(validatorProofs[i], s.lastValidatorsRoot)) {
                 revert InvalidValidatorProof();
             }
-            if (
-                !_verifySignature(
-                    batchId,
-                    signatures[i],
-                    validatorProofs[i].signer
-                )
-            ) {
+            if (!_verifySignature(batchId, signatures[i], validatorProofs[i].signer)) {
                 revert InvalidSignature();
             }
             votingPower += validatorProofs[i].votingPower;
@@ -147,15 +126,8 @@ contract Secp256k1ProverV1 is
         bytes32[] calldata merkleProof
     ) public view override returns (bool) {
         Secp256k1ProverStorage storage s = _storage();
-        bytes32 leaf = keccak256(
-            abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId)
-        );
-        return
-            MerkleProof.verify(
-                merkleProof,
-                s.batchToResultsRoot[batchHeight],
-                leaf
-            );
+        bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
+        return MerkleProof.verify(merkleProof, s.batchToResultsRoot[batchHeight], leaf);
     }
 
     /// @notice Returns the last processed batch height
@@ -173,9 +145,7 @@ contract Secp256k1ProverV1 is
     /// @notice Returns the results root for a specific batch height
     /// @param batchHeight The batch height to query
     /// @return The results root for the specified batch
-    function getBatchResultsRoot(
-        uint64 batchHeight
-    ) public view returns (bytes32) {
+    function getBatchResultsRoot(uint64 batchHeight) public view returns (bytes32) {
         return _storage().batchToResultsRoot[batchHeight];
     }
 
@@ -184,12 +154,8 @@ contract Secp256k1ProverV1 is
     /// @notice Returns the storage struct for the contract
     /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
     /// @return s The storage struct containing the contract's state variables
-    function _storage()
-        internal
-        pure
-        returns (Secp256k1ProverStorage storage s)
-    {
-        bytes32 slot = STORAGE_SLOT;
+    function _storage() internal pure returns (Secp256k1ProverStorage storage s) {
+        bytes32 slot = PROVER_V1_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {
             s.slot := slot
@@ -205,13 +171,7 @@ contract Secp256k1ProverV1 is
         SedaDataTypes.ValidatorProof memory proof,
         bytes32 validatorsRoot
     ) internal pure returns (bool) {
-        bytes32 leaf = keccak256(
-            abi.encodePacked(
-                SECP256K1_DOMAIN_SEPARATOR,
-                proof.signer,
-                proof.votingPower
-            )
-        );
+        bytes32 leaf = keccak256(abi.encodePacked(SECP256K1_DOMAIN_SEPARATOR, proof.signer, proof.votingPower));
 
         return MerkleProof.verify(proof.merkleProof, validatorsRoot, leaf);
     }
@@ -238,7 +198,6 @@ contract Secp256k1ProverV1 is
         internal
         virtual
         override
-        onlyOwner
-    // solhint-disable-next-line no-empty-blocks
+        onlyOwner // solhint-disable-next-line no-empty-blocks
     {}
 }

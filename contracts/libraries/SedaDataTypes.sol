@@ -121,9 +121,7 @@ library SedaDataTypes {
     /// @notice Derives a unique result ID from a Result struct
     /// @param result The Result struct to derive the ID from
     /// @return The derived result ID
-    function deriveResultId(
-        Result memory result
-    ) internal pure returns (bytes32) {
+    function deriveResultId(Result memory result) internal pure returns (bytes32) {
         return
             keccak256(
                 bytes.concat(
@@ -144,9 +142,7 @@ library SedaDataTypes {
     /// @notice Derives a unique request ID from RequestInputs
     /// @param inputs The RequestInputs struct to derive the ID from
     /// @return The derived request ID
-    function deriveRequestId(
-        RequestInputs memory inputs
-    ) internal pure returns (bytes32) {
+    function deriveRequestId(RequestInputs memory inputs) internal pure returns (bytes32) {
         return
             keccak256(
                 bytes.concat(

@@ -12,12 +12,7 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title SedaCorePermissioned
 /// @notice Core contract for the Seda protocol with permissioned access, managing requests and results
 /// @dev Implements RequestHandlerBase, IResultHandler, AccessControl, Pausable, and ReentrancyGuard functionalities
-contract SedaCorePermissioned is
-    RequestHandlerBase,
-    IResultHandler,
-    AccessControl,
-    Pausable
-{
+contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessControl, Pausable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     // Constants
@@ -26,7 +21,6 @@ contract SedaCorePermissioned is
 
     // State variables
     uint16 public maxReplicationFactor;
-    mapping(bytes32 => SedaDataTypes.Request) public requests;
     mapping(bytes32 => SedaDataTypes.Result) public results;
     EnumerableSet.Bytes32Set private pendingRequests;
 
@@ -49,9 +43,7 @@ contract SedaCorePermissioned is
 
     /// @notice Sets the maximum replication factor that can be used for requests
     /// @param newMaxReplicationFactor The new maximum replication factor
-    function setMaxReplicationFactor(
-        uint16 newMaxReplicationFactor
-    ) external onlyRole(ADMIN_ROLE) {
+    function setMaxReplicationFactor(uint16 newMaxReplicationFactor) external onlyRole(ADMIN_ROLE) {
         maxReplicationFactor = newMaxReplicationFactor;
     }
 
@@ -60,11 +52,9 @@ contract SedaCorePermissioned is
     /// @return requestId The ID of the posted request
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) external override whenNotPaused returns (bytes32) {
+    ) public override(RequestHandlerBase) whenNotPaused returns (bytes32) {
         uint16 replicationFactor = inputs.replicationFactor;
-        if (
-            replicationFactor > maxReplicationFactor || replicationFactor == 0
-        ) {
+        if (replicationFactor > maxReplicationFactor || replicationFactor == 0) {
             revert InvalidReplicationFactor();
         }
 
@@ -97,7 +87,7 @@ contract SedaCorePermissioned is
     /// @param result The result data
     function postResult(
         SedaDataTypes.Result calldata result,
-        uint64 ,    
+        uint64,
         bytes32[] calldata
     ) external override onlyRole(RELAYER_ROLE) whenNotPaused returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
@@ -115,7 +105,7 @@ contract SedaCorePermissioned is
     /// @return The requested data
     function getRequest(
         bytes32 requestId
-    ) external view override returns (SedaDataTypes.Request memory) {
+    ) external view override(RequestHandlerBase) returns (SedaDataTypes.Request memory) {
         SedaDataTypes.Request memory request = requests[requestId];
         if (bytes(request.version).length == 0) {
             revert RequestNotFound(requestId);
@@ -127,9 +117,7 @@ contract SedaCorePermissioned is
     /// @notice Retrieves a result by its ID
     /// @param requestId The unique identifier of the result
     /// @return The result data associated with the given ID
-    function getResult(
-        bytes32 requestId
-    ) external view override returns (SedaDataTypes.Result memory) {
+    function getResult(bytes32 requestId) external view override returns (SedaDataTypes.Result memory) {
         if (results[requestId].drId == bytes32(0)) {
             revert ResultNotFound(requestId);
         }
@@ -141,21 +129,14 @@ contract SedaCorePermissioned is
     /// @param offset The starting index in the pendingRequests set
     /// @param limit The maximum number of request IDs to return
     /// @return An array of pending request IDs
-    function getPendingRequests(
-        uint256 offset,
-        uint256 limit
-    ) public view returns (SedaDataTypes.Request[] memory) {
+    function getPendingRequests(uint256 offset, uint256 limit) public view returns (SedaDataTypes.Request[] memory) {
         uint256 totalRequests = pendingRequests.length();
         if (offset >= totalRequests) {
             return new SedaDataTypes.Request[](0);
         }
 
-        uint256 actualLimit = (offset + limit > totalRequests)
-            ? totalRequests - offset
-            : limit;
-        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](
-            actualLimit
-        );
+        uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
+        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
             bytes32 requestId = pendingRequests.at(offset + i); // Get request ID
             queriedPendingRequests[i] = requests[requestId];

@@ -2,14 +2,17 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {RequestHandler} from "./handlers/RequestHandler.sol";
-import {ResultHandler} from "./handlers/ResultHandler.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+import {RequestHandlerBase} from "./abstract/RequestHandlerBase.sol";
+import {ResultHandlerBase} from "./abstract/ResultHandlerBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title SedaCoreV1
 /// @notice Core contract for the Seda protocol, managing requests and results
 /// @dev Implements ResultHandler and RequestHandler functionalities, and manages active requests
-contract SedaCoreV1 is RequestHandler, ResultHandler {
+contract SedaCoreV1 is RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     // Enumerable Set to store the request IDs that are pending
@@ -21,7 +24,12 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
 
     /// @notice Initializes the SedaCoreV1 contract
     /// @param sedaProverAddress The address of the Seda prover contract
-    constructor(address sedaProverAddress) ResultHandler(sedaProverAddress) {}
+    /// @dev This function replaces the constructor for proxy compatibility and can only be called once
+    function initialize(address sedaProverAddress) public initializer {
+        __ResultHandler_init(sedaProverAddress);
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
+    }
 
     /// @notice Retrieves a list of active requests
     /// @dev This function is gas-intensive due to iteration over the pendingRequests array.
@@ -29,22 +37,14 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
     /// @param offset The starting index in the pendingRequests array
     /// @param limit The maximum number of requests to return
     /// @return An array of SedaDataTypes.Request structs
-    function getPendingRequests(
-        uint256 offset,
-        uint256 limit
-    ) public view returns (SedaDataTypes.Request[] memory) {
+    function getPendingRequests(uint256 offset, uint256 limit) public view returns (SedaDataTypes.Request[] memory) {
         uint256 totalRequests = pendingRequests.length();
         if (offset >= totalRequests) {
             return new SedaDataTypes.Request[](0);
         }
 
-        uint256 actualLimit = (offset + limit > totalRequests)
-            ? totalRequests - offset
-            : limit;
-        SedaDataTypes.Request[]
-            memory queriedPendingRequests = new SedaDataTypes.Request[](
-                actualLimit
-            );
+        uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
+        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
             bytes32 requestId = pendingRequests.at(offset + i);
             queriedPendingRequests[i] = requests[requestId];
@@ -53,24 +53,24 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
         return queriedPendingRequests;
     }
 
-    /// @inheritdoc RequestHandler
+    /// @inheritdoc RequestHandlerBase
     /// @dev Overrides the base implementation to also add the request ID to the pendingRequests array
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) public override(RequestHandler) returns (bytes32) {
+    ) public override(RequestHandlerBase) returns (bytes32) {
         bytes32 requestId = super.postRequest(inputs);
         _addRequest(requestId);
 
         return requestId;
     }
 
-    /// @inheritdoc ResultHandler
+    /// @inheritdoc ResultHandlerBase
     /// @dev Overrides the base implementation to also remove the request ID from the pendingRequests array if it exists
     function postResult(
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public override(ResultHandler) returns (bytes32) {
+    ) public override(ResultHandlerBase) returns (bytes32) {
         bytes32 resultId = super.postResult(result, batchHeight, proof);
         _removeRequest(result.drId);
 
@@ -92,4 +92,16 @@ contract SedaCoreV1 is RequestHandler, ResultHandler {
     function _removeRequest(bytes32 requestId) internal {
         pendingRequests.remove(requestId);
     }
+
+    /// @dev Required override for UUPSUpgradeable. Ensures only the owner can upgrade the implementation.
+    /// @inheritdoc UUPSUpgradeable
+    /// @param newImplementation Address of the new implementation contract
+    function _authorizeUpgrade(
+        address newImplementation
+    )
+        internal
+        virtual
+        override
+        onlyOwner // solhint-disable-next-line no-empty-blocks
+    {}
 }

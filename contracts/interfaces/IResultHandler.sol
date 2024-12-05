@@ -25,7 +25,5 @@ interface IResultHandler {
     /// @notice Retrieves a result by its ID
     /// @param requestId The unique identifier of the request
     /// @return The result data associated with the given ID
-    function getResult(
-        bytes32 requestId
-    ) external view returns (SedaDataTypes.Result memory);
+    function getResult(bytes32 requestId) external view returns (SedaDataTypes.Result memory);
 }
