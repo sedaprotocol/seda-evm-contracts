@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.24;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -10,19 +10,40 @@ import {IResultHandler} from "../../interfaces/IResultHandler.sol";
 /// @title ResultHandler
 /// @notice Implements the ResultHandlerBase for managing Seda protocol results
 abstract contract ResultHandlerBase is IResultHandler, Initializable {
-    IProver public sedaProver;
+    // ============ Errors ============
+    // Note: Errors are defined in IResultHandler interface
 
-    // Mapping of request IDs to Result structs
-    mapping(bytes32 => SedaDataTypes.Result) public results;
+    // ============ Constants ============
 
-    // Remove constructor and add initialization function
+    // Define a unique storage slot for ResultHandlerBase
+    bytes32 private constant RESULT_HANDLER_STORAGE_SLOT =
+        keccak256(abi.encode(uint256(keccak256("seda.resulthandler.storage")) - 1)) & ~bytes32(uint256(0xff));
+
+    // ============ Storage ============
+
+    /// @custom:storage-location erc7201:seda.resulthandler.storage
+    struct ResultHandlerStorage {
+        IProver sedaProver;
+        // Mapping of request IDs to Result structs
+        mapping(bytes32 => SedaDataTypes.Result) results;
+    }
+
+    // ============ Constructor & Initializer ============
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @notice Initializes the ResultHandler contract
     /// @dev Sets up the contract with the provided Seda prover address
     /// @param sedaProverAddress The address of the Seda prover contract
     // solhint-disable-next-line func-name-mixedcase
     function __ResultHandler_init(address sedaProverAddress) internal onlyInitializing {
-        sedaProver = IProver(sedaProverAddress);
+        _resultHandlerStorage().sedaProver = IProver(sedaProverAddress);
     }
+
+    // ============ External Functions ============
 
     /// @inheritdoc IResultHandler
     function postResult(
@@ -31,27 +52,29 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         bytes32[] calldata proof
     ) public virtual override(IResultHandler) returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
-        if (results[result.drId].drId != bytes32(0)) {
+        if (_resultHandlerStorage().results[result.drId].drId != bytes32(0)) {
             revert ResultAlreadyExists(resultId);
         }
-        if (!sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
+        if (!_resultHandlerStorage().sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
             revert InvalidResultProof(resultId);
         }
 
-        results[result.drId] = result;
+        _resultHandlerStorage().results[result.drId] = result;
 
         emit ResultPosted(resultId);
         return resultId;
     }
 
+    // ============ Public View Functions ============
+
     /// @inheritdoc IResultHandler
     function getResult(bytes32 requestId) public view override(IResultHandler) returns (SedaDataTypes.Result memory) {
-        SedaDataTypes.Result memory result = results[requestId];
+        SedaDataTypes.Result memory result = _resultHandlerStorage().results[requestId];
         if (bytes(result.version).length == 0) {
             revert ResultNotFound(requestId);
         }
 
-        return results[requestId];
+        return _resultHandlerStorage().results[requestId];
     }
 
     /// @notice Verifies the result without storing it
@@ -65,7 +88,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         bytes32[] calldata proof
     ) public view returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
-        if (!sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
+        if (!_resultHandlerStorage().sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
             revert InvalidResultProof(resultId);
         }
 
@@ -77,5 +100,18 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     /// @return The derived result ID
     function deriveResultId(SedaDataTypes.Result calldata result) public pure returns (bytes32) {
         return SedaDataTypes.deriveResultId(result);
+    }
+
+    // ============ Internal Functions ============
+
+    /// @notice Returns the storage struct for the contract
+    /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
+    /// @return s The storage struct containing the contract's state variables
+    function _resultHandlerStorage() private pure returns (ResultHandlerStorage storage s) {
+        bytes32 slot = RESULT_HANDLER_STORAGE_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            s.slot := slot
+        }
     }
 }

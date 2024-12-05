@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.24;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -11,18 +11,22 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title SedaCorePermissioned
 /// @notice Core contract for the Seda protocol with permissioned access, managing requests and results
-/// @dev Implements RequestHandlerBase, IResultHandler, AccessControl, Pausable, and ReentrancyGuard functionalities
+/// @dev Implements RequestHandlerBase, IResultHandler, AccessControl, and Pausable functionalities
 contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessControl, Pausable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    // Constants
+    // ============ Constants ============
+
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    // State variables
+    // ============ State Variables ============
+
     uint16 public maxReplicationFactor;
     mapping(bytes32 => SedaDataTypes.Result) public results;
     EnumerableSet.Bytes32Set private pendingRequests;
+
+    // ============ Constructor ============
 
     /// @notice Contract constructor
     /// @param relayers The initial list of relayer addresses to be granted the RELAYER_ROLE
@@ -41,46 +45,12 @@ contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessContr
         maxReplicationFactor = initialMaxReplicationFactor;
     }
 
+    // ============ External Functions ============
+
     /// @notice Sets the maximum replication factor that can be used for requests
     /// @param newMaxReplicationFactor The new maximum replication factor
     function setMaxReplicationFactor(uint16 newMaxReplicationFactor) external onlyRole(ADMIN_ROLE) {
         maxReplicationFactor = newMaxReplicationFactor;
-    }
-
-    /// @notice Posts a new request
-    /// @param inputs The request inputs
-    /// @return requestId The ID of the posted request
-    function postRequest(
-        SedaDataTypes.RequestInputs calldata inputs
-    ) public override(RequestHandlerBase) whenNotPaused returns (bytes32) {
-        uint16 replicationFactor = inputs.replicationFactor;
-        if (replicationFactor > maxReplicationFactor || replicationFactor == 0) {
-            revert InvalidReplicationFactor();
-        }
-
-        bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
-        if (bytes(requests[requestId].version).length != 0) {
-            revert RequestAlreadyExists(requestId);
-        }
-
-        requests[requestId] = SedaDataTypes.Request({
-            version: SedaDataTypes.VERSION,
-            execProgramId: inputs.execProgramId,
-            execInputs: inputs.execInputs,
-            execGasLimit: inputs.execGasLimit,
-            tallyProgramId: inputs.tallyProgramId,
-            tallyInputs: inputs.tallyInputs,
-            tallyGasLimit: inputs.tallyGasLimit,
-            replicationFactor: inputs.replicationFactor,
-            consensusFilter: inputs.consensusFilter,
-            gasPrice: inputs.gasPrice,
-            memo: inputs.memo
-        });
-
-        _addPendingRequest(requestId);
-
-        emit RequestPosted(requestId);
-        return requestId;
     }
 
     /// @notice Posts a result for a request
@@ -125,6 +95,44 @@ contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessContr
         return results[requestId];
     }
 
+    // ============ Public Functions ============
+
+    /// @notice Posts a new request
+    /// @param inputs The request inputs
+    /// @return requestId The ID of the posted request
+    function postRequest(
+        SedaDataTypes.RequestInputs calldata inputs
+    ) public override(RequestHandlerBase) whenNotPaused returns (bytes32) {
+        uint16 replicationFactor = inputs.replicationFactor;
+        if (replicationFactor > maxReplicationFactor || replicationFactor == 0) {
+            revert InvalidReplicationFactor();
+        }
+
+        bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
+        if (bytes(requests[requestId].version).length != 0) {
+            revert RequestAlreadyExists(requestId);
+        }
+
+        requests[requestId] = SedaDataTypes.Request({
+            version: SedaDataTypes.VERSION,
+            execProgramId: inputs.execProgramId,
+            execInputs: inputs.execInputs,
+            execGasLimit: inputs.execGasLimit,
+            tallyProgramId: inputs.tallyProgramId,
+            tallyInputs: inputs.tallyInputs,
+            tallyGasLimit: inputs.tallyGasLimit,
+            replicationFactor: inputs.replicationFactor,
+            consensusFilter: inputs.consensusFilter,
+            gasPrice: inputs.gasPrice,
+            memo: inputs.memo
+        });
+
+        _addPendingRequest(requestId);
+
+        emit RequestPosted(requestId);
+        return requestId;
+    }
+
     /// @notice Retrieves a list of pending request IDs
     /// @param offset The starting index in the pendingRequests set
     /// @param limit The maximum number of request IDs to return
@@ -138,12 +146,14 @@ contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessContr
         uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
         SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
-            bytes32 requestId = pendingRequests.at(offset + i); // Get request ID
+            bytes32 requestId = pendingRequests.at(offset + i);
             queriedPendingRequests[i] = requests[requestId];
         }
 
         return queriedPendingRequests;
     }
+
+    // ============ Admin Functions ============
 
     /// @notice Adds a relayer
     /// @param account The address of the relayer to add
@@ -166,6 +176,8 @@ contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessContr
     function unpause() external onlyRole(ADMIN_ROLE) {
         _unpause();
     }
+
+    // ============ Internal Functions ============
 
     /// @notice Adds a request ID to the pendingRequests set
     /// @param requestId The ID of the request to add

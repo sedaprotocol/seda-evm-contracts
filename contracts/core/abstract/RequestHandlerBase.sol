@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.24;
 
 import {SedaDataTypes} from "../../libraries/SedaDataTypes.sol";
 import {IRequestHandler} from "../../interfaces/IRequestHandler.sol";

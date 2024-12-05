@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.24;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -15,12 +15,30 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 contract SedaCoreV1 is RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    // Enumerable Set to store the request IDs that are pending
-    // `pendingRequests` keeps track of all active data requests that have been posted but not yet fulfilled.
-    // This set is used to manage the lifecycle of requests, allowing easy retrieval and status tracking.
-    // When a request is posted, it is added to `pendingRequests`.
-    // When a result is posted and the request is fulfilled, it is removed from `pendingRequests`
-    EnumerableSet.Bytes32Set private pendingRequests;
+    // ============ Constants ============
+
+    // Constant storage slot for the state following the ERC-7201 standard
+    bytes32 private constant SEDA_CORE_V1_STORAGE_SLOT =
+        keccak256(abi.encode(uint256(keccak256("sedacore.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
+
+    // ============ Storage ============
+
+    /// @custom:storage-location erc7201:sedacore.storage.v1
+    struct SedaCoreStorage {
+        // Enumerable Set to store the request IDs that are pending
+        // `pendingRequests` keeps track of all active data requests that have been posted but not yet fulfilled.
+        // This set is used to manage the lifecycle of requests, allowing easy retrieval and status tracking.
+        // When a request is posted, it is added to `pendingRequests`.
+        // When a result is posted and the request is fulfilled, it is removed from `pendingRequests`
+        EnumerableSet.Bytes32Set pendingRequests;
+    }
+
+    // ============ Constructor & Initializer ============
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     /// @notice Initializes the SedaCoreV1 contract
     /// @param sedaProverAddress The address of the Seda prover contract
@@ -31,27 +49,7 @@ contract SedaCoreV1 is RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, O
         __UUPSUpgradeable_init();
     }
 
-    /// @notice Retrieves a list of active requests
-    /// @dev This function is gas-intensive due to iteration over the pendingRequests array.
-    /// Users should be cautious when using high `limit` values in production environments, as it can result in high gas consumption.
-    /// @param offset The starting index in the pendingRequests array
-    /// @param limit The maximum number of requests to return
-    /// @return An array of SedaDataTypes.Request structs
-    function getPendingRequests(uint256 offset, uint256 limit) public view returns (SedaDataTypes.Request[] memory) {
-        uint256 totalRequests = pendingRequests.length();
-        if (offset >= totalRequests) {
-            return new SedaDataTypes.Request[](0);
-        }
-
-        uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
-        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
-        for (uint256 i = 0; i < actualLimit; i++) {
-            bytes32 requestId = pendingRequests.at(offset + i);
-            queriedPendingRequests[i] = requests[requestId];
-        }
-
-        return queriedPendingRequests;
-    }
+    // ============ External Functions ============
 
     /// @inheritdoc RequestHandlerBase
     /// @dev Overrides the base implementation to also add the request ID to the pendingRequests array
@@ -77,12 +75,49 @@ contract SedaCoreV1 is RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, O
         return resultId;
     }
 
+    // ============ Public View Functions ============
+
+    /// @notice Retrieves a list of active requests
+    /// @dev This function is gas-intensive due to iteration over the pendingRequests array.
+    /// Users should be cautious when using high `limit` values in production environments, as it can result in high gas consumption.
+    /// @param offset The starting index in the pendingRequests array
+    /// @param limit The maximum number of requests to return
+    /// @return An array of SedaDataTypes.Request structs
+    function getPendingRequests(uint256 offset, uint256 limit) public view returns (SedaDataTypes.Request[] memory) {
+        uint256 totalRequests = _storageV1().pendingRequests.length();
+        if (offset >= totalRequests) {
+            return new SedaDataTypes.Request[](0);
+        }
+
+        uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
+        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
+        for (uint256 i = 0; i < actualLimit; i++) {
+            bytes32 requestId = _storageV1().pendingRequests.at(offset + i);
+            queriedPendingRequests[i] = requests[requestId];
+        }
+
+        return queriedPendingRequests;
+    }
+
+    // ============ Internal Functions ============
+
+    /// @notice Returns the storage struct for the contract
+    /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
+    /// @return s The storage struct containing the contract's state variables
+    function _storageV1() internal pure returns (SedaCoreStorage storage s) {
+        bytes32 slot = SEDA_CORE_V1_STORAGE_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            s.slot := slot
+        }
+    }
+
     /// @notice Adds a request ID to the pendingRequests set
     /// @dev This function is internal to ensure that only the contract's internal logic can add requests,
     /// preventing unauthorized additions and maintaining proper state management.
     /// @param requestId The ID of the request to add
     function _addRequest(bytes32 requestId) internal {
-        pendingRequests.add(requestId);
+        _storageV1().pendingRequests.add(requestId);
     }
 
     /// @notice Removes a request ID from the pendingRequests set if it exists
@@ -90,7 +125,7 @@ contract SedaCoreV1 is RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, O
     /// maintaining proper state transitions and preventing unauthorized removals.
     /// @param requestId The ID of the request to remove
     function _removeRequest(bytes32 requestId) internal {
-        pendingRequests.remove(requestId);
+        _storageV1().pendingRequests.remove(requestId);
     }
 
     /// @dev Required override for UUPSUpgradeable. Ensures only the owner can upgrade the implementation.
