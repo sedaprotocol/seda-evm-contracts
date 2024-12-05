@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.24;
 
 // TODO: Rearrange struct fields to minimize storage gaps and optimize packing
 

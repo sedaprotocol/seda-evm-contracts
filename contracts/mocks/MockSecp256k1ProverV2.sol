@@ -12,9 +12,10 @@ contract MockSecp256k1ProverV2 is Secp256k1ProverV1 {
 
     // ============ Constants ============
     bytes32 private constant PROVER_V2_STORAGE_SLOT =
-        keccak256(abi.encode(uint256(keccak256("secp256k1prover.v2.storage")) - 1)) & ~bytes32(uint256(0xff));
+        keccak256(abi.encode(uint256(keccak256("secp256k1prover.storage.v2")) - 1)) & ~bytes32(uint256(0xff));
 
     // ============ Storage ============
+    /// @custom:storage-location secp256k1prover.storage.v2
     struct V2Storage {
         string version;
     }
@@ -26,7 +27,7 @@ contract MockSecp256k1ProverV2 is Secp256k1ProverV1 {
     }
 
     function initialize() external reinitializer(2) onlyOwner {
-        V2Storage storage s = _v2Storage();
+        V2Storage storage s = _storageV2();
         s.version = "2.0.0";
     }
 
@@ -34,11 +35,11 @@ contract MockSecp256k1ProverV2 is Secp256k1ProverV1 {
     /// @notice Returns the version string from V2 storage
     /// @return version The version string
     function getVersion() external view returns (string memory) {
-        return _v2Storage().version;
+        return _storageV2().version;
     }
 
     // ============ Internal Functions ============
-    function _v2Storage() internal pure returns (V2Storage storage s) {
+    function _storageV2() internal pure returns (V2Storage storage s) {
         bytes32 slot = PROVER_V2_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {

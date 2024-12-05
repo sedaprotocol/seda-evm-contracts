@@ -30,11 +30,11 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
     // Constant storage slot for the state following the ERC-7201 standard
     bytes32 private constant PROVER_V1_STORAGE_SLOT =
-        keccak256(abi.encode(uint256(keccak256("secp256k1prover.v1.storage")) - 1)) & ~bytes32(uint256(0xff));
+        keccak256(abi.encode(uint256(keccak256("secp256k1prover.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
 
     // ============ Storage ============
 
-    /// @custom:storage-location secp256k1prover.v1.storage
+    /// @custom:storage-location secp256k1prover.storage.v1
     struct Secp256k1ProverStorage {
         uint64 lastBatchHeight;
         bytes32 lastValidatorsRoot;
@@ -57,7 +57,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         __UUPSUpgradeable_init();
 
         // Existing initialization code
-        Secp256k1ProverStorage storage s = _storage();
+        Secp256k1ProverStorage storage s = _storageV1();
         s.batchToResultsRoot[initialBatch.batchHeight] = initialBatch.resultsRoot;
         s.lastBatchHeight = initialBatch.batchHeight;
         s.lastValidatorsRoot = initialBatch.validatorsRoot;
@@ -82,7 +82,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
     ) public override {
-        Secp256k1ProverStorage storage s = _storage();
+        Secp256k1ProverStorage storage s = _storageV1();
         // Check that new batch invariants hold
         if (newBatch.batchHeight <= s.lastBatchHeight) {
             revert InvalidBatchHeight();
@@ -130,7 +130,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         uint64 batchHeight,
         bytes32[] calldata merkleProof
     ) public view override returns (bool) {
-        Secp256k1ProverStorage storage s = _storage();
+        Secp256k1ProverStorage storage s = _storageV1();
         bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
         return MerkleProof.verify(merkleProof, s.batchToResultsRoot[batchHeight], leaf);
     }
@@ -138,20 +138,20 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @notice Returns the last processed batch height
     /// @return The height of the last batch
     function getLastBatchHeight() public view returns (uint64) {
-        return _storage().lastBatchHeight;
+        return _storageV1().lastBatchHeight;
     }
 
     /// @notice Returns the last validators root hash
     /// @return The Merkle root of the last validator set
     function getLastValidatorsRoot() public view returns (bytes32) {
-        return _storage().lastValidatorsRoot;
+        return _storageV1().lastValidatorsRoot;
     }
 
     /// @notice Returns the results root for a specific batch height
     /// @param batchHeight The batch height to query
     /// @return The results root for the specified batch
     function getBatchResultsRoot(uint64 batchHeight) public view returns (bytes32) {
-        return _storage().batchToResultsRoot[batchHeight];
+        return _storageV1().batchToResultsRoot[batchHeight];
     }
 
     // ============ Internal Functions ============
@@ -159,7 +159,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @notice Returns the storage struct for the contract
     /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
     /// @return s The storage struct containing the contract's state variables
-    function _storage() internal pure returns (Secp256k1ProverStorage storage s) {
+    function _storageV1() internal pure returns (Secp256k1ProverStorage storage s) {
         bytes32 slot = PROVER_V1_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {
