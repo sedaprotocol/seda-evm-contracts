@@ -43,6 +43,11 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
     // ============ Constructor & Initializer ============
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @notice Initializes the contract with initial batch data
     /// @dev Sets up the contract's initial state and initializes inherited contracts
     /// @param initialBatch The initial batch data containing height, validators root, and results root

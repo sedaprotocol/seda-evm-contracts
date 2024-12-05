@@ -2,7 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
 import type { Wallet } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import type { SedaDataTypes } from '../../typechain-types/contracts/libraries';
 import {
   computeResultLeafHash,
@@ -74,8 +74,8 @@ describe('Secp256k1Prover', () => {
 
     // Deploy the contract
     const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-    const prover = await ProverFactory.deploy();
-    await prover.initialize(initialBatch);
+    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], { initializer: 'initialize' });
+    await prover.waitForDeployment();
 
     return { prover, wallets, data };
   }
@@ -359,8 +359,8 @@ describe('Secp256k1Prover', () => {
 
       // Deploy the contract
       const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-      const prover = await ProverFactory.deploy();
-      await prover.initialize(testBatch);
+      const prover = await upgrades.deployProxy(ProverFactory, [testBatch], { initializer: 'initialize' });
+      await prover.waitForDeployment();
 
       expect(prover).to.emit(prover, 'BatchPosted').withArgs(testBatch.batchHeight, expectedBatchId);
     });
