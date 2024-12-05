@@ -2,15 +2,15 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { compareRequests } from './helpers';
-import { deriveRequestId, generateDataFixtures } from './utils';
+import { compareRequests } from '../helpers';
+import { deriveRequestId, generateDataFixtures } from '../utils';
 
 describe('RequestHandler', () => {
   async function deployRequestHandlerFixture() {
     const { requests } = generateDataFixtures(4);
 
     // Deploy the RequestHandler contract
-    const RequestHandlerFactory = await ethers.getContractFactory('RequestHandler');
+    const RequestHandlerFactory = await ethers.getContractFactory('SedaCoreV1');
     const handler = await RequestHandlerFactory.deploy();
 
     return { handler, requests };

@@ -3,8 +3,8 @@ import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import { compareRequests, compareResults, convertToRequestInputs } from './helpers';
-import { computeResultLeafHash, deriveDataResultId, deriveRequestId, generateDataFixtures } from './utils';
+import { compareRequests, compareResults, convertToRequestInputs } from '../helpers';
+import { computeResultLeafHash, deriveDataResultId, deriveRequestId, generateDataFixtures } from '../utils';
 
 describe('SedaCoreV1', () => {
   async function deployCoreFixture() {
@@ -30,7 +30,8 @@ describe('SedaCoreV1', () => {
     await prover.initialize(initialBatch);
 
     const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
-    const core = await CoreFactory.deploy(await prover.getAddress());
+    const core = await CoreFactory.deploy();
+    await core.initialize(await prover.getAddress());
 
     return { prover, core, data };
   }

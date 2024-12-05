@@ -1,8 +1,8 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { compareRequests, compareResults, convertToRequestInputs } from './helpers';
-import { deriveDataResultId, deriveRequestId, generateDataFixtures } from './utils';
+import { compareRequests, compareResults, convertToRequestInputs } from '../helpers';
+import { deriveDataResultId, deriveRequestId, generateDataFixtures } from '../utils';
 
 describe('SedaCorePermissioned', () => {
   const MAX_REPLICATION_FACTOR = 1;

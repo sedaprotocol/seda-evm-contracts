@@ -3,7 +3,7 @@ import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
 import type { Wallet } from 'ethers';
 import { ethers } from 'hardhat';
-import type { SedaDataTypes } from '../typechain-types/contracts/libraries';
+import type { SedaDataTypes } from '../../typechain-types/contracts/libraries';
 import {
   computeResultLeafHash,
   computeValidatorLeafHash,
@@ -11,7 +11,7 @@ import {
   deriveDataResultId,
   generateDataFixtures,
   generateNewBatchWithId,
-} from './utils';
+} from '../utils';
 
 describe('Secp256k1Prover', () => {
   async function deployProverFixture(length = 4) {
@@ -72,16 +72,10 @@ describe('Secp256k1Prover', () => {
       results,
     };
 
-    // Deploy the SedaDataTypes library first
-    // const DataTypesFactory = await ethers.getContractFactory('SedaDataTypes');
-    // const dataTypes = await DataTypesFactory.deploy();
-
     // Deploy the contract
     const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
     const prover = await ProverFactory.deploy();
     await prover.initialize(initialBatch);
-
-    // const prover = await upgrades.deployProxy(ProverFactory, [initialBatch]);
 
     return { prover, wallets, data };
   }
