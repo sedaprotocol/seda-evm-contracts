@@ -1,7 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 
 import { compareRequests, compareResults, convertToRequestInputs } from '../helpers';
 import { computeResultLeafHash, deriveDataResultId, deriveRequestId, generateDataFixtures } from '../utils';
@@ -26,12 +26,12 @@ describe('SedaCoreV1', () => {
     };
 
     const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-    const prover = await ProverFactory.deploy();
-    await prover.initialize(initialBatch);
+    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], { initializer: 'initialize' });
+    await prover.waitForDeployment();
 
     const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
-    const core = await CoreFactory.deploy();
-    await core.initialize(await prover.getAddress());
+    const core = await upgrades.deployProxy(CoreFactory, [await prover.getAddress()], { initializer: 'initialize' });
+    await core.waitForDeployment();
 
     return { prover, core, data };
   }
