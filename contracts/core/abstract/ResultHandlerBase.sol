@@ -10,9 +10,6 @@ import {IResultHandler} from "../../interfaces/IResultHandler.sol";
 /// @title ResultHandler
 /// @notice Implements the ResultHandlerBase for managing Seda protocol results
 abstract contract ResultHandlerBase is IResultHandler, Initializable {
-    // ============ Errors ============
-    // Note: Errors are defined in IResultHandler interface
-
     // ============ Constants ============
 
     // Define a unique storage slot for ResultHandlerBase

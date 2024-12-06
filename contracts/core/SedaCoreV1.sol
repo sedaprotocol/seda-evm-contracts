@@ -96,7 +96,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
             bytes32 requestId = _storageV1().pendingRequests.at(offset + i);
-            queriedPendingRequests[i] = requests[requestId];
+            queriedPendingRequests[i] = getRequest(requestId);
         }
 
         return queriedPendingRequests;

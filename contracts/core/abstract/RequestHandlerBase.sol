@@ -7,8 +7,21 @@ import {IRequestHandler} from "../../interfaces/IRequestHandler.sol";
 /// @title RequestHandler
 /// @notice Implements the RequestHandlerBase for managing Seda protocol requests
 abstract contract RequestHandlerBase is IRequestHandler {
-    // Mapping of request IDs to Request structs
-    mapping(bytes32 => SedaDataTypes.Request) public requests;
+    // ============ Constants ============
+
+    // Define a unique storage slot for RequestHandlerBase
+    bytes32 private constant REQUEST_HANDLER_STORAGE_SLOT =
+        keccak256(abi.encode(uint256(keccak256("seda.requesthandler.storage")) - 1)) & ~bytes32(uint256(0xff));
+
+    // ============ Storage ============
+
+    /// @custom:storage-location erc7201:seda.requesthandler.storage
+    struct RequestHandlerStorage {
+        // Mapping of request IDs to Request structs
+        mapping(bytes32 => SedaDataTypes.Request) requests;
+    }
+
+    // ============ External Functions ============
 
     /// @inheritdoc IRequestHandler
     function postRequest(
@@ -19,11 +32,11 @@ abstract contract RequestHandlerBase is IRequestHandler {
         }
 
         bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
-        if (bytes(requests[requestId].version).length != 0) {
+        if (bytes(_requestHandlerStorage().requests[requestId].version).length != 0) {
             revert RequestAlreadyExists(requestId);
         }
 
-        requests[requestId] = SedaDataTypes.Request({
+        _requestHandlerStorage().requests[requestId] = SedaDataTypes.Request({
             version: SedaDataTypes.VERSION,
             execProgramId: inputs.execProgramId,
             execInputs: inputs.execInputs,
@@ -44,14 +57,14 @@ abstract contract RequestHandlerBase is IRequestHandler {
     /// @inheritdoc IRequestHandler
     function getRequest(
         bytes32 requestId
-    ) external view virtual override(IRequestHandler) returns (SedaDataTypes.Request memory) {
-        SedaDataTypes.Request memory request = requests[requestId];
+    ) public view virtual override(IRequestHandler) returns (SedaDataTypes.Request memory) {
+        SedaDataTypes.Request memory request = _requestHandlerStorage().requests[requestId];
         // Version field is always set
         if (bytes(request.version).length == 0) {
             revert RequestNotFound(requestId);
         }
 
-        return requests[requestId];
+        return _requestHandlerStorage().requests[requestId];
     }
 
     /// @notice Derives a request ID from the given inputs
@@ -59,5 +72,18 @@ abstract contract RequestHandlerBase is IRequestHandler {
     /// @return The derived request ID
     function deriveRequestId(SedaDataTypes.RequestInputs calldata inputs) public pure returns (bytes32) {
         return SedaDataTypes.deriveRequestId(inputs);
+    }
+
+    // ============ Internal Functions ============
+
+    /// @notice Returns the storage struct for the contract
+    /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
+    /// @return s The storage struct containing the contract's state variables
+    function _requestHandlerStorage() internal pure returns (RequestHandlerStorage storage s) {
+        bytes32 slot = REQUEST_HANDLER_STORAGE_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            s.slot := slot
+        }
     }
 }

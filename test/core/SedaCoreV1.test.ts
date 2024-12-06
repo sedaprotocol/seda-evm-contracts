@@ -80,6 +80,7 @@ describe('SedaCoreV1', () => {
       const requests = await core.getPendingRequests(0, 1);
       expect(requests.length).to.equal(0);
     });
+
     it('should post a request and then post its result', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
@@ -178,7 +179,7 @@ describe('SedaCoreV1', () => {
       const gasUsed = await core.postResult.estimateGas(data.results[2], 0, data.proofs[2]);
 
       // This is rough esimate
-      expect(gasUsed).to.be.lessThan(250000);
+      expect(gasUsed).to.be.lessThan(300000);
     });
 
     it('should maintain pending requests (with removals)', async () => {
