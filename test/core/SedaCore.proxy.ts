@@ -2,48 +2,52 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 
-describe('Proxy: Secp256k1Prover', () => {
+describe('Proxy: SedaCore', () => {
   async function deployProxyFixture() {
     const [owner] = await ethers.getSigners();
 
-    // Generate initial batch data
     const initialBatch = {
       batchHeight: 0,
       blockHeight: 0,
       validatorsRoot: ethers.ZeroHash,
       resultsRoot: ethers.ZeroHash,
-      provingMetadata: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+      provingMetadata: ethers.ZeroHash,
     };
 
+    // Deploy prover
+    const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
+    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], { initializer: 'initialize' });
+    await prover.waitForDeployment();
+
     // Deploy V1 through proxy
-    const ProverV1Factory = await ethers.getContractFactory('Secp256k1ProverV1', owner);
-    const proxy = await upgrades.deployProxy(ProverV1Factory, [initialBatch], { initializer: 'initialize' });
-    await proxy.waitForDeployment();
+    const CoreV1Factory = await ethers.getContractFactory('SedaCoreV1', owner);
+    const core = await upgrades.deployProxy(CoreV1Factory, [await prover.getAddress()], { initializer: 'initialize' });
+    await core.waitForDeployment();
 
     // Get V2 factory
-    const ProverV2Factory = await ethers.getContractFactory('MockSecp256k1ProverV2', owner);
+    const CoreV2Factory = await ethers.getContractFactory('MockSedaCoreV2', owner);
 
-    return { proxy, ProverV2Factory, initialBatch };
+    return { prover, core, CoreV2Factory };
   }
 
   describe('upgrade', () => {
     it('should maintain state after upgrade', async () => {
-      const { proxy, ProverV2Factory, initialBatch } = await loadFixture(deployProxyFixture);
+      const { prover, core, CoreV2Factory } = await loadFixture(deployProxyFixture);
 
-      // Check initial state
-      const heightBeforeUpgrade = await proxy.getLastBatchHeight();
-      expect(heightBeforeUpgrade).to.equal(initialBatch.batchHeight);
+      // Check initial state (using a relevant state variable from your SedaCore)
+      const stateBeforeUpgrade = await core.getSedaProver();
+      expect(stateBeforeUpgrade).to.equal(await prover.getAddress());
 
       // Upgrade to V2
-      const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), ProverV2Factory);
+      const proxyV2 = await upgrades.upgradeProxy(await core.getAddress(), CoreV2Factory);
 
       // Check state is maintained
-      const heightAfterUpgrade = await proxyV2.getLastBatchHeight();
-      expect(heightAfterUpgrade).to.equal(heightBeforeUpgrade);
+      const stateAfterUpgrade = await proxyV2.getSedaProver();
+      expect(stateAfterUpgrade).to.equal(stateBeforeUpgrade);
     });
 
     it('should maintain owner after upgrade', async () => {
-      const { proxy, ProverV2Factory } = await loadFixture(deployProxyFixture);
+      const { core: proxy, CoreV2Factory } = await loadFixture(deployProxyFixture);
       const [owner] = await ethers.getSigners();
 
       // Check owner before upgrade
@@ -51,7 +55,7 @@ describe('Proxy: Secp256k1Prover', () => {
       expect(ownerBeforeUpgrade).to.equal(owner.address);
 
       // Upgrade to V2
-      const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), ProverV2Factory);
+      const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), CoreV2Factory);
 
       // Check owner is maintained after upgrade
       const ownerAfterUpgrade = await proxyV2.owner();
@@ -59,7 +63,7 @@ describe('Proxy: Secp256k1Prover', () => {
     });
 
     it('should have new functionality after upgrade', async () => {
-      const { proxy, ProverV2Factory } = await loadFixture(deployProxyFixture);
+      const { core: proxy, CoreV2Factory } = await loadFixture(deployProxyFixture);
 
       // Verify V1 doesn't have getVersion()
       const V1Contract = proxy.connect(await ethers.provider.getSigner());
@@ -67,7 +71,7 @@ describe('Proxy: Secp256k1Prover', () => {
       expect(V1Contract.getVersion).to.be.undefined;
 
       // Upgrade to V2
-      const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), ProverV2Factory);
+      const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), CoreV2Factory);
       await proxyV2.initialize();
 
       // Check new V2 functionality

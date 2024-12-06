@@ -13,7 +13,7 @@ import {
   generateNewBatchWithId,
 } from '../utils';
 
-describe('Secp256k1Prover', () => {
+describe('Secp256k1ProverV1', () => {
   async function deployProverFixture(length = 4) {
     const wallets = Array.from({ length }, (_, i) => {
       const seed = ethers.id(`validator${i}`);
