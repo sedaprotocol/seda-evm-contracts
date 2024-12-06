@@ -1,7 +1,9 @@
-import type { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
-import { getEtherscanConfig, getNetworksConfig } from './config';
 import '@openzeppelin/hardhat-upgrades';
+import type { HardhatUserConfig } from 'hardhat/config';
+import { getEtherscanConfig, getNetworksConfig } from './config';
+
+import './tasks';
 
 const gasReporterConfig = {
   currency: 'USD',
