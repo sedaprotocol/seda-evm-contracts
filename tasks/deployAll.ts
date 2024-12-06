@@ -6,15 +6,17 @@ import { deploySecp256k1Prover } from './deployProver';
 export async function deployAll(
   hre: HardhatRuntimeEnvironment,
   options: {
-    proverParams: string;
+    params: string;
+    reset?: boolean;
     verify?: boolean;
   },
 ) {
   // 1. Deploy Secp256k1Prover
   logger.section('1. Deploy Secp256k1Prover contracts', 'meta');
   const { contractAddress } = await deploySecp256k1Prover(hre, {
-    params: options.proverParams,
+    params: options.params,
     verify: options.verify,
+    reset: options.reset,
   });
 
   // 2. Deploy SedaCore using the prover address
@@ -22,5 +24,6 @@ export async function deployAll(
   await deploySedaCore(hre, {
     proverAddress: contractAddress,
     verify: options.verify,
+    reset: options.reset,
   });
 }

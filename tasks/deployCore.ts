@@ -16,6 +16,7 @@ export async function deploySedaCore(
   options: {
     params?: string;
     proverAddress?: string;
+    reset?: boolean;
     verify?: boolean;
   },
 ) {
@@ -71,7 +72,7 @@ export async function deploySedaCore(
   // Deploy
   logger.section('Deploying Contracts', 'deploy');
   const networkKey = `${hre.network.name}-${hre.network.config.chainId}`;
-  if (await pathExists(`${CONFIG.DEPLOYMENTS.FOLDER}/${networkKey}`)) {
+  if (!options.reset && (await pathExists(`${CONFIG.DEPLOYMENTS.FOLDER}/${networkKey}`))) {
     const confirmation = await prompt(`Deployments folder for ${networkKey} already exists. Type "yes" to continue: `);
     if (confirmation !== 'yes') {
       logger.error('Deployment aborted.');

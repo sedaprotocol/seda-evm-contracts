@@ -16,6 +16,7 @@ export async function deploySecp256k1Prover(
   hre: HardhatRuntimeEnvironment,
   options: {
     params: string;
+    reset?: boolean;
     verify?: boolean;
   },
 ): Promise<{ contractAddress: string; contractImplAddress: string }> {
@@ -44,7 +45,7 @@ export async function deploySecp256k1Prover(
   // Deploy
   logger.section('Deploying Contracts', 'deploy');
   const networkKey = `${hre.network.name}-${hre.network.config.chainId}`;
-  if (await pathExists(`${CONFIG.DEPLOYMENTS.FOLDER}/${networkKey}`)) {
+  if (!options.reset && (await pathExists(`${CONFIG.DEPLOYMENTS.FOLDER}/${networkKey}`))) {
     const confirmation = await prompt('Deployments folder already exists. Type "yes" to continue: ');
     if (confirmation !== 'yes') {
       logger.error('Deployment aborted.');
