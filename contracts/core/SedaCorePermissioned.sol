@@ -70,20 +70,6 @@ contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessContr
         return resultId;
     }
 
-    /// @notice Retrieves a stored request
-    /// @param requestId The ID of the request to retrieve
-    /// @return The requested data
-    function getRequest(
-        bytes32 requestId
-    ) external view override(RequestHandlerBase) returns (SedaDataTypes.Request memory) {
-        SedaDataTypes.Request memory request = requests[requestId];
-        if (bytes(request.version).length == 0) {
-            revert RequestNotFound(requestId);
-        }
-
-        return requests[requestId];
-    }
-
     /// @notice Retrieves a result by its ID
     /// @param requestId The unique identifier of the result
     /// @return The result data associated with the given ID
@@ -103,33 +89,17 @@ contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessContr
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
     ) public override(RequestHandlerBase) whenNotPaused returns (bytes32) {
-        uint16 replicationFactor = inputs.replicationFactor;
-        if (replicationFactor > maxReplicationFactor || replicationFactor == 0) {
+        // Check max replication factor first
+        if (inputs.replicationFactor > maxReplicationFactor) {
             revert InvalidReplicationFactor();
         }
 
-        bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
-        if (bytes(requests[requestId].version).length != 0) {
-            revert RequestAlreadyExists(requestId);
-        }
+        // Call parent implementation which handles the rest
+        bytes32 requestId = super.postRequest(inputs);
 
-        requests[requestId] = SedaDataTypes.Request({
-            version: SedaDataTypes.VERSION,
-            execProgramId: inputs.execProgramId,
-            execInputs: inputs.execInputs,
-            execGasLimit: inputs.execGasLimit,
-            tallyProgramId: inputs.tallyProgramId,
-            tallyInputs: inputs.tallyInputs,
-            tallyGasLimit: inputs.tallyGasLimit,
-            replicationFactor: inputs.replicationFactor,
-            consensusFilter: inputs.consensusFilter,
-            gasPrice: inputs.gasPrice,
-            memo: inputs.memo
-        });
-
+        // Add to pending requests (unique to this implementation)
         _addPendingRequest(requestId);
 
-        emit RequestPosted(requestId);
         return requestId;
     }
 
@@ -147,7 +117,7 @@ contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessContr
         SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
             bytes32 requestId = pendingRequests.at(offset + i);
-            queriedPendingRequests[i] = requests[requestId];
+            queriedPendingRequests[i] = getRequest(requestId);
         }
 
         return queriedPendingRequests;
