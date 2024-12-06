@@ -73,8 +73,13 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         if (bytes(result.version).length == 0) {
             revert ResultNotFound(requestId);
         }
-
         return _resultHandlerStorage().results[requestId];
+    }
+
+    /// @notice Returns the address of the Seda prover contract
+    /// @return The address of the Seda prover contract
+    function getSedaProver() public view returns (address) {
+        return address(_resultHandlerStorage().sedaProver);
     }
 
     /// @notice Verifies the result without storing it

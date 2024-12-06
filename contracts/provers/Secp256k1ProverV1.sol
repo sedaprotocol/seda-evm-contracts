@@ -137,7 +137,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
     /// @notice Returns the last processed batch height
     /// @return The height of the last batch
-    function getLastBatchHeight() public view returns (uint64) {
+    function getLastBatchHeight() public view override returns (uint64) {
         return _storageV1().lastBatchHeight;
     }
 

@@ -8,6 +8,10 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 interface IProver {
     event BatchPosted(uint256 indexed batchHeight, bytes32 batchHash);
 
+    /// @notice Gets the height of the most recently posted batch
+    /// @return uint64 The height of the last batch, 0 if no batches exist
+    function getLastBatchHeight() external view returns (uint64);
+
     /// @notice Posts a new batch with new data and validator proofs
     /// @param newBatch The new batch data to be posted
     /// @param signatures Array of signatures validating the new batch
