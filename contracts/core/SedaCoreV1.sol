@@ -18,6 +18,11 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
+    // ============ Errors ============
+
+    // Error thrown when a result is posted with a timestamp before the corresponding request
+    error InvalidResultTimestamp(bytes32 drId, uint256 resultTimestamp, uint256 requestTimestamp);
+
     // ============ Constants ============
 
     // Constant storage slot for the state following the ERC-7201 standard
@@ -34,6 +39,8 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         // When a request is posted, it is added to `pendingRequests`.
         // When a result is posted and the request is fulfilled, it is removed from `pendingRequests`
         EnumerableSet.Bytes32Set pendingRequests;
+        // Mapping to store request timestamps for pending DRs
+        mapping(bytes32 => uint256) requestTimestamps;
     }
 
     // ============ Constructor & Initializer ============
@@ -55,25 +62,36 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     // ============ External Functions ============
 
     /// @inheritdoc RequestHandlerBase
-    /// @dev Overrides the base implementation to also add the request ID to the pendingRequests array
+    /// @dev Overrides the base implementation to also add the request ID and timestamp to storage
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
     ) public override(RequestHandlerBase, IRequestHandler) returns (bytes32) {
         bytes32 requestId = super.postRequest(inputs);
         _addRequest(requestId);
+        // Store the request timestamp
+        _storageV1().requestTimestamps[requestId] = block.timestamp;
 
         return requestId;
     }
 
     /// @inheritdoc ResultHandlerBase
-    /// @dev Overrides the base implementation to also remove the request ID from the pendingRequests array if it exists
+    /// @dev Overrides the base implementation to validate result timestamp and clean up storage
     function postResult(
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
     ) public override(ResultHandlerBase, IResultHandler) returns (bytes32) {
+        uint256 requestTimestamp = _storageV1().requestTimestamps[result.drId];
+        // Validate result timestamp comes after request timestamp
+        // Note: requestTimestamp = 0 for requests not tracked by this contract (always passes validation)
+        if (result.blockTimestamp <= requestTimestamp) {
+            revert InvalidResultTimestamp(result.drId, result.blockTimestamp, requestTimestamp);
+        }
+
         bytes32 resultId = super.postResult(result, batchHeight, proof);
+
         _removeRequest(result.drId);
+        delete _storageV1().requestTimestamps[result.drId];
 
         return resultId;
     }

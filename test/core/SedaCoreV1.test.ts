@@ -8,7 +8,11 @@ import { computeResultLeafHash, deriveDataResultId, deriveRequestId, generateDat
 
 describe('SedaCoreV1', () => {
   async function deployCoreFixture() {
+    // Generate test fixtures and modify the last result's timestamp to be 1 second (1 unix timestamp)
+    // This simulates an invalid result with a timestamp from 1970-01-01T00:00:01Z
     const { requests, results } = generateDataFixtures(10);
+    results[results.length - 1].blockTimestamp = 1;
+
     const leaves = results.map(deriveDataResultId).map(computeResultLeafHash);
 
     // Create merkle tree and proofs
@@ -118,6 +122,18 @@ describe('SedaCoreV1', () => {
         const postedResult = await core.getResult(data.results[i].drId);
         compareResults(postedResult, data.results[i]);
       }
+    });
+
+    it('should reject results with invalid timestamps', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+
+      const requestIndex = data.results.length - 1;
+      await core.postRequest(data.requests[requestIndex]);
+
+      // Try to post the last result which has an invalid timestamp of 1
+      await expect(
+        core.postResult(data.results[requestIndex], 0, data.proofs[requestIndex]),
+      ).to.be.revertedWithCustomError(core, 'InvalidResultTimestamp');
     });
   });
 
