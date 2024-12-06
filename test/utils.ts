@@ -1,6 +1,5 @@
 import { ethers } from 'hardhat';
-
-import type { SedaDataTypes } from '../typechain-types/contracts/libraries/SedaDataTypes';
+import type { CoreRequestTypes, CoreResultTypes, ProverDataTypes } from '../ts-types';
 
 export const SEDA_DATA_TYPES_VERSION = '0.0.1';
 
@@ -11,8 +10,8 @@ function padBigIntToBytes(value: bigint, byteLength: number): string {
   return ethers.zeroPadValue(ethers.toBeArray(value), byteLength);
 }
 
-export function generateNewBatchWithId(initialBatch: SedaDataTypes.BatchStruct) {
-  const newBatch: SedaDataTypes.BatchStruct = {
+export function generateNewBatchWithId(initialBatch: ProverDataTypes.BatchStruct) {
+  const newBatch: ProverDataTypes.BatchStruct = {
     ...initialBatch,
     batchHeight: BigInt(initialBatch.batchHeight) + BigInt(1),
     blockHeight: BigInt(initialBatch.blockHeight) + BigInt(1),
@@ -22,7 +21,7 @@ export function generateNewBatchWithId(initialBatch: SedaDataTypes.BatchStruct) 
   return { newBatchId, newBatch };
 }
 
-export function deriveBatchId(batch: SedaDataTypes.BatchStruct): string {
+export function deriveBatchId(batch: ProverDataTypes.BatchStruct): string {
   return ethers.keccak256(
     ethers.concat([
       padBigIntToBytes(BigInt(batch.batchHeight), 8),
@@ -34,7 +33,7 @@ export function deriveBatchId(batch: SedaDataTypes.BatchStruct): string {
   );
 }
 
-export function deriveRequestId(request: SedaDataTypes.RequestInputsStruct): string {
+export function deriveRequestId(request: CoreRequestTypes.RequestInputsStruct): string {
   return ethers.keccak256(
     ethers.concat([
       ethers.keccak256(ethers.toUtf8Bytes(SEDA_DATA_TYPES_VERSION)),
@@ -52,7 +51,7 @@ export function deriveRequestId(request: SedaDataTypes.RequestInputsStruct): str
   );
 }
 
-export function deriveDataResultId(dataResult: SedaDataTypes.ResultStruct): string {
+export function deriveDataResultId(dataResult: CoreResultTypes.ResultStruct): string {
   return ethers.keccak256(
     ethers.concat([
       ethers.keccak256(ethers.toUtf8Bytes(SEDA_DATA_TYPES_VERSION)),
@@ -81,8 +80,8 @@ export function computeValidatorLeafHash(validator: string, votingPower: number)
 }
 
 export function generateDataFixtures(length: number): {
-  requests: SedaDataTypes.RequestInputsStruct[];
-  results: SedaDataTypes.ResultStruct[];
+  requests: CoreRequestTypes.RequestInputsStruct[];
+  results: CoreResultTypes.ResultStruct[];
 } {
   const requests = Array.from({ length }, (_, i) => ({
     execProgramId: ethers.ZeroHash,

@@ -1,12 +1,11 @@
 import { expect } from 'chai';
-
-import type { SedaDataTypes } from '../typechain-types/contracts/libraries/SedaDataTypes';
+import type { CoreRequestTypes, CoreResultTypes, ProverDataTypes } from '../ts-types';
 
 // Function to convert an unformatted tuple result to a formatted struct
 export function convertToRequestInputs(
   // biome-ignore lint/suspicious/noExplicitAny: Explicit any type is necessary to handle the unformatted tuple result
   request: any,
-): SedaDataTypes.RequestInputsStruct {
+): CoreRequestTypes.RequestInputsStruct {
   return {
     //version: unformatted[0],
     execProgramId: request[1],
@@ -24,8 +23,8 @@ export function convertToRequestInputs(
 
 // Helper function to compare two requests
 export const compareRequests = (
-  actual: SedaDataTypes.RequestInputsStruct,
-  expected: SedaDataTypes.RequestInputsStruct,
+  actual: CoreRequestTypes.RequestInputsStruct,
+  expected: CoreRequestTypes.RequestInputsStruct,
 ) => {
   expect(actual.execProgramId).to.equal(expected.execProgramId);
   expect(actual.execInputs).to.equal(expected.execInputs);
@@ -40,7 +39,7 @@ export const compareRequests = (
 };
 
 // Helper function to compare two results
-export const compareResults = (actual: SedaDataTypes.ResultStruct, expected: SedaDataTypes.ResultStruct) => {
+export const compareResults = (actual: CoreResultTypes.ResultStruct, expected: CoreResultTypes.ResultStruct) => {
   expect(actual.version).to.equal(expected.version);
   expect(actual.drId).to.equal(expected.drId);
   expect(actual.consensus).to.equal(expected.consensus);

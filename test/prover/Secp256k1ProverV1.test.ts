@@ -3,7 +3,7 @@ import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
 import type { Wallet } from 'ethers';
 import { ethers, upgrades } from 'hardhat';
-import type { SedaDataTypes } from '../../typechain-types/contracts/libraries';
+import type { ProverDataTypes } from '../../ts-types';
 import {
   computeResultLeafHash,
   computeValidatorLeafHash,
@@ -81,7 +81,11 @@ describe('Secp256k1ProverV1', () => {
   }
 
   // Add a helper function to generate and sign a new batch
-  async function generateAndSignBatch(wallets: Wallet[], initialBatch: SedaDataTypes.BatchStruct, signerIndices = [0]) {
+  async function generateAndSignBatch(
+    wallets: Wallet[],
+    initialBatch: ProverDataTypes.BatchStruct,
+    signerIndices = [0],
+  ) {
     const { newBatchId, newBatch } = generateNewBatchWithId(initialBatch);
     const signatures = await Promise.all(signerIndices.map((i) => wallets[i].signingKey.sign(newBatchId).serialized));
     return { newBatchId, newBatch, signatures };
@@ -347,7 +351,7 @@ describe('Secp256k1ProverV1', () => {
 
   describe('batch id', () => {
     it('should generate the correct batch id for test vectors', async () => {
-      const testBatch: SedaDataTypes.BatchStruct = {
+      const testBatch: ProverDataTypes.BatchStruct = {
         batchHeight: 4,
         blockHeight: 134,
         resultsRoot: '0x49918c4e986fff80aeb3532466132920d2ffd8db2a9615e8d02dd0f02e19503a',

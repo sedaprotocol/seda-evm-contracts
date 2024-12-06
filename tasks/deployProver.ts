@@ -1,5 +1,4 @@
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
-import type { SedaDataTypes } from '../typechain-types/contracts/libraries/SedaDataTypes';
 import { CONFIG } from './common/config';
 import { pathExists } from './common/io';
 import { prompt } from './common/io';
@@ -7,10 +6,6 @@ import { logger } from './common/logger';
 import { readParams } from './common/params';
 import { updateAddressesFile, updateDeployment } from './common/reports';
 import { deployProxyContract } from './common/uupsProxy';
-
-interface Secp256k1ProverV1Params {
-  initialBatch: SedaDataTypes.BatchStruct;
-}
 
 export async function deploySecp256k1Prover(
   hre: HardhatRuntimeEnvironment,
@@ -20,17 +15,13 @@ export async function deploySecp256k1Prover(
     verify?: boolean;
   },
 ): Promise<{ contractAddress: string; contractImplAddress: string }> {
-  const { params, verify } = options;
+  const { params: paramsFilePath, verify } = options;
   const contractName = 'Secp256k1ProverV1';
 
   // Contract Parameters
   logger.section('Contract Parameters', 'params');
-  const proverParams = await readParams<Secp256k1ProverV1Params>(
-    params,
-    ['batchHeight', 'blockHeight', 'validatorsRoot', 'resultsRoot', 'provingMetadata'],
-    ['Secp256k1ProverV1', 'initialBatch'],
-  );
-  logger.info(`Using parameters file: ${params}`);
+  logger.info(`Using parameters file: ${paramsFilePath}`);
+  const proverParams = await readParams(paramsFilePath);
   logger.info(`File Content: \n  ${JSON.stringify(proverParams, null, 2).replace(/\n/g, '\n  ')}`);
 
   // Configuration
@@ -52,7 +43,12 @@ export async function deploySecp256k1Prover(
       throw new Error('Deployment aborted: User cancelled the operation');
     }
   }
-  const { contract, contractImplAddress } = await deployProxyContract(hre, contractName, [proverParams], owner);
+  const { contract, contractImplAddress } = await deployProxyContract(
+    hre,
+    contractName,
+    [proverParams.Secp256k1ProverV1.initialBatch],
+    owner,
+  );
   const contractAddress = await contract.getAddress();
   logger.success(`Proxy address: ${contractAddress}`);
   logger.success(`Impl. address: ${contractImplAddress}`);

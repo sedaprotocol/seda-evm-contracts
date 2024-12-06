@@ -7,10 +7,6 @@ import { readParams } from './common/params';
 import { updateAddressesFile, updateDeployment } from './common/reports';
 import { deployProxyContract } from './common/uupsProxy';
 
-interface SedaCoreV1Params {
-  sedaProverAddress: string;
-}
-
 export async function deploySedaCore(
   hre: HardhatRuntimeEnvironment,
   options: {
@@ -33,9 +29,9 @@ export async function deploySedaCore(
   // Validate parameters
   let sedaProverAddress: string;
   if (params) {
-    const sedaProverParams = await readParams<SedaCoreV1Params>(params, ['sedaProverAddress'], ['SedaCoreV1']);
-    sedaProverAddress = sedaProverParams.sedaProverAddress;
     logger.info(`Using parameters file: ${params}`);
+    const sedaProverParams = await readParams(params);
+    sedaProverAddress = sedaProverParams.SedaCoreV1.sedaProverAddress;
     logger.info(`File content: \n  ${JSON.stringify(sedaProverParams, null, 2).replace(/\n/g, '\n  ')}`);
   } else if (proverAddress) {
     // Use the directly provided prover address

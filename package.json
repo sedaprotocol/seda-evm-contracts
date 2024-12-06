@@ -31,7 +31,8 @@
     "prettier": "^3.4.2",
     "prettier-plugin-solidity": "^1.4.1",
     "rimraf": "^6.0.1",
-    "solhint": "^5.0.3"
+    "solhint": "^5.0.3",
+    "valibot": "^0.42.1"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.1.0",

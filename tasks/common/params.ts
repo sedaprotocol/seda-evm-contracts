@@ -1,37 +1,35 @@
+import * as v from 'valibot';
 import { readFile } from './io';
 
-export async function readParams<T extends object>(
-  filePath: string,
-  requiredFields: string[],
-  objectPath: string[],
-): Promise<T> {
-  // Read and parse JSON file
-  let params: T;
+const HexString = v.pipe(v.string(), v.regex(/^0x[0-9a-fA-F]*$/, 'Invalid hex string'));
+
+const ParamsSchema = v.object({
+  SedaCoreV1: v.object({
+    sedaProverAddress: HexString,
+  }),
+  Secp256k1ProverV1: v.object({
+    initialBatch: v.object({
+      batchHeight: v.number(),
+      blockHeight: v.number(),
+      validatorsRoot: HexString,
+      resultsRoot: HexString,
+      provingMetadata: HexString,
+    }),
+  }),
+});
+
+export async function readParams(filePath: string): Promise<v.InferOutput<typeof ParamsSchema>> {
   try {
     const fileContent = await readFile(filePath);
     const parsedJson = JSON.parse(fileContent);
 
-    // Navigate through nested object structure with better error handling
-    params = objectPath.reduce((obj, key) => {
-      if (obj === undefined || obj === null) {
-        throw new Error(`Invalid path: '${objectPath.join('.')}' - '${key}' not found`);
-      }
-      return obj[key];
-    }, parsedJson);
-
-    if (!params) {
-      throw new Error(`No data found at path '${objectPath.join('.')}'`);
-    }
+    return v.parse(ParamsSchema, parsedJson);
   } catch (error: unknown) {
+    if (error instanceof v.ValiError) {
+      throw new Error(`Failed to read or parse params file: ${v.flatten(error.issues)}`);
+    }
+
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to read or parse params file: ${errorMessage}`);
   }
-
-  // Validate JSON structure
-  const missingFields = requiredFields.filter((field) => !(field in params));
-  if (missingFields.length > 0) {
-    throw new Error(`Invalid params configuration: missing required fields: ${missingFields.join(', ')}`);
-  }
-
-  return params as T;
 }
