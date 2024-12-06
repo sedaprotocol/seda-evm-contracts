@@ -5,6 +5,8 @@ import { scope, types } from 'hardhat/config';
  */
 export const sedaScope = scope('seda', 'Deploy and interact with SEDA contracts');
 
+import './postRequest';
+
 import { deployAll } from './deployAll';
 import { deploySedaCore } from './deployCore';
 import { deploySecp256k1Prover } from './deployProver';

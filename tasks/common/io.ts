@@ -48,9 +48,9 @@ export async function ensureDirectoryExists(dirPath: string): Promise<void> {
   }
 }
 
-export async function directoryExists(dirPath: string): Promise<boolean> {
+export async function pathExists(path: string): Promise<boolean> {
   try {
-    await fs.access(dirPath);
+    await fs.access(path);
     return true;
   } catch {
     return false;

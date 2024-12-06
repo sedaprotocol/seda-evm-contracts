@@ -1,13 +1,12 @@
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 import type { SedaDataTypes } from '../typechain-types/contracts/libraries/SedaDataTypes';
-import { updateAddresses } from './common/addresses';
 import { CONFIG } from './common/config';
-import { updateDeployment } from './common/deployment';
-import { directoryExists } from './common/io';
+import { pathExists } from './common/io';
 import { prompt } from './common/io';
 import { logger } from './common/logger';
 import { readParams } from './common/params';
-import { deployProxyContract } from './common/proxy';
+import { updateAddressesFile, updateDeployment } from './common/reports';
+import { deployProxyContract } from './common/uupsProxy';
 
 interface Secp256k1ProverV1Params {
   initialBatch: SedaDataTypes.BatchStruct;
@@ -44,8 +43,8 @@ export async function deploySecp256k1Prover(
 
   // Deploy
   logger.section('Deploying Contracts', 'deploy');
-  // If deployments folder exists, ask user to confirm by typing 'yes'
-  if (await directoryExists(CONFIG.DEPLOYMENTS.FOLDER)) {
+  const networkKey = `${hre.network.name}-${hre.network.config.chainId}`;
+  if (await pathExists(`${CONFIG.DEPLOYMENTS.FOLDER}/${networkKey}`)) {
     const confirmation = await prompt('Deployments folder already exists. Type "yes" to continue: ');
     if (confirmation !== 'yes') {
       logger.error('Deployment aborted.');
@@ -60,7 +59,7 @@ export async function deploySecp256k1Prover(
   // Update deployment files
   logger.section('Updating Deployment Files', 'files');
   await updateDeployment(hre, contractName);
-  await updateAddresses(hre, contractName, contractAddress, contractImplAddress);
+  await updateAddressesFile(hre, contractName, contractAddress, contractImplAddress);
 
   if (verify) {
     logger.section('Verifying Contracts', 'verify');
