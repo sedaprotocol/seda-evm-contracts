@@ -18,16 +18,16 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    // ============ Errors ============
-
-    // Error thrown when a result is posted with a timestamp before the corresponding request
-    error InvalidResultTimestamp(bytes32 drId, uint256 resultTimestamp, uint256 requestTimestamp);
-
     // ============ Constants ============
 
     // Constant storage slot for the state following the ERC-7201 standard
     bytes32 private constant CORE_V1_STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("sedacore.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
+
+    // ============ Errors ============
+
+    // Error thrown when a result is posted with a timestamp before the corresponding request
+    error InvalidResultTimestamp(bytes32 drId, uint256 resultTimestamp, uint256 requestTimestamp);
 
     // ============ Storage ============
 

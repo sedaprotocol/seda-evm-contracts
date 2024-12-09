@@ -18,10 +18,6 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 ///      - Valid validator proofs and signatures
 ///      - Sufficient voting power to meet the consensus threshold
 contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, OwnableUpgradeable {
-    // ============ Errors ============
-    // Error thrown when consensus is not reached
-    error ConsensusNotReached();
-
     // ============ Constants ============
 
     // The percentage of voting power required for consensus (66.666666%, represented as parts per 100,000,000)
@@ -31,6 +27,9 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     // Constant storage slot for the state following the ERC-7201 standard
     bytes32 private constant PROVER_V1_STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("secp256k1prover.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
+
+    // ============ Errors ============
+    error ConsensusNotReached();
 
     // ============ Storage ============
 
