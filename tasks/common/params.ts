@@ -16,6 +16,9 @@ const ParamsSchema = v.object({
       provingMetadata: HexString,
     }),
   }),
+  SedaPermissioned: v.object({
+    maxReplicationFactor: v.number(),
+  }),
 });
 
 export async function readParams(filePath: string): Promise<v.InferOutput<typeof ParamsSchema>> {

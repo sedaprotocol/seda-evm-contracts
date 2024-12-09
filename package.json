@@ -6,7 +6,6 @@
     "check": "bun run lint && bun run format:sol",
     "clean": "rimraf artifacts cache typechain-types",
     "compile": "hardhat compile",
-    "deploy:core:permissioned": "hardhat ignition deploy ignition/modules/SedaCorePermissioned.ts --parameters ignition/modules/parameters.json",
     "format:sol": "prettier --check \"**/*.sol\"",
     "format:sol:fix": "prettier --write \"**/*.sol\"",
     "gen:testvectors": "bun scripts/generateTestVectors.ts",

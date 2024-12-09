@@ -5,24 +5,30 @@ import { prompt } from './common/io';
 import { logger } from './common/logger';
 import { readParams } from './common/params';
 import { updateAddressesFile, updateDeployment } from './common/reports';
-import { deployProxyContract } from './common/uupsProxy';
 
-export async function deploySecp256k1Prover(
+export async function deployMock(
   hre: HardhatRuntimeEnvironment,
   options: {
-    params: string;
+    params?: string;
+    maxReplicationFactor?: number;
     reset?: boolean;
     verify?: boolean;
   },
-): Promise<{ contractAddress: string; contractImplAddress: string }> {
-  const { params: paramsFilePath, verify } = options;
-  const contractName = 'Secp256k1ProverV1';
+): Promise<{ contractAddress: string }> {
+  const contractName = 'SedaPermissioned';
 
-  // Contract Parameters
+  // Contract Parameter: Replication Factor (1 by default)
   logger.section('Contract Parameters', 'params');
-  logger.info(`Using parameters file: ${paramsFilePath}`);
-  const proverParams = await readParams(paramsFilePath);
-  logger.info(`File Content: \n  ${JSON.stringify(proverParams, null, 2).replace(/\n/g, '\n  ')}`);
+  let maxReplicationFactor = 1;
+
+  if (options.params) {
+    logger.info(`Using parameters file: ${options.params}`);
+    const params = await readParams(options.params);
+    maxReplicationFactor = params.SedaPermissioned.maxReplicationFactor;
+  } else if (options.maxReplicationFactor) {
+    maxReplicationFactor = options.maxReplicationFactor;
+  }
+  logger.info(`Max Replication Factor: ${maxReplicationFactor}`);
 
   // Configuration
   logger.section('Deployment Configuration', 'config');
@@ -43,22 +49,20 @@ export async function deploySecp256k1Prover(
       throw new Error('Deployment aborted: User cancelled the operation');
     }
   }
-  const { contract, contractImplAddress } = await deployProxyContract(
-    hre,
-    contractName,
-    [proverParams.Secp256k1ProverV1.initialBatch],
-    owner,
-  );
+
+  const factory = await hre.ethers.getContractFactory(contractName);
+  const contract = await factory.deploy([owner.address], maxReplicationFactor);
+  await contract.waitForDeployment();
+
   const contractAddress = await contract.getAddress();
-  logger.success(`Proxy address: ${contractAddress}`);
-  logger.success(`Impl. address: ${contractImplAddress}`);
+  logger.success(`Contract address: ${contractAddress}`);
 
   // Update deployment files
   logger.section('Updating Deployment Files', 'files');
   await updateDeployment(hre, contractName);
-  await updateAddressesFile(networkKey, contractName, { proxy: contractAddress, implementation: contractImplAddress });
+  await updateAddressesFile(networkKey, contractName, contractAddress);
 
-  if (verify) {
+  if (options.verify) {
     logger.section('Verifying Contracts', 'verify');
     try {
       await hre.run('verify:verify', {
@@ -76,5 +80,5 @@ export async function deploySecp256k1Prover(
     }
   }
 
-  return { contractAddress, contractImplAddress };
+  return { contractAddress };
 }

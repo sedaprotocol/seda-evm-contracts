@@ -10,5 +10,8 @@
       "resultsRoot": "0x56c4f39b7564ea6a32877fc98743652998753c4cd8a4b455c26dcb3b92774b73",
       "provingMetadata": "0x0000000000000000000000000000000000000000000000000000000000000000"
     }
+  },
+  "SedaPermissioned": {
+    "maxReplicationFactor": 1
   }
 }

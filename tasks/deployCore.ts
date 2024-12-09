@@ -84,7 +84,7 @@ export async function deploySedaCore(
   // Update deployment files
   logger.section('Updating Deployment Files', 'files');
   await updateDeployment(hre, contractName);
-  await updateAddressesFile(hre, contractName, contractAddress, contractImplAddress);
+  await updateAddressesFile(networkKey, contractName, { proxy: contractAddress, implementation: contractImplAddress });
 
   if (verify) {
     logger.section('Verifying Contracts', 'verify');

@@ -6,34 +6,32 @@ import { path, ensureDirectoryExists, pathExists, readFile, writeFile } from './
 const DEPLOYMENTS_FOLDER = CONFIG.DEPLOYMENTS.FOLDER;
 const ADDRESSES_FILE = CONFIG.DEPLOYMENTS.FILES.ADDRESSES;
 
+type ProxyAddress = {
+  proxy: string;
+  implementation: string;
+};
+
 // Define the type for the addresses object
-type Addresses = {
+type DeploymentAddress = {
   [networkName: string]: {
     [contractName: string]: {
-      proxy: string;
-      implementation: string;
+      address: ProxyAddress | string;
       gitCommitHash: string;
     };
   };
 };
 
-export async function updateAddressesFile(
-  hre: HardhatRuntimeEnvironment,
-  contractName: string,
-  proxyAddress: string,
-  implAddress: string,
-) {
+export async function updateAddressesFile(networkName: string, contractName: string, address: ProxyAddress | string) {
   const addressesPath = path.join(DEPLOYMENTS_FOLDER, ADDRESSES_FILE);
-  let addresses: Addresses = {};
+  let addresses: DeploymentAddress = {};
 
   if (await pathExists(addressesPath)) {
     const content = await readFile(addressesPath);
     if (content.trim()) {
-      addresses = JSON.parse(content) as Addresses;
+      addresses = JSON.parse(content) as DeploymentAddress;
     }
   }
 
-  const networkName = `${hre.network.name}-${(await hre.ethers.provider.getNetwork()).chainId.toString()}`;
   if (!addresses[networkName]) {
     addresses[networkName] = {};
   }
@@ -41,8 +39,7 @@ export async function updateAddressesFile(
   const gitCommitHash = require('node:child_process').execSync('git rev-parse HEAD').toString().trim();
 
   addresses[networkName][contractName] = {
-    proxy: proxyAddress,
-    implementation: implAddress,
+    address,
     gitCommitHash,
   };
 
