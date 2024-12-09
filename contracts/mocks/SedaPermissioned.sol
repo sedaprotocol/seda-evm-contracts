@@ -6,13 +6,16 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IResultHandler} from "../interfaces/IResultHandler.sol";
-import {RequestHandlerBase} from "./abstract/RequestHandlerBase.sol";
+import {RequestHandlerBase} from "../core/abstract/RequestHandlerBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title SedaCorePermissioned
 /// @notice Core contract for the Seda protocol with permissioned access, managing requests and results
 /// @dev Implements RequestHandlerBase, IResultHandler, AccessControl, and Pausable functionalities
-contract SedaCorePermissioned is RequestHandlerBase, IResultHandler, AccessControl, Pausable {
+/// @dev WARNING: This is a permissioned version of the core contract, primarily intended for testing
+///      and controlled environments. It should not be used in production without careful consideration
+///      of the centralization risks introduced by the permissioning system.
+contract SedaPermissioned is RequestHandlerBase, IResultHandler, AccessControl, Pausable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     // ============ Constants ============

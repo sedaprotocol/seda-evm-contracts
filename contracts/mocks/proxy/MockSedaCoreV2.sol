@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {SedaCoreV1} from "../core/SedaCoreV1.sol";
+import {SedaCoreV1} from "../../core/SedaCoreV1.sol";
 
 /// @title MockSedaCoreV2
 /// @notice Mock version of SedaCore for testing purposes

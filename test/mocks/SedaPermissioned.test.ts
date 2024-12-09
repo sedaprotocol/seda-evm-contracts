@@ -4,7 +4,7 @@ import { ethers } from 'hardhat';
 import { compareRequests, compareResults, convertToRequestInputs } from '../helpers';
 import { deriveDataResultId, deriveRequestId, generateDataFixtures } from '../utils';
 
-describe('SedaCorePermissioned', () => {
+describe('SedaPermissioned', () => {
   const MAX_REPLICATION_FACTOR = 1;
 
   async function deployFixture() {
@@ -15,7 +15,7 @@ describe('SedaCorePermissioned', () => {
       anyone,
     };
 
-    const PermissionedFactory = await ethers.getContractFactory('SedaCorePermissioned');
+    const PermissionedFactory = await ethers.getContractFactory('SedaPermissioned');
     const core = await PermissionedFactory.deploy([relayer.address], MAX_REPLICATION_FACTOR);
 
     return { core, signers };

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Secp256k1ProverV1} from "../provers/Secp256k1ProverV1.sol";
+import {Secp256k1ProverV1} from "../../provers/Secp256k1ProverV1.sol";
 
 /// @title MockSecp256k1ProverV2
 /// @notice Mock version of Secp256k1Prover for testing purposes
