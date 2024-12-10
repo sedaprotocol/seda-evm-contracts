@@ -20,11 +20,8 @@ jobs:
       - name: "Install the dependencies 📦"
         run: "bun install"
 
-      - name: "Lint TypeScript 🧹"
-        run: "bun run lint:ts"
-
-      - name: "Lint Solidity 🧹"
-        run: "bun run lint:sol"
+      - name: "Lint TypeScript & Solidity 🧹"
+        run: "bun run check"
 
       - name: "Compile the contracts 🛠️"
         run: "bun run compile"
