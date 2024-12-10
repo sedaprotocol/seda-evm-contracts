@@ -14,6 +14,7 @@
     "lint:sol:fix": "solhint 'contracts/**/*.sol' --fix --ignore-path .solhintignore",
     "lint:ts": "bunx biome check .",
     "lint:ts:fix": "bunx biome check --write .",
+    "tasks": "hardhat seda",
     "test": "hardhat test --grep \"^(?!.*[Gg]as.*[Aa]nalysis).*$\"",
     "test:gas": "REPORT_GAS=true hardhat test --grep \"[Gg]as.*[Aa]nalysis\""
   },

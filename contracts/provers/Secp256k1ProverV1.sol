@@ -50,7 +50,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @notice Initializes the contract with initial batch data
     /// @dev Sets up the contract's initial state and initializes inherited contracts
     /// @param initialBatch The initial batch data containing height, validators root, and results root
-    function initialize(SedaDataTypes.Batch memory initialBatch) public initializer {
+    function initialize(SedaDataTypes.Batch memory initialBatch) external initializer {
         // Initialize inherited contracts
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();

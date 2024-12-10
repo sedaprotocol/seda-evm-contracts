@@ -53,7 +53,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     /// @notice Initializes the SedaCoreV1 contract
     /// @param sedaProverAddress The address of the Seda prover contract
     /// @dev This function replaces the constructor for proxy compatibility and can only be called once
-    function initialize(address sedaProverAddress) public initializer {
+    function initialize(address sedaProverAddress) external initializer {
         __ResultHandler_init(sedaProverAddress);
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
