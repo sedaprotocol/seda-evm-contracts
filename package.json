@@ -1,7 +1,22 @@
 {
   "name": "@seda-protocol/contracts",
   "version": "0.0.4",
-  "main": "index.js",
+  "description": "EVM smart contracts enabling any blockchain to connect with the SEDA decentralized network",
+  "keywords": [
+    "ethereum",
+    "evm",
+    "oracle",
+    "seda",
+    "smart-contracts",
+    "solidity",
+    "cross-chain"
+  ],
+  "author": "SEDA Protocol <info@seda.xyz>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sedaprotocol/seda-evm-contracts.git"
+  },
   "scripts": {
     "check": "bun run lint && bun run format:sol",
     "clean": "rimraf artifacts cache typechain-types",
@@ -14,13 +29,14 @@
     "lint:sol:fix": "solhint 'contracts/**/*.sol' --fix --ignore-path .solhintignore",
     "lint:ts": "bunx biome check .",
     "lint:ts:fix": "bunx biome check --write .",
-    "tasks": "hardhat seda",
+    "seda": "hardhat seda",
     "test": "hardhat test --grep \"^(?!.*[Gg]as.*[Aa]nalysis).*$\"",
     "test:gas": "REPORT_GAS=true hardhat test --grep \"[Gg]as.*[Aa]nalysis\""
   },
-  "author": "",
-  "license": "MIT",
-  "description": "",
+  "dependencies": {
+    "@openzeppelin/contracts": "5.1.0",
+    "@openzeppelin/contracts-upgradeable": "5.1.0"
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
@@ -34,8 +50,11 @@
     "solhint": "^5.0.3",
     "valibot": "^0.42.1"
   },
-  "dependencies": {
-    "@openzeppelin/contracts": "5.1.0",
-    "@openzeppelin/contracts-upgradeable": "5.1.0"
-  }
+  "files": [
+    "/artifacts/contracts/**/*.json",
+    "/contracts/**/*.sol",
+    "!/artifacts/contracts/**/*.dbg.json",
+    "!/artifacts/contracts/mocks/**/*",
+    "!/contracts/mocks/**/*"
+  ]
 }
