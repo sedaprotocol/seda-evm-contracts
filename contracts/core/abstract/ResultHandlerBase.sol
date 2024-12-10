@@ -73,9 +73,8 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         return _resultHandlerStorage().results[requestId];
     }
 
-    /// @notice Returns the address of the Seda prover contract
-    /// @return The address of the Seda prover contract
-    function getSedaProver() public view returns (address) {
+    /// @inheritdoc IResultHandler
+    function getSedaProver() public view override(IResultHandler) returns (address) {
         return address(_resultHandlerStorage().sedaProver);
     }
 

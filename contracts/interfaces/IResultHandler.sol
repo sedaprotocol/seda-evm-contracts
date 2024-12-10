@@ -18,13 +18,17 @@ interface IResultHandler {
     function getResult(bytes32 requestId) external view returns (SedaDataTypes.Result memory);
 
     /// @notice Posts a new result with a proof
-    /// @param inputs The result data to be posted
+    /// @param result The result data to be posted
     /// @param batchHeight The height of the batch the result belongs to
     /// @param proof The proof associated with the result
     /// @return resultId The unique identifier of the posted result
     function postResult(
-        SedaDataTypes.Result calldata inputs,
+        SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] memory proof
     ) external returns (bytes32);
+
+    /// @notice Returns the address of the Seda prover contract
+    /// @return The address of the Seda prover contract
+    function getSedaProver() external view returns (address);
 }
