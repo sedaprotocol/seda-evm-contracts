@@ -1,7 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import type { MockSecp256k1ProverV2, Secp256k1ProverV2Resettable } from '../../typechain-types';
+import type { MockSecp256k1ProverV2, Secp256k1ProverResettable } from '../../typechain-types';
 import { generateNewBatchWithId } from '../utils';
 
 describe('Proxy: Secp256k1Prover', () => {
@@ -22,9 +22,9 @@ describe('Proxy: Secp256k1Prover', () => {
 
     // Get V2 factories
     const ProverV2Factory = await ethers.getContractFactory('MockSecp256k1ProverV2', owner);
-    const ResettableV2Factory = await ethers.getContractFactory('Secp256k1ProverV2Resettable', owner);
+    const ProverResettableFactory = await ethers.getContractFactory('Secp256k1ProverResettable', owner);
 
-    return { proxy, ProverV2Factory, ResettableV2Factory, owner, nonOwner, initialBatch };
+    return { proxy, ProverV2Factory, ProverResettableFactory, owner, nonOwner, initialBatch };
   }
 
   describe('V1 to V2 upgrade', () => {
@@ -83,8 +83,8 @@ describe('Proxy: Secp256k1Prover', () => {
 
   describe('Resettable variant', () => {
     it('should allow owner to reset state with valid batch', async () => {
-      const { proxy, ResettableV2Factory, initialBatch } = await loadFixture(deployProxyFixture);
-      const proxyV2Resettable = await upgrades.upgradeProxy(await proxy.getAddress(), ResettableV2Factory);
+      const { proxy, ProverResettableFactory, initialBatch } = await loadFixture(deployProxyFixture);
+      const proxyV2Resettable = await upgrades.upgradeProxy(await proxy.getAddress(), ProverResettableFactory);
 
       // Use generateNewBatchWithId instead of manual creation
       const { newBatch } = generateNewBatchWithId(initialBatch);
@@ -103,11 +103,11 @@ describe('Proxy: Secp256k1Prover', () => {
     });
 
     it('should prevent non-owner from resetting state', async () => {
-      const { proxy, ResettableV2Factory, nonOwner, initialBatch } = await loadFixture(deployProxyFixture);
+      const { proxy, ProverResettableFactory, nonOwner, initialBatch } = await loadFixture(deployProxyFixture);
       const proxyV2Resettable = (await upgrades.upgradeProxy(
         await proxy.getAddress(),
-        ResettableV2Factory,
-      )) as unknown as Secp256k1ProverV2Resettable;
+        ProverResettableFactory,
+      )) as unknown as Secp256k1ProverResettable;
 
       await expect(proxyV2Resettable.connect(nonOwner).resetProverState(initialBatch)).to.be.revertedWithCustomError(
         proxyV2Resettable,
