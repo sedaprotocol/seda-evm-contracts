@@ -2,15 +2,7 @@
   "name": "@seda-protocol/contracts",
   "version": "0.0.4",
   "description": "EVM smart contracts enabling any blockchain to connect with the SEDA decentralized network",
-  "keywords": [
-    "ethereum",
-    "evm",
-    "oracle",
-    "seda",
-    "smart-contracts",
-    "solidity",
-    "cross-chain"
-  ],
+  "keywords": ["ethereum", "evm", "oracle", "seda", "smart-contracts", "solidity", "cross-chain"],
   "author": "SEDA Protocol <info@seda.xyz>",
   "license": "MIT",
   "repository": {
@@ -23,7 +15,7 @@
     "compile": "hardhat compile",
     "format:sol": "prettier --check \"**/*.sol\"",
     "format:sol:fix": "prettier --write \"**/*.sol\"",
-    "gen:testvectors": "bun scripts/generateTestVectors.ts",
+    "gen:testvectors": "hardhat run scripts/generateTestVectors.ts",
     "lint": "bun run lint:ts && bun run lint:sol",
     "lint:sol": "solhint 'contracts/**/*.sol' --ignore-path .solhintignore",
     "lint:sol:fix": "solhint 'contracts/**/*.sol' --fix --ignore-path .solhintignore",

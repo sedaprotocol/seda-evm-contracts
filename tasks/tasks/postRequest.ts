@@ -2,7 +2,7 @@ import { logger } from '../common/logger';
 import { sedaScope } from '../index';
 
 sedaScope
-  .task('post-request', 'Posts a data request to the SedaCore contract')
+  .task('post-request', 'Post a data request to a ISedaCore contract')
   .addParam('core', 'The address of the SedaCore contract')
   .setAction(async (taskArgs, hre) => {
     logger.section('Post Data Request', 'deploy');

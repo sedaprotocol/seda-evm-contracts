@@ -13,7 +13,7 @@ import { getNetworkKey } from '../../common/utils';
 import { sedaScope } from '../../index';
 
 sedaScope
-  .task('deploy:prover', 'Deploy the Secp256k1ProverV1 contract')
+  .task('deploy:prover', 'Deploys the Secp256k1ProverV1 contract')
   .addParam('params', 'The parameters file to use', undefined, types.string)
   .addFlag('reset', 'Replace existing deployment files')
   .addFlag('verify', 'Verify the contract on etherscan')

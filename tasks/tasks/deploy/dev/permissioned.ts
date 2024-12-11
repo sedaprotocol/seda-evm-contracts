@@ -13,7 +13,7 @@ import { getNetworkKey } from '../../../common/utils';
 import { sedaScope } from '../../../index';
 
 sedaScope
-  .task('deploy:dev:permissioned', 'Deploy the Permissioned Seda contract (only for testing)')
+  .task('deploy:dev:permissioned', 'Deploys the Permissioned SEDA contract (only for testing)')
   .addOptionalParam('maxReplicationFactor', 'The maximum replication factor', undefined, types.int)
   .addOptionalParam('params', 'The parameters file to use', undefined, types.string)
   .addFlag('reset', 'Replace existing deployment files')

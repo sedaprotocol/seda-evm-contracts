@@ -15,7 +15,7 @@ import { sedaScope } from '../../index';
 
 
 sedaScope
-  .task('deploy:core', 'Deploy the SedaCoreV1 contract')
+  .task('deploy:core', 'Deploys the SedaCoreV1 contract')
   .addOptionalParam('params', 'The parameters file to use', undefined, types.string)
   .addOptionalParam('proverAddress', 'Direct SedaProver contract address', undefined, types.string)
   .addFlag('reset', 'Replace existing deployment files')

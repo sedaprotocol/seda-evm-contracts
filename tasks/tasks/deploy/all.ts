@@ -7,7 +7,7 @@ import { deploySedaCore } from './core';
 import { deploySecp256k1Prover } from './prover';
 
 sedaScope
-  .task('deploy:all', 'Deploy the Secp256k1ProverV1 and SedaCoreV1 contracts')
+  .task('deploy:all', 'Deploys the Secp256k1ProverV1 and SedaCoreV1 contracts')
   .addParam('params', 'The parameters file to use', undefined, types.string)
   .addFlag('reset', 'Replace existing deployment files')
   .addFlag('verify', 'Verify the contract on etherscan')

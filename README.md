@@ -29,7 +29,56 @@ This repository contains smart contracts that enable interaction between Ethereu
 2. Managing results returned from the SEDA network
 3. Verifying proofs from the SEDA network
 
-These contracts provide the necessary infrastructure for developers to integrate SEDA's functionality into their EVM-based applications, enabling cross-chain data processing and computation.
+These contracts provide the necessary infrastructure for developers to integrate SEDA's functionality into their EVM-based applications, facilitating cross-chain data processing and computation.
+
+## Architecture
+
+The SEDA EVM Contracts enable interaction with the SEDA network through two main components:
+
+### Core Components
+
+1. **SedaCore (SedaCoreV1)**
+   - Manages the lifecycle of data requests and results
+   - Inherits from `RequestHandlerBase` and `ResultHandlerBase` for request and result management
+
+2. **Secp256k1Prover (Secp256k1ProverV1)**
+   - Proves results by cryptographically verifying batches from the SEDA network
+   - Requires 66.67% validator consensus
+
+### Key Interfaces
+
+1. **ISedaCore**
+   ```solidity
+   interface ISedaCore is IResultHandler, IRequestHandler {
+       function getPendingRequests(uint256 offset, uint256 limit) 
+           external view returns (Request[] memory);
+   }
+   ```
+
+2. **IProver**
+   ```solidity
+   interface IProver {
+       function postBatch(Batch calldata, bytes[] calldata, ValidatorProof[] calldata) external;
+       function verifyResultProof(bytes32, uint64, bytes32[] calldata) external view returns (bool);
+       function getLastBatchHeight() external view returns (uint64);
+   }
+   ```
+
+### Data Flow
+
+1. **Request Flow**
+   - Users submit requests through `SedaCore.postRequest()`
+   - Requests are stored and tracked in pending state
+   - Each request includes execution and tally parameters
+
+2. **Result Flow**
+   - Results are submitted with Merkle proofs through `SedaCore.postResult()`
+   - `Secp256k1Prover` validates the proof against the latest batch
+   - Valid results are stored and linked to their original requests
+
+3. **Batch Management**
+   - Validator set updates and results are organized in batches
+   - Batches are sequential and maintain a verifiable chain of state updates
 
 ## Getting Started
 
@@ -42,58 +91,158 @@ These contracts provide the necessary infrastructure for developers to integrate
 This project relies on the following dependencies:
 
 - Development dependencies (listed in `package.json`)
-- [@openzeppelin/contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) (version 5.0.2) for ECDSA and Merkle Tree verifications
-
+- [@openzeppelin/contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) for:
+  - ECDSA signature verification
+  - Merkle Tree verifications
+  - Access control
+  - Contract upgradeability (UUPS pattern)
 
 ### Installation
 
 1. Clone the repository:
-   ```
+   ```bash
    git clone https://github.com/sedaprotocol/seda-evm-contracts.git
    ```
 
 2. Navigate to the project directory:
-   ```
+   ```bash
    cd seda-evm-contracts
    ```
 
 3. Install dependencies:
-   ```
+   ```bash
    bun install
    ```
    
 ### Development
 
-Dive into the development process with these easy-to-use commands:
+Available commands:
 
 1. Compile contracts:
-   ```
+   ```bash
    bun run compile
    ```
 
 2. Run tests:
-   ```
+   ```bash
    bun test
    ```
 
 3. Run tests with gas reporting:
-   ```
+   ```bash
    bun run test:gas
    ```
 
-4. Lint Solidity files:
-   ```
+4. Lint and format code:
+   ```bash
+   # Run all checks (lint + format)
+   bun run check
+
+   # Lint Solidity files
    bun run lint:sol
-   ```
+   bun run lint:sol:fix
 
-5. Lint TypeScript files:
-   ```
+   # Lint TypeScript files (using Biome)
    bun run lint:ts
+   bun run lint:ts:fix
+
+   # Format Solidity files
+   bun run format:sol
+   bun run format:sol:fix
    ```
 
-> [!TIP]
-> Don't forget to set up your `.env` file with the necessary environment variables before deploying or interacting with live networks!
+5. Other utilities:
+   ```bash
+   # Generate test vectors
+   bun run gen:testvectors
+
+   # Clean build artifacts
+   bun run clean
+   ```
+
+### Configuration
+
+The project uses a network configuration file (`config/networks.ts`) to manage different EVM network connections. Here's how to set it up:
+
+1. Create or modify `config/networks.ts`:
+```typescript
+import type { Networks } from './types';
+
+export const networks: Networks = {
+  baseSepolia: {
+    accounts: 'EVM_PRIVATE_KEY', // Ensure this is set in your .env file
+    chainId: 84532,
+    url: 'https://sepolia.base.org',
+    verify: {
+      etherscan: {
+        apiKey: process.env.BASE_SEPOLIA_ETHERSCAN_API_KEY, // Ensure this is set in your .env file
+        apiUrl: 'https://api-sepolia.basescan.org/api',
+        browserUrl: 'https://sepolia.basescan.org',
+      }
+    }
+  }
+};
+```
+
+2. Set up your environment variables in `.env`:
+```bash
+# Network Configuration
+EVM_PRIVATE_KEY=your-private-key-here # Replace with your actual private key
+BASE_SEPOLIA_ETHERSCAN_API_KEY=your-api-key-here # Replace with your actual API key
+
+# Add other network-specific variables as needed
+```
+
+### Configuration Options
+
+Each network configuration can include:
+
+- **accounts**: Array of private keys or HD wallet configuration
+- **chainId** (required): The network's chain ID
+- **url** (required): RPC endpoint URL
+- **verify**: Contract verification settings
+  - **etherscan**: Block explorer API configuration
+    - **apiKey**: Your block explorer API key
+    - **apiUrl**: API endpoint for verification
+    - **browserUrl**: Block explorer URL
+
+### Deployment
+
+These tasks are available via `bun run seda` or using Hardhat directly:
+```bash
+$ npx hardhat seda --help
+Hardhat version 2.22.17
+
+Usage: hardhat [GLOBAL OPTIONS] seda <TASK> [TASK OPTIONS]
+
+AVAILABLE TASKS:
+
+  deploy:all                    Deploys the Secp256k1ProverV1 and SedaCoreV1 contracts
+  deploy:core                   Deploys the SedaCoreV1 contract
+  deploy:dev:permissioned       Deploys the Permissioned SEDA contract (only for testing)
+  deploy:dev:prover-reset       Deploys the Secp256k1ProverResettable contract (only for testing)
+  deploy:prover                 Deploys the Secp256k1ProverV1 contract
+  post-request                  Post a data request to a ISedaCore contract
+  reset-prover                  Resets a Secp256k1ProverResettable contract to a specified batch (only for testing)
+
+seda: Deploy and interact with SEDA contracts
+
+For global options help run: hardhat help
+```
+
+> [!NOTE]
+> - The `--reset` flag replaces existing deployment files
+> - The `--verify` flag triggers contract verification on block explorers
+> - The `--params` flag specifies a JSON file with deployment parameters
+
+## Contributing
+
+We welcome contributions from the community! Please feel free to submit issues, create pull requests, or join our [Discord](https://discord.com/invite/seda) for discussions.
+
+## Security
+
+If you discover a security vulnerability, please send an e-mail to security@seda.xyz. All security vulnerabilities will be promptly addressed.
 
 ## License
 
-Contents of this repository are open source under [MIT License](LICENSE).
+This project is open source and available under the [MIT License](LICENSE).

@@ -2,7 +2,7 @@ import { logger } from '../common/logger';
 import { sedaScope } from '../index';
 
 sedaScope
-  .task('reset-prover', 'Resets the prover contract (if resettable) to a given batch')
+  .task('reset-prover', 'Resets a Secp256k1ProverResettable contract to a specified batch (only for testing)')
   .addParam('prover', 'The address of the resettable prover contract')
   .addParam('height', 'The batch height to reset to')
   .addParam('validatorsRoot', 'The validators root hash')
