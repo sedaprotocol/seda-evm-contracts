@@ -5,7 +5,9 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
+import {IRequestHandler} from "../interfaces/IRequestHandler.sol";
 import {IResultHandler} from "../interfaces/IResultHandler.sol";
+import {ISedaCore} from "../interfaces/ISedaCore.sol";
 import {RequestHandlerBase} from "../core/abstract/RequestHandlerBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
@@ -15,7 +17,7 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @dev WARNING: This is a permissioned version of the SEDA core contract, primarily intended for testing
 ///      and controlled environments. It should not be used in production without careful consideration
 ///      of the centralization risks introduced by the permissioning system.
-contract SedaPermissioned is RequestHandlerBase, IResultHandler, AccessControl, Pausable {
+contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     // ============ Constants ============
@@ -98,7 +100,7 @@ contract SedaPermissioned is RequestHandlerBase, IResultHandler, AccessControl, 
     /// @return requestId The ID of the posted request
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) public override(RequestHandlerBase) whenNotPaused returns (bytes32) {
+    ) public override(IRequestHandler, RequestHandlerBase) whenNotPaused returns (bytes32) {
         // Check max replication factor first
         if (inputs.replicationFactor > maxReplicationFactor) {
             revert InvalidReplicationFactor();

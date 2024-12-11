@@ -13,7 +13,6 @@ import { HexString } from '../../common/params';
 import { getNetworkKey } from '../../common/utils';
 import { sedaScope } from '../../index';
 
-
 sedaScope
   .task('deploy:core', 'Deploys the SedaCoreV1 contract')
   .addOptionalParam('params', 'The parameters file to use', undefined, types.string)
