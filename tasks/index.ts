@@ -13,4 +13,5 @@ import './tasks/deploy/dev/permissioned';
 import './tasks/deploy/dev/resettableProver';
 
 // Request tasks
-import './tasks/request/post';
+import './tasks/postRequest';
+import './tasks/resetProver';
