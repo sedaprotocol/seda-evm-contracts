@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as readline from 'node:readline';
+
 import { logger } from './logger';
 
 export async function prompt(question: string): Promise<string> {

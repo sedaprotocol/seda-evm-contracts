@@ -1,5 +1,7 @@
 import { types } from 'hardhat/config';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
+import * as v from 'valibot';
+
 import {
   confirmDeployment,
   deployAndVerifyContract,
@@ -20,6 +22,10 @@ sedaScope
     await deployPermissioned(hre, taskArgs);
   });
 
+const SedaPermissionedSchema = v.object({
+  maxReplicationFactor: v.number(),
+});
+
 async function deployPermissioned(
   hre: HardhatRuntimeEnvironment,
   options: {
@@ -34,12 +40,8 @@ async function deployPermissioned(
   // Contract Parameters
   let constructorArgs = 1;
   if (options.params) {
-    const params = await readAndValidateParams(options.params, contractName);
-    if (params && 'maxReplicationFactor' in params && typeof params.maxReplicationFactor === 'number') {
-      constructorArgs = params.maxReplicationFactor;
-    } else {
-      throw new Error('SedaCoreV1 address not found in params file');
-    }
+    constructorArgs = (await readAndValidateParams(options.params, contractName, SedaPermissionedSchema))
+      .maxReplicationFactor;
   } else if (options.maxReplicationFactor) {
     constructorArgs = options.maxReplicationFactor;
     logConstructorArgs('Using command line parameters', { maxReplicationFactor: constructorArgs });

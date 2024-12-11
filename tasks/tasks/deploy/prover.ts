@@ -1,11 +1,14 @@
 import { types } from 'hardhat/config';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
+import * as v from 'valibot';
+
 import {
   confirmDeployment,
   deployAndVerifyContractWithProxy,
   logDeploymentConfig,
   readAndValidateParams,
 } from '../../common/deploy/helpers';
+import { HexString } from '../../common/params';
 import { getNetworkKey } from '../../common/utils';
 import { sedaScope } from '../../index';
 
@@ -18,6 +21,16 @@ sedaScope
     await deploySecp256k1Prover(hre, taskArgs);
   });
 
+const Secp256k1ProverV1Schema = v.object({
+  initialBatch: v.object({
+    batchHeight: v.number(),
+    blockHeight: v.number(),
+    validatorsRoot: HexString,
+    resultsRoot: HexString,
+    provingMetadata: HexString,
+  }),
+});
+
 export async function deploySecp256k1Prover(
   hre: HardhatRuntimeEnvironment,
   options: {
@@ -29,19 +42,8 @@ export async function deploySecp256k1Prover(
   const contractName = 'Secp256k1ProverV1';
 
   // Contract Parameters
-  let constructorArgs: {
-    batchHeight: number;
-    blockHeight: number;
-    validatorsRoot: string;
-    resultsRoot: string;
-    provingMetadata: string;
-  };
-  const params = await readAndValidateParams(options.params, contractName);
-  if (params && 'initialBatch' in params) {
-    constructorArgs = params.initialBatch;
-  } else {
-    throw new Error('SedaCoreV1 address not found in params file');
-  }
+  const constructorArgs = (await readAndValidateParams(options.params, contractName, Secp256k1ProverV1Schema))
+    .initialBatch;
 
   // Configuration
   const [owner] = await hre.ethers.getSigners();

@@ -1,5 +1,6 @@
 import type { Signer } from 'ethers';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
+
 import type { ProverDataTypes } from '../../../ts-types';
 
 export type UupsContracts = {

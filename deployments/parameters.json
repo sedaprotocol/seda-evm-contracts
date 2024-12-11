@@ -4,14 +4,23 @@
   },
   "Secp256k1ProverV1": {
     "initialBatch": {
-      "batchHeight": 3,
-      "blockHeight": 31,
-      "validatorsRoot": "0x6b8a7c6cd54c814f4e30b89b5f2e91b9d96860e24eb39366f4c260400fcb47db",
-      "resultsRoot": "0x56c4f39b7564ea6a32877fc98743652998753c4cd8a4b455c26dcb3b92774b73",
+      "batchHeight": 2,
+      "blockHeight": 898,
+      "validatorsRoot": "0x020ab7806acda6ab0a9e083b10f7e7baebc46f3bc90c47d6168b731340cefa32",
+      "resultsRoot": "0x6ab79debdff3288b5c783c2260d9d8e9aaba272c4ab611724e720a352aad6383",
       "provingMetadata": "0x0000000000000000000000000000000000000000000000000000000000000000"
     }
   },
   "SedaPermissioned": {
     "maxReplicationFactor": 1
+  },
+  "Secp256k1ProverResettable": {
+    "initialBatch": {
+      "batchHeight": 2,
+      "blockHeight": 898,
+      "validatorsRoot": "0x020ab7806acda6ab0a9e083b10f7e7baebc46f3bc90c47d6168b731340cefa32",
+      "resultsRoot": "0x6ab79debdff3288b5c783c2260d9d8e9aaba272c4ab611724e720a352aad6383",
+      "provingMetadata": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    }
   }
 }

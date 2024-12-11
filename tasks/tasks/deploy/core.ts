@@ -1,5 +1,7 @@
 import { types } from 'hardhat/config';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
+import * as v from 'valibot';
+
 import {
   confirmDeployment,
   deployAndVerifyContractWithProxy,
@@ -7,8 +9,10 @@ import {
   logDeploymentConfig,
   readAndValidateParams,
 } from '../../common/deploy/helpers';
+import { HexString } from '../../common/params';
 import { getNetworkKey } from '../../common/utils';
 import { sedaScope } from '../../index';
+
 
 sedaScope
   .task('deploy:core', 'Deploy the SedaCoreV1 contract')
@@ -19,6 +23,10 @@ sedaScope
   .setAction(async (taskArgs, hre) => {
     await deploySedaCore(hre, taskArgs);
   });
+
+const SedaCoreV1Schema = v.object({
+  sedaProverAddress: HexString,
+});
 
 export async function deploySedaCore(
   hre: HardhatRuntimeEnvironment,
@@ -37,12 +45,7 @@ export async function deploySedaCore(
   }
   let constructorArgs: string;
   if (options.params) {
-    const params = await readAndValidateParams(options.params, contractName);
-    if (params && 'sedaProverAddress' in params && typeof params.sedaProverAddress === 'string') {
-      constructorArgs = params.sedaProverAddress;
-    } else {
-      throw new Error('SedaCoreV1 address not found in params file');
-    }
+    constructorArgs = (await readAndValidateParams(options.params, contractName, SedaCoreV1Schema)).sedaProverAddress;
   } else if (options.proverAddress) {
     constructorArgs = options.proverAddress;
     logConstructorArgs('Using user-defined parameter', { sedaProverAddress: constructorArgs });

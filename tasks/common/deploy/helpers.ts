@@ -1,40 +1,31 @@
 import type { Signer } from 'ethers';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 import type * as v from 'valibot';
+
 import { CONFIG } from '../config';
 import { pathExists, prompt } from '../io';
 import { logger } from '../logger';
+import { readParams } from '../params';
 import { getNetworkKey } from '../utils';
-import { type ParamsSchema, readParams } from './params';
 import { type UupsContracts, deployProxyContract } from './proxy';
 import { updateAddressesFile, updateDeployment } from './reports';
 
 /**
  * Validates and prepares constructor arguments from various sources
  */
-export async function readAndValidateParams(
+export async function readAndValidateParams<TInput, TOutput>(
   paramsFilePath: string,
   contractKey: string,
-): Promise<v.InferOutput<typeof ParamsSchema>[keyof v.InferOutput<typeof ParamsSchema>]> {
+  schema: v.BaseSchema<TInput, TOutput, v.BaseIssue<unknown>>,
+): Promise<TOutput> {
   // Contract Parameters
   logger.section('Contract Parameters', 'params');
   logger.info(`Using parameters file: ${paramsFilePath}`);
-  const deployParams = await readParams(paramsFilePath);
+  const deployParams = await readParams(paramsFilePath, contractKey, schema);
 
-  // Type guard to check if contractKey is a valid key of proverParams
-  if (!(contractKey in deployParams)) {
-    throw new Error(`${contractKey} parameters not found in file`);
-  }
+  logger.info(`Deployment Params: \n  ${JSON.stringify(deployParams, null, 2).replace(/\n/g, '\n  ')}`);
 
-  // Now TypeScript knows contractKey is a valid key
-  const constructorArgs = deployParams[contractKey as keyof typeof deployParams];
-  logger.info(`Deployment Params: \n  ${JSON.stringify(constructorArgs, null, 2).replace(/\n/g, '\n  ')}`);
-
-  if (constructorArgs === undefined) {
-    throw new Error(`${contractKey} parameters not found in file`);
-  }
-
-  return constructorArgs;
+  return deployParams;
 }
 
 /**
