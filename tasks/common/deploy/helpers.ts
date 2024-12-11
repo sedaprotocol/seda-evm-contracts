@@ -67,14 +67,18 @@ export async function deployAndVerifyContractWithProxy<T extends keyof UupsContr
   logger.success(`Proxy address: ${contractAddress}`);
   logger.success(`Impl. address: ${contractImplAddress}`);
 
-  // Update deployment files
-  logger.section('Updating Deployment Files', 'files');
-  const networkKey = await getNetworkKey(hre);
-  await updateDeployment(hre, contractName);
-  await updateAddressesFile(networkKey, contractName, { proxy: contractAddress, implementation: contractImplAddress });
-
-  if (verify) {
-    await verifyContract(hre, contractAddress);
+  // Update deployment files (if not local hardhat)
+  if (hre.network.name !== 'hardhat') {
+    logger.section('Updating Deployment Files', 'files');
+    const networkKey = await getNetworkKey(hre);
+    await updateDeployment(hre, contractName);
+    await updateAddressesFile(networkKey, contractName, {
+      proxy: contractAddress,
+      implementation: contractImplAddress,
+    });
+    if (verify) {
+      await verifyContract(hre, contractAddress);
+    }
   }
 
   return { contractAddress, contractImplAddress };
