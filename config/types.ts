@@ -1,11 +1,9 @@
-export type Account =
-  | string[]
-  | {
-      mnemonic: string;
-    };
-
 interface NetworkConfig {
-  accounts?: string | Account;
+  accounts?:
+    | string
+    | {
+        mnemonic: string;
+      };
   chainId: number;
   url: string;
   etherscan?: {
