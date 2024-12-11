@@ -1,8 +1,8 @@
-import { sedaScope } from '.';
-import { logger } from './common/logger';
+import { logger } from '../../common/logger';
+import { sedaScope } from '../../index';
 
 sedaScope
-  .task('post-request', 'Posts a data request to the SedaCore contract')
+  .task('request:post', 'Posts a data request to the SedaCore contract')
   .addParam('core', 'The address of the SedaCore contract')
   .setAction(async (taskArgs, hre) => {
     logger.section('Post Data Request', 'deploy');

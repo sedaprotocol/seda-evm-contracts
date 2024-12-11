@@ -3,7 +3,6 @@ import * as path from 'node:path';
 import * as readline from 'node:readline';
 import { logger } from './logger';
 
-// Add this helper function at the top level
 export async function prompt(question: string): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,

@@ -1,9 +1,12 @@
 import type { Signer } from 'ethers';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
-import type { ProverDataTypes } from '../../ts-types';
+import type { ProverDataTypes } from '../../../ts-types';
 
-type Contracts = {
+export type UupsContracts = {
   Secp256k1ProverV1: {
+    constructorArgs: [ProverDataTypes.BatchStruct];
+  };
+  Secp256k1ProverResettable: {
     constructorArgs: [ProverDataTypes.BatchStruct];
   };
   SedaCoreV1: {
@@ -11,10 +14,10 @@ type Contracts = {
   };
 };
 
-export async function deployProxyContract<T extends keyof Contracts>(
+export async function deployProxyContract<T extends keyof UupsContracts>(
   hre: HardhatRuntimeEnvironment,
   contractName: T,
-  constructorArgs: Contracts[T]['constructorArgs'],
+  constructorArgs: UupsContracts[T]['constructorArgs'],
   signer: Signer,
 ) {
   const ContractFactory = await hre.ethers.getContractFactory(contractName, signer);

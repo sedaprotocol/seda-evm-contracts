@@ -1,25 +1,27 @@
 import * as v from 'valibot';
-import { readFile } from './io';
+import { readFile } from '../io';
 
 const HexString = v.pipe(v.string(), v.regex(/^0x[0-9a-fA-F]*$/, 'Invalid hex string'));
 
-const ParamsSchema = v.object({
-  SedaCoreV1: v.object({
-    sedaProverAddress: HexString,
-  }),
-  Secp256k1ProverV1: v.object({
-    initialBatch: v.object({
-      batchHeight: v.number(),
-      blockHeight: v.number(),
-      validatorsRoot: HexString,
-      resultsRoot: HexString,
-      provingMetadata: HexString,
+export const ParamsSchema = v.partial(
+  v.object({
+    SedaCoreV1: v.object({
+      sedaProverAddress: HexString,
+    }),
+    Secp256k1ProverV1: v.object({
+      initialBatch: v.object({
+        batchHeight: v.number(),
+        blockHeight: v.number(),
+        validatorsRoot: HexString,
+        resultsRoot: HexString,
+        provingMetadata: HexString,
+      }),
+    }),
+    SedaPermissioned: v.object({
+      maxReplicationFactor: v.number(),
     }),
   }),
-  SedaPermissioned: v.object({
-    maxReplicationFactor: v.number(),
-  }),
-});
+);
 
 export async function readParams(filePath: string): Promise<v.InferOutput<typeof ParamsSchema>> {
   try {
