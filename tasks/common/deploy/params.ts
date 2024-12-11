@@ -20,6 +20,15 @@ export const ParamsSchema = v.partial(
     SedaPermissioned: v.object({
       maxReplicationFactor: v.number(),
     }),
+    Secp256k1ProverResettable: v.object({
+      initialBatch: v.object({
+        batchHeight: v.number(),
+        blockHeight: v.number(),
+        validatorsRoot: HexString,
+        resultsRoot: HexString,
+        provingMetadata: HexString,
+      }),
+    }),
   }),
 );
 

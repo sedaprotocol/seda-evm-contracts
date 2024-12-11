@@ -10,6 +10,7 @@ import './tasks/deploy/core';
 import './tasks/deploy/prover';
 import './tasks/deploy/all';
 import './tasks/deploy/dev/permissioned';
+import './tasks/deploy/dev/resettableProver';
 
 // Request tasks
 import './tasks/request/post';
