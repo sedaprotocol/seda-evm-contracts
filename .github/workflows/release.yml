@@ -1,0 +1,35 @@
+name: "📦 Release"
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 📝 Generate Changelog
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v3
+        with:
+          output-file: false
+          skip-commit: true
+          skip-tag: true
+          skip-git-pull: true
+          git-push: false
+
+      - name: 🚀 Create Draft Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: 🎉 Release ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: true
+          prerelease: false

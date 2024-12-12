@@ -1,4 +1,4 @@
-name: "Hardhat CI 🚀"
+name: "⚡ Push"
 
 on:
   workflow_dispatch:
