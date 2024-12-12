@@ -1,0 +1,33 @@
+name: "📦 Release"
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📝 Generate Changelog
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v3
+        with:
+          output-file: false
+          skip-commit: true
+          skip-tag: true
+          skip-git-pull: true
+          git-push: false
+
+      - name: 🚀 Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: true
+          prerelease: false
