@@ -21,6 +21,7 @@
     "lint:sol:fix": "solhint 'contracts/**/*.sol' --fix --ignore-path .solhintignore",
     "lint:ts": "bunx biome check .",
     "lint:ts:fix": "bunx biome check --write .",
+    "prepublish": "bun run clean && bun run compile",
     "seda": "hardhat seda",
     "test": "hardhat test --grep \"^(?!.*[Gg]as.*[Aa]nalysis).*$\"",
     "test:gas": "REPORT_GAS=true hardhat test --grep \"[Gg]as.*[Aa]nalysis\""
@@ -43,10 +44,12 @@
     "valibot": "^0.42.1"
   },
   "files": [
-    "/artifacts/contracts/**/*.json",
-    "/contracts/**/*.sol",
     "!/artifacts/contracts/**/*.dbg.json",
     "!/artifacts/contracts/mocks/**/*",
-    "!/contracts/mocks/**/*"
+    "!/contracts/mocks/**/*",
+    "/artifacts/contracts/**/*.json",
+    "/contracts/**/*.sol",
+    "/typechain-types/**/*.d.ts",
+    "/typechain-types/**/*.ts"
   ]
 }

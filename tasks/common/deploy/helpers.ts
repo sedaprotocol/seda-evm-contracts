@@ -11,7 +11,9 @@ import { type UupsContracts, deployProxyContract } from './proxy';
 import { updateAddressesFile, updateDeployment } from './reports';
 
 /**
- * Validates and prepares constructor arguments from various sources
+ * Reads parameters from a file, validates them against a schema, and logs the results.
+ * This is typically used to ensure contract constructor arguments meet expected format and constraints
+ * before deployment.
  */
 export async function readAndValidateParams<TInput, TOutput>(
   paramsFilePath: string,
@@ -29,7 +31,7 @@ export async function readAndValidateParams<TInput, TOutput>(
 }
 
 /**
- * Logs constructor arguments
+ * Pretty prints constructor arguments with custom formatting.
  */
 export function logConstructorArgs(infoText: string, params: object): void {
   logger.section('Contract Parameters', 'params');
@@ -38,7 +40,9 @@ export function logConstructorArgs(infoText: string, params: object): void {
 }
 
 /**
- * Confirms deployment by checking if deployment folder exists and prompting for confirmation
+ * Safety check to prevent accidental deployments to already deployed networks.
+ * If deployments already exist for the target network, requires explicit user confirmation
+ * unless the reset flag is set to true.
  */
 export async function confirmDeployment(networkKey: string, reset: boolean | undefined): Promise<void> {
   if (!reset && (await pathExists(`${CONFIG.DEPLOYMENTS.FOLDER}/${networkKey}`))) {
@@ -51,7 +55,12 @@ export async function confirmDeployment(networkKey: string, reset: boolean | und
 }
 
 /**
- * Deploys a contract with a proxy and verifies it (if requested)
+ * Handles the complete proxy contract deployment workflow:
+ * 1. Deploys implementation contract
+ * 2. Deploys proxy contract pointing to the implementation
+ * 3. Updates deployment records and address files
+ * 4. Optionally verifies contracts on block explorer
+ * Returns both proxy and implementation addresses
  */
 export async function deployAndVerifyContractWithProxy<T extends keyof UupsContracts>(
   hre: HardhatRuntimeEnvironment,
@@ -85,7 +94,10 @@ export async function deployAndVerifyContractWithProxy<T extends keyof UupsContr
 }
 
 /**
- * Verifies a contract
+ * Attempts to verify contract source code on the network's block explorer (e.g., Etherscan).
+ * Handles common verification scenarios including:
+ * - Already verified contracts
+ * - Failed verifications with detailed error reporting
  */
 export async function verifyContract(hre: HardhatRuntimeEnvironment, address: string) {
   logger.section('Verifying Contracts', 'verify');
@@ -105,7 +117,10 @@ export async function verifyContract(hre: HardhatRuntimeEnvironment, address: st
 }
 
 /**
- * Logs deployment configuration
+ * Outputs essential deployment context including:
+ * - Target network and chain ID
+ * - Deployer address and balance
+ * - Contract being deployed
  */
 export async function logDeploymentConfig(hre: HardhatRuntimeEnvironment, contractName: string, owner: Signer) {
   const address = await owner.getAddress();
@@ -119,7 +134,11 @@ export async function logDeploymentConfig(hre: HardhatRuntimeEnvironment, contra
 }
 
 /**
- * Deploys a contract with a proxy and verifies it (if requested)
+ * Handles the complete standard contract deployment workflow:
+ * 1. Deploys contract with provided constructor arguments
+ * 2. Updates deployment records and address files
+ * 3. Optionally verifies contract on block explorer
+ * Similar to deployAndVerifyContractWithProxy but for non-proxy contracts
  */
 export async function deployAndVerifyContract(
   hre: HardhatRuntimeEnvironment,

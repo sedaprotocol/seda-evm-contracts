@@ -48,7 +48,7 @@
       "cache",
       "coverage",
       "dist",
-      "ignition/deployments",
+      "deployments",
       "node_modules",
       "types",
       "typechain-types",

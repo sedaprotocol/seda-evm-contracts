@@ -24,14 +24,7 @@ export async function readParams<TInput, TOutput>(
     return v.parse(schema, data);
   } catch (error) {
     if (error instanceof v.ValiError) {
-      const issues = error.issues
-        .map((issue) => {
-          const path = issue.path?.map((p: { key: string }) => p.key).join('.') || 'root';
-          const received = issue.input !== undefined ? `\n  Received: ${JSON.stringify(issue.input)}` : '';
-          return `\n- ${path}: ${issue.message}${received}`;
-        })
-        .join('\n');
-      throw new Error(`Validation error for key "${key}": ${issues}`);
+      throw new Error(`Validation error for key "${key}": \n${JSON.stringify(v.flatten(error.issues), null, 2)}`);
     }
     throw new Error(`Failed to read or validate params: ${error instanceof Error ? error.message : String(error)}`);
   }
