@@ -43,6 +43,38 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     // ============ External Functions ============
 
     /// @inheritdoc IResultHandler
+    function getSedaProver() external view override(IResultHandler) returns (address) {
+        return address(_resultHandlerStorage().sedaProver);
+    }
+
+    /// @notice Verifies the result without storing it
+    /// @param result The result to verify
+    /// @param batchHeight The height of the batch the result belongs to
+    /// @param proof The proof associated with the result
+    /// @return A boolean indicating whether the result is valid
+    function verifyResult(
+        SedaDataTypes.Result calldata result,
+        uint64 batchHeight,
+        bytes32[] calldata proof
+    ) external view returns (bytes32) {
+        bytes32 resultId = SedaDataTypes.deriveResultId(result);
+        if (!_resultHandlerStorage().sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
+            revert InvalidResultProof(resultId);
+        }
+
+        return resultId;
+    }
+
+    /// @notice Derives a result ID from the given result
+    /// @param result The result data
+    /// @return The derived result ID
+    function deriveResultId(SedaDataTypes.Result calldata result) external pure returns (bytes32) {
+        return SedaDataTypes.deriveResultId(result);
+    }
+
+    // ============ Public Functions ============
+
+    /// @inheritdoc IResultHandler
     function postResult(
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
@@ -62,8 +94,6 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         return resultId;
     }
 
-    // ============ Public View Functions ============
-
     /// @inheritdoc IResultHandler
     function getResult(bytes32 requestId) public view override(IResultHandler) returns (SedaDataTypes.Result memory) {
         SedaDataTypes.Result memory result = _resultHandlerStorage().results[requestId];
@@ -71,36 +101,6 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
             revert ResultNotFound(requestId);
         }
         return _resultHandlerStorage().results[requestId];
-    }
-
-    /// @inheritdoc IResultHandler
-    function getSedaProver() public view override(IResultHandler) returns (address) {
-        return address(_resultHandlerStorage().sedaProver);
-    }
-
-    /// @notice Verifies the result without storing it
-    /// @param result The result to verify
-    /// @param batchHeight The height of the batch the result belongs to
-    /// @param proof The proof associated with the result
-    /// @return A boolean indicating whether the result is valid
-    function verifyResult(
-        SedaDataTypes.Result calldata result,
-        uint64 batchHeight,
-        bytes32[] calldata proof
-    ) public view returns (bytes32) {
-        bytes32 resultId = SedaDataTypes.deriveResultId(result);
-        if (!_resultHandlerStorage().sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
-            revert InvalidResultProof(resultId);
-        }
-
-        return resultId;
-    }
-
-    /// @notice Derives a result ID from the given result
-    /// @param result The result data
-    /// @return The derived result ID
-    function deriveResultId(SedaDataTypes.Result calldata result) public pure returns (bytes32) {
-        return SedaDataTypes.deriveResultId(result);
     }
 
     // ============ Internal Functions ============

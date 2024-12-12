@@ -23,6 +23,15 @@ abstract contract RequestHandlerBase is IRequestHandler {
 
     // ============ External Functions ============
 
+    /// @notice Derives a request ID from the given inputs
+    /// @param inputs The request inputs
+    /// @return The derived request ID
+    function deriveRequestId(SedaDataTypes.RequestInputs calldata inputs) external pure returns (bytes32) {
+        return SedaDataTypes.deriveRequestId(inputs);
+    }
+
+    // ============ Public Functions ============
+
     /// @inheritdoc IRequestHandler
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
@@ -65,13 +74,6 @@ abstract contract RequestHandlerBase is IRequestHandler {
         }
 
         return _requestHandlerStorage().requests[requestId];
-    }
-
-    /// @notice Derives a request ID from the given inputs
-    /// @param inputs The request inputs
-    /// @return The derived request ID
-    function deriveRequestId(SedaDataTypes.RequestInputs calldata inputs) public pure returns (bytes32) {
-        return SedaDataTypes.deriveRequestId(inputs);
     }
 
     // ============ Internal Functions ============

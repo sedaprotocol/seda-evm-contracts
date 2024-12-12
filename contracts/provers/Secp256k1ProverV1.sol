@@ -80,7 +80,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         SedaDataTypes.Batch calldata newBatch,
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
-    ) public override {
+    ) external override(ProverBase) {
         Secp256k1ProverStorage storage s = _storageV1();
         // Check that new batch invariants hold
         if (newBatch.batchHeight <= s.lastBatchHeight) {
@@ -117,7 +117,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         emit BatchPosted(newBatch.batchHeight, batchId);
     }
 
-    // ============ Public View Functions ============
+    // ============ External View Functions ============
 
     /// @notice Verifies a result proof against a batch's results root
     /// @param resultId The ID of the result to verify
@@ -128,7 +128,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         bytes32 resultId,
         uint64 batchHeight,
         bytes32[] calldata merkleProof
-    ) public view override returns (bool) {
+    ) external view override(ProverBase) returns (bool) {
         Secp256k1ProverStorage storage s = _storageV1();
         bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
         return MerkleProof.verify(merkleProof, s.batchToResultsRoot[batchHeight], leaf);
@@ -136,20 +136,20 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
     /// @notice Returns the last processed batch height
     /// @return The height of the last batch
-    function getLastBatchHeight() public view override returns (uint64) {
+    function getLastBatchHeight() external view override returns (uint64) {
         return _storageV1().lastBatchHeight;
     }
 
     /// @notice Returns the last validators root hash
     /// @return The Merkle root of the last validator set
-    function getLastValidatorsRoot() public view returns (bytes32) {
+    function getLastValidatorsRoot() external view returns (bytes32) {
         return _storageV1().lastValidatorsRoot;
     }
 
     /// @notice Returns the results root for a specific batch height
     /// @param batchHeight The batch height to query
     /// @return The results root for the specified batch
-    function getBatchResultsRoot(uint64 batchHeight) public view returns (bytes32) {
+    function getBatchResultsRoot(uint64 batchHeight) external view returns (bytes32) {
         return _storageV1().batchToResultsRoot[batchHeight];
     }
 

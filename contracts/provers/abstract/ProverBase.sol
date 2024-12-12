@@ -27,14 +27,14 @@ abstract contract ProverBase is IProver {
         SedaDataTypes.Batch calldata newBatch,
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
-    ) public virtual override(IProver);
+    ) external virtual override(IProver);
 
     /// @inheritdoc IProver
     function verifyResultProof(
         bytes32 resultId,
         uint64 batchHeight,
         bytes32[] calldata merkleProof
-    ) public view virtual override(IProver) returns (bool);
+    ) external view virtual override(IProver) returns (bool);
 
     /// @inheritdoc IProver
     function getLastBatchHeight() external view virtual override(IProver) returns (uint64);

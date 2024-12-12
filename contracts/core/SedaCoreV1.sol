@@ -59,7 +59,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         __UUPSUpgradeable_init();
     }
 
-    // ============ External Functions ============
+    // ============ Public Functions ============
 
     /// @inheritdoc RequestHandlerBase
     /// @dev Overrides the base implementation to also add the request ID and timestamp to storage
