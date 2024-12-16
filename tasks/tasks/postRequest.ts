@@ -12,26 +12,30 @@ sedaScope
 
     const timestamp = Math.floor(Date.now() / 1000).toString(16);
     const request = {
-      execProgramId: '0x541d1faf3b6e167ea5369928a24a0019f4167ca430da20a271c5a7bc5fa2657a',
-      execInputs: '0x1234',
-      execGasLimit: 100000n,
-      tallyProgramId: '0x541d1faf3b6e167ea5369928a24a0019f4167ca430da20a271c5a7bc5fa2657a',
-      tallyInputs: '0x5678',
-      tallyGasLimit: 100000n,
+      execProgramId: '0x57ce7bf6a9fdf1782dbc1e709418bd22603797b202453f0c49186bbb60f4b5e4',
+      execInputs: '0x6574682d75736463',
+      execGasLimit: 300000000000000n,
+      tallyProgramId: '0x57ce7bf6a9fdf1782dbc1e709418bd22603797b202453f0c49186bbb60f4b5e4',
+      tallyInputs: '0x',
+      tallyGasLimit: 300000000000000n,
       replicationFactor: 1,
       consensusFilter: '0x00',
-      gasPrice: 1000n,
+      gasPrice: 1n,
       memo: `0x${timestamp}`,
     };
 
     logger.info(`Posting DR with memo: ${request.memo}`);
     const tx = await core.postRequest(request);
+    logger.info(`Tx hash: ${tx?.hash}`);
     const receipt = await tx.wait();
-    logger.success('Data request posted successfully!');
 
-    // Get requestId from event logs
     const logs = await core.queryFilter(core.filters.RequestPosted(), receipt?.blockNumber, receipt?.blockNumber);
-    const requestId = logs[0].args[0];
+    const requestId = logs[0]?.args[0];
 
-    logger.info(`Data Request ID: ${requestId}`);
+    if (requestId) {
+      logger.success('Data request posted successfully!');
+      logger.info(`Data Request ID: ${requestId}`);
+    } else {
+      logger.error('Data request failed');
+    }
   });
