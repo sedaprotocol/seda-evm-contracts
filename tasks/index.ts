@@ -11,6 +11,7 @@ import './tasks/deploy/prover';
 import './tasks/deploy/all';
 import './tasks/deploy/dev/permissioned';
 import './tasks/deploy/dev/resettableProver';
+import './tasks/deploy/dev/allResettable';
 
 // Request tasks
 import './tasks/postRequest';
