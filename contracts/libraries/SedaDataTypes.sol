@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// TODO: Rearrange struct fields to minimize storage gaps and optimize packing
-
 /// @title SedaDataTypes Library
 /// @notice Contains data structures and utility functions for the SEDA protocol
 library SedaDataTypes {
