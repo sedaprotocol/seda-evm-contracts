@@ -125,15 +125,20 @@ Available commands:
 
 2. Run tests:
    ```bash
-   bun test
+   bun run test
    ```
 
-3. Run tests with gas reporting:
+3. Run tests with coverage:
+   ```bash
+   bun run test:coverage
+   ```
+
+4. Run tests with gas reporting:
    ```bash
    bun run test:gas
    ```
 
-4. Lint and format code:
+5. Lint and format code:
    ```bash
    # Run all checks (lint + format)
    bun run check
@@ -151,7 +156,7 @@ Available commands:
    bun run format:sol:fix
    ```
 
-5. Other utilities:
+6. Other utilities:
    ```bash
    # Generate test vectors
    bun run gen:testvectors

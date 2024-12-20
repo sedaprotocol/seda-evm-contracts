@@ -24,6 +24,7 @@
     "prepublish": "bun run clean && bun run compile",
     "seda": "hardhat seda",
     "test": "hardhat test --grep \"^(?!.*[Gg]as.*[Aa]nalysis).*$\"",
+    "test:coverage": "COVERAGE=true hardhat coverage",
     "test:gas": "REPORT_GAS=true hardhat test --grep \"[Gg]as.*[Aa]nalysis\""
   },
   "dependencies": {
