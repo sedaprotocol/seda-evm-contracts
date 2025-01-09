@@ -8,10 +8,22 @@ import { computeResultLeafHash, deriveDataResultId, deriveRequestId, generateDat
 
 describe('SedaCoreV1', () => {
   async function deployCoreFixture() {
-    // Generate test fixtures and modify the last result's timestamp to be 1 second (1 unix timestamp)
-    // This simulates an invalid result with a timestamp from 1970-01-01T00:00:01Z
+    // Generate test fixtures
     const { requests, results } = generateDataFixtures(10);
+
+    // Modify the last result's timestamp to be 1 second (1 unix timestamp)
+    // This simulates an invalid result with a timestamp from 1970-01-01T00:00:01Z
     results[results.length - 1].blockTimestamp = 1;
+
+    // Modify results to have:
+    // - a zero payback address
+    // - a non-zero payback address
+    // - a longer non-EVM-compatible payback address (40 bytes)
+    // - a shorter non-EVM-compatible payback address (10 bytes)
+    results[0].paybackAddress = ethers.ZeroAddress;
+    results[1].paybackAddress = '0x0123456789012345678901234567890123456789';
+    results[2].paybackAddress = '0x01234567890123456789012345678901234567890123456789012345678901234567890123456789';
+    results[3].paybackAddress = '0x01234567890123456789';
 
     const leaves = results.map(deriveDataResultId).map(computeResultLeafHash);
 
@@ -195,7 +207,7 @@ describe('SedaCoreV1', () => {
       const gasUsed = await core.postResult.estimateGas(data.results[2], 0, data.proofs[2]);
 
       // This is rough esimate
-      expect(gasUsed).to.be.lessThan(300000);
+      expect(gasUsed).to.be.lessThan(500000);
     });
 
     it('should maintain pending requests (with removals)', async () => {
@@ -304,6 +316,81 @@ describe('SedaCoreV1', () => {
       expect(balanceAfter).to.be.greaterThan(balanceBefore);
       // The difference should be close to resultFee (accounting for gas costs)
       expect(balanceAfter - balanceBefore).to.be.closeTo(resultFee, ethers.parseEther('0.01'));
+    });
+
+    it('should transfer request fee back to requestor when paybackAddress is empty', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const requestFee = ethers.parseEther('10');
+      const [requestor] = await ethers.getSigners();
+
+      const initialBalance = await ethers.provider.getBalance(requestor.address);
+
+      // Post request with request fee
+      await core.postRequest(data.requests[0], requestFee, 0, 0, { value: requestFee });
+
+      // Check requestor balance reflects the two request fees
+      const midBalance = await ethers.provider.getBalance(requestor.address);
+      expect(initialBalance - midBalance).closeTo(ethers.parseEther('10'), ethers.parseEther('0.01'));
+
+      // Post result with empty payback address
+      await core.postResult(data.results[0], 0, data.proofs[0]);
+
+      // Check requestor balance after
+      const finalBalance = await ethers.provider.getBalance(requestor.address);
+
+      // Balance should have increased by requestFee
+      expect(initialBalance - finalBalance).closeTo(0, ethers.parseEther('0.01'));
+    });
+
+    it('should transfer request fee to specified payback address', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const requestFee = ethers.parseEther('10');
+      const validPaybackAddress = data.results[1].paybackAddress;
+
+      // Get initial balance of payback address
+      const initialBalance = await ethers.provider.getBalance(validPaybackAddress.toString());
+
+      // Post request with request fee
+      await core.postRequest(data.requests[1], requestFee, 0, 0, { value: requestFee });
+
+      // Post result with non-empty payback address
+      await core.postResult(data.results[1], 0, data.proofs[1]);
+
+      // Check payback address balance after
+      const finalBalance = await ethers.provider.getBalance(validPaybackAddress.toString());
+
+      // Balance should have increased by exactly requestFee
+      expect(finalBalance - initialBalance).to.equal(requestFee);
+    });
+
+    it('should transfer request fee back to requestor when paybackAddress is not valid', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const requestFee = ethers.parseEther('10');
+      const [requestor] = await ethers.getSigners();
+
+      const initialBalance = await ethers.provider.getBalance(requestor.address);
+
+      // Post request with request fee
+      await core.postRequest(data.requests[2], requestFee, 0, 0, { value: requestFee });
+
+      // Post request with request fee
+      await core.postRequest(data.requests[3], requestFee, 0, 0, { value: requestFee });
+
+      // Check requestor balance reflects the two request fees
+      const midBalance = await ethers.provider.getBalance(requestor.address);
+      expect(initialBalance - midBalance).closeTo(ethers.parseEther('20'), ethers.parseEther('0.01'));
+
+      // Post result with empty payback address
+      await core.postResult(data.results[2], 0, data.proofs[2]);
+
+      // Post result with empty payback address
+      await core.postResult(data.results[3], 0, data.proofs[3]);
+
+      // Check requestor balance after
+      const finalBalance = await ethers.provider.getBalance(requestor.address);
+
+      // Balance should have increased by requestFee
+      expect(initialBalance - finalBalance).closeTo(0, ethers.parseEther('0.01'));
     });
   });
 });

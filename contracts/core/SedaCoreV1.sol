@@ -33,6 +33,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
 
     // Request details struct
     struct RequestDetails {
+        address requestor;
         uint256 timestamp;
         uint256 requestFee;
         uint256 resultFee;
@@ -94,6 +95,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         _addRequest(requestId);
         // Store the request details
         _storageV1().requestDetails[requestId] = RequestDetails({
+            requestor: msg.sender,
             timestamp: block.timestamp,
             requestFee: requestFee,
             resultFee: resultFee,
@@ -128,7 +130,25 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         _removeRequest(result.drId);
         delete _storageV1().requestDetails[result.drId];
 
-        // Pay the reward to the result submitter
+        // Handle request fee payment
+        if (requestDetails.requestFee > 0) {
+            address payableAddress;
+            // Try to decode paybackAddress if it exists
+            if (result.paybackAddress.length == 20) {
+                // Extract 20 bytes and convert to address
+                payableAddress = address(bytes20(result.paybackAddress));
+            }
+
+            if (payableAddress == address(0)) {
+                // If paybackAddress is invalid or empty, refund to original submitter
+                payableAddress = requestDetails.requestor;
+            }
+
+            (bool successRequestFee, ) = payable(payableAddress).call{value: requestDetails.requestFee}("");
+            if (!successRequestFee) revert FeeTransferFailed();
+        }
+
+        // Handle result fee payment
         if (requestDetails.resultFee > 0) {
             (bool successResultFee, ) = payable(msg.sender).call{value: requestDetails.resultFee}("");
             if (!successResultFee) revert FeeTransferFailed();
