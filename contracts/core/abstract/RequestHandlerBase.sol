@@ -35,7 +35,7 @@ abstract contract RequestHandlerBase is IRequestHandler {
     /// @inheritdoc IRequestHandler
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) public virtual override(IRequestHandler) returns (bytes32) {
+    ) public payable virtual override(IRequestHandler) returns (bytes32) {
         if (inputs.replicationFactor == 0) {
             revert InvalidReplicationFactor();
         }

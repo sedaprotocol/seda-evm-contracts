@@ -79,7 +79,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public virtual override(IResultHandler) returns (bytes32) {
+    ) public payable virtual override(IResultHandler) returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (_resultHandlerStorage().results[result.drId].drId != bytes32(0)) {
             revert ResultAlreadyExists(resultId);

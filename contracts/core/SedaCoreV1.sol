@@ -39,8 +39,10 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         // When a request is posted, it is added to `pendingRequests`.
         // When a result is posted and the request is fulfilled, it is removed from `pendingRequests`
         EnumerableSet.Bytes32Set pendingRequests;
-        // Mapping to store request timestamps for pending DRs
+        // Mapping to store request timestamps for pending requests
         mapping(bytes32 => uint256) requestTimestamps;
+        // Mapping to store request fee for forwarding the request
+        mapping(bytes32 => uint256) requestFee;
     }
 
     // ============ Constructor & Initializer ============
@@ -65,11 +67,12 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     /// @dev Overrides the base implementation to also add the request ID and timestamp to storage
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) public override(RequestHandlerBase, IRequestHandler) returns (bytes32) {
+    ) public payable override(RequestHandlerBase, IRequestHandler) returns (bytes32) {
         bytes32 requestId = super.postRequest(inputs);
         _addRequest(requestId);
-        // Store the request timestamp
+        // Store the request fields: timestamp, fee
         _storageV1().requestTimestamps[requestId] = block.timestamp;
+        _storageV1().requestFee[requestId] = msg.value;
 
         return requestId;
     }
@@ -80,18 +83,32 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public override(ResultHandlerBase, IResultHandler) returns (bytes32) {
-        uint256 requestTimestamp = _storageV1().requestTimestamps[result.drId];
-        // Validate result timestamp comes after request timestamp
+    ) public payable override(ResultHandlerBase, IResultHandler) returns (bytes32) {
+        // Check: Validate result timestamp comes after request timestamp
         // Note: requestTimestamp = 0 for requests not tracked by this contract (always passes validation)
+        uint256 requestTimestamp = _storageV1().requestTimestamps[result.drId];
         if (result.blockTimestamp <= requestTimestamp) {
             revert InvalidResultTimestamp(result.drId, result.blockTimestamp, requestTimestamp);
         }
 
+        // Store fee amount before state changes
+        uint256 requestFee = _storageV1().requestFee[result.drId];
+
+        // Call parent postResult
         bytes32 resultId = super.postResult(result, batchHeight, proof);
 
+        // Clean up state:
+        // - Remove the request from the pendingRequests set
+        // - Delete the request fields: timestamp, fee
         _removeRequest(result.drId);
         delete _storageV1().requestTimestamps[result.drId];
+        delete _storageV1().requestFee[result.drId];
+
+        // Pay the reward to the result submitter
+        if (requestFee > 0) {
+            (bool success, ) = payable(msg.sender).call{value: requestFee}("");
+            if (!success) revert FeeTransferFailed();
+        }
 
         return resultId;
     }

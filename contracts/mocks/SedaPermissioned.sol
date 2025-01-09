@@ -64,7 +64,7 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
         SedaDataTypes.Result calldata result,
         uint64,
         bytes32[] calldata
-    ) external override onlyRole(RELAYER_ROLE) whenNotPaused returns (bytes32) {
+    ) external payable override onlyRole(RELAYER_ROLE) whenNotPaused returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (results[result.drId].drId != bytes32(0)) {
             revert ResultAlreadyExists(resultId);
@@ -100,7 +100,7 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
     /// @return requestId The ID of the posted request
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) public override(IRequestHandler, RequestHandlerBase) whenNotPaused returns (bytes32) {
+    ) public payable override(IRequestHandler, RequestHandlerBase) whenNotPaused returns (bytes32) {
         // Check max replication factor first
         if (inputs.replicationFactor > maxReplicationFactor) {
             revert InvalidReplicationFactor();
