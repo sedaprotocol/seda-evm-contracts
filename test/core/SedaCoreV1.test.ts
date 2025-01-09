@@ -265,4 +265,45 @@ describe('SedaCoreV1', () => {
       compareRequests(pendingRequests[1], data.requests[1]);
     });
   });
+
+  describe('fee management', () => {
+    it('should revert if fee amount does not match specified fees', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const resultFee = ethers.parseEther('1.0');
+
+      // Try to post with incorrect fee amount
+      await expect(
+        core.postRequest(
+          data.requests[0],
+          0,
+          resultFee,
+          0,
+          { value: ethers.parseEther('0.5') }, // Sending less than specified
+        ),
+      ).to.be.revertedWithCustomError(core, 'InvalidFeeAmount');
+    });
+
+    it('should transfer result fee to result submitter', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const resultFee = ethers.parseEther('1.0');
+      const [, resultSubmitter] = await ethers.getSigners();
+
+      // Post request with result fee
+      await core.postRequest(data.requests[0], 0, resultFee, 0, { value: resultFee });
+
+      // Check submitter's balance before
+      const balanceBefore = await ethers.provider.getBalance(resultSubmitter.address);
+
+      // Post result from the result submitter account
+      await core.connect(resultSubmitter).postResult(data.results[0], 0, data.proofs[0]);
+
+      // Check submitter's balance after
+      const balanceAfter = await ethers.provider.getBalance(resultSubmitter.address);
+
+      // Balance should have increased by resultFee (minus gas costs)
+      expect(balanceAfter).to.be.greaterThan(balanceBefore);
+      // The difference should be close to resultFee (accounting for gas costs)
+      expect(balanceAfter - balanceBefore).to.be.closeTo(resultFee, ethers.parseEther('0.01'));
+    });
+  });
 });
