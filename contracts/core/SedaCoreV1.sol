@@ -31,6 +31,12 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
 
     // ============ Storage ============
 
+    // Request details struct
+    struct RequestDetails {
+        uint256 timestamp;
+        uint256 requestFee;
+    }
+
     /// @custom:storage-location erc7201:sedacore.storage.v1
     struct SedaCoreStorage {
         // Enumerable Set to store the request IDs that are pending
@@ -39,10 +45,10 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         // When a request is posted, it is added to `pendingRequests`.
         // When a result is posted and the request is fulfilled, it is removed from `pendingRequests`
         EnumerableSet.Bytes32Set pendingRequests;
-        // Mapping to store request timestamps for pending requests
-        mapping(bytes32 => uint256) requestTimestamps;
-        // Mapping to store request fee for forwarding the request
-        mapping(bytes32 => uint256) requestFee;
+        // Mapping to store request details for pending requests:
+        // - timestamps
+        // - request fee
+        mapping(bytes32 => RequestDetails) requestDetails;
     }
 
     // ============ Constructor & Initializer ============
@@ -70,9 +76,11 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     ) public payable override(RequestHandlerBase, IRequestHandler) returns (bytes32) {
         bytes32 requestId = super.postRequest(inputs);
         _addRequest(requestId);
-        // Store the request fields: timestamp, fee
-        _storageV1().requestTimestamps[requestId] = block.timestamp;
-        _storageV1().requestFee[requestId] = msg.value;
+        // Store the request details
+        _storageV1().requestDetails[requestId] = RequestDetails({
+            timestamp: block.timestamp,
+            requestFee: msg.value
+        });
 
         return requestId;
     }
@@ -84,15 +92,14 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         uint64 batchHeight,
         bytes32[] calldata proof
     ) public payable override(ResultHandlerBase, IResultHandler) returns (bytes32) {
+        // Get request details from storage
+        RequestDetails memory requestDetails = _storageV1().requestDetails[result.drId];
+
         // Check: Validate result timestamp comes after request timestamp
         // Note: requestTimestamp = 0 for requests not tracked by this contract (always passes validation)
-        uint256 requestTimestamp = _storageV1().requestTimestamps[result.drId];
-        if (result.blockTimestamp <= requestTimestamp) {
-            revert InvalidResultTimestamp(result.drId, result.blockTimestamp, requestTimestamp);
+        if (result.blockTimestamp <= requestDetails.timestamp) {
+            revert InvalidResultTimestamp(result.drId, result.blockTimestamp, requestDetails.timestamp);
         }
-
-        // Store fee amount before state changes
-        uint256 requestFee = _storageV1().requestFee[result.drId];
 
         // Call parent postResult
         bytes32 resultId = super.postResult(result, batchHeight, proof);
@@ -101,12 +108,11 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         // - Remove the request from the pendingRequests set
         // - Delete the request fields: timestamp, fee
         _removeRequest(result.drId);
-        delete _storageV1().requestTimestamps[result.drId];
-        delete _storageV1().requestFee[result.drId];
+        delete _storageV1().requestDetails[result.drId];
 
         // Pay the reward to the result submitter
-        if (requestFee > 0) {
-            (bool success, ) = payable(msg.sender).call{value: requestFee}("");
+        if (requestDetails.requestFee > 0) {
+            (bool success, ) = payable(msg.sender).call{value: requestDetails.requestFee}("");
             if (!success) revert FeeTransferFailed();
         }
 
