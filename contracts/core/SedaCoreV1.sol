@@ -35,6 +35,8 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     struct RequestDetails {
         uint256 timestamp;
         uint256 requestFee;
+        uint256 resultFee;
+        uint256 batchFee;
     }
 
     /// @custom:storage-location erc7201:sedacore.storage.v1
@@ -74,12 +76,28 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
     ) public payable override(RequestHandlerBase, IRequestHandler) returns (bytes32) {
+        return postRequest(inputs, 0, 0, 0);
+    }
+
+    function postRequest(
+        SedaDataTypes.RequestInputs calldata inputs,
+        uint256 requestFee,
+        uint256 resultFee,
+        uint256 batchFee
+    ) public payable override returns (bytes32) {
+        // Check that amount is equal to sum of fees
+        if (msg.value != requestFee + resultFee + batchFee) {
+            revert InvalidFeeAmount();
+        }
+
         bytes32 requestId = super.postRequest(inputs);
         _addRequest(requestId);
         // Store the request details
         _storageV1().requestDetails[requestId] = RequestDetails({
             timestamp: block.timestamp,
-            requestFee: msg.value
+            requestFee: requestFee,
+            resultFee: resultFee,
+            batchFee: batchFee
         });
 
         return requestId;
@@ -111,9 +129,9 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         delete _storageV1().requestDetails[result.drId];
 
         // Pay the reward to the result submitter
-        if (requestDetails.requestFee > 0) {
-            (bool success, ) = payable(msg.sender).call{value: requestDetails.requestFee}("");
-            if (!success) revert FeeTransferFailed();
+        if (requestDetails.resultFee > 0) {
+            (bool successResultFee, ) = payable(msg.sender).call{value: requestDetails.resultFee}("");
+            if (!successResultFee) revert FeeTransferFailed();
         }
 
         return resultId;
