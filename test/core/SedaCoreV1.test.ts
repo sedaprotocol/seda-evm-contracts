@@ -25,6 +25,9 @@ describe('SedaCoreV1', () => {
     results[2].paybackAddress = '0x01234567890123456789012345678901234567890123456789012345678901234567890123456789';
     results[3].paybackAddress = '0x01234567890123456789';
 
+    // Modify results to have different gas used to 1/4 of the gas limit
+    results[1].gasUsed = 500000;
+
     const leaves = results.map(deriveDataResultId).map(computeResultLeafHash);
 
     // Create merkle tree and proofs
@@ -279,118 +282,199 @@ describe('SedaCoreV1', () => {
   });
 
   describe('fee management', () => {
-    it('should revert if fee amount does not match specified fees', async () => {
-      const { core, data } = await loadFixture(deployCoreFixture);
-      const resultFee = ethers.parseEther('1.0');
+    describe('request fee handling', () => {
+      it('should enforce correct fee payment', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const requestFee = ethers.parseEther('1.0');
+        const resultFee = ethers.parseEther('2.0');
+        const batchFee = ethers.parseEther('3.0');
+        const totalFee = requestFee + resultFee + batchFee;
 
-      // Try to post with incorrect fee amount
-      await expect(
-        core.postRequest(
-          data.requests[0],
-          0,
-          resultFee,
-          0,
-          { value: ethers.parseEther('0.5') }, // Sending less than specified
-        ),
-      ).to.be.revertedWithCustomError(core, 'InvalidFeeAmount');
+        // Should fail with insufficient fee
+        await expect(
+          core.postRequest(data.requests[0], requestFee, resultFee, batchFee, {
+            value: totalFee - ethers.parseEther('0.5'),
+          }),
+        ).to.be.revertedWithCustomError(core, 'InvalidFeeAmount');
+
+        // Should fail with excess fee
+        await expect(
+          core.postRequest(data.requests[0], requestFee, resultFee, batchFee, {
+            value: totalFee + ethers.parseEther('0.5'),
+          }),
+        ).to.be.revertedWithCustomError(core, 'InvalidFeeAmount');
+
+        // Should succeed with exact fee
+        await expect(core.postRequest(data.requests[0], requestFee, resultFee, batchFee, { value: totalFee })).to.not.be
+          .reverted;
+      });
+
+      it('should handle request fee distribution correctly', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const requestFee = ethers.parseEther('10');
+        const [requestor] = await ethers.getSigners();
+        const validPaybackAddress = data.results[1].paybackAddress;
+
+        // Setup: Post request with fee
+        const requestorBalanceBefore = await ethers.provider.getBalance(requestor.address);
+        await core.postRequest(data.requests[1], requestFee, 0, 0, { value: requestFee });
+
+        // Verify request fee was deducted
+        const requestorBalanceAfterRequest = await ethers.provider.getBalance(requestor.address);
+        expect(requestorBalanceBefore - requestorBalanceAfterRequest).closeTo(requestFee, ethers.parseEther('0.01'));
+
+        // Submit result and verify fee distribution
+        const paybackBalanceBefore = await ethers.provider.getBalance(validPaybackAddress.toString());
+        await core.postResult(data.results[1], 0, data.proofs[1]);
+        const paybackBalanceAfter = await ethers.provider.getBalance(validPaybackAddress.toString());
+        const requestorBalanceAfterResult = await ethers.provider.getBalance(requestor.address);
+
+        // Calculate expected fee distribution
+        const totalGasLimit = BigInt(data.requests[1].execGasLimit) + BigInt(data.requests[1].tallyGasLimit);
+        const expectedPaybackFee = (requestFee * BigInt(data.results[1].gasUsed)) / totalGasLimit;
+        const expectedRefund = requestFee - expectedPaybackFee;
+
+        // Verify payback address received correct amount
+        expect(paybackBalanceAfter - paybackBalanceBefore).to.equal(expectedPaybackFee);
+
+        // Verify requestor received correct refund
+        expect(requestorBalanceAfterResult - requestorBalanceAfterRequest).closeTo(
+          expectedRefund,
+          ethers.parseEther('0.01'),
+        );
+      });
+
+      it('should handle invalid payback addresses', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const requestFee = ethers.parseEther('1.0');
+        const [requestor] = await ethers.getSigners();
+
+        // Test cases: Zero address, oversized address, undersized address
+        const testCases = [0, 2, 3]; // Indices of results with different payback addresses
+
+        for (const i of testCases) {
+          const initialBalance = await ethers.provider.getBalance(requestor.address);
+
+          await core.postRequest(data.requests[i], requestFee, 0, 0, { value: requestFee });
+          await core.postResult(data.results[i], 0, data.proofs[i]);
+
+          // Full refund should be given for invalid addresses
+          const finalBalance = await ethers.provider.getBalance(requestor.address);
+          expect(initialBalance - finalBalance).closeTo(0, ethers.parseEther('0.01'));
+        }
+      });
+
+      it('should handle zero request fees', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const [requestor] = await ethers.getSigners();
+        const validPaybackAddress = data.results[1].paybackAddress;
+
+        // Post request with zero fee
+        const requestorBalanceBefore = await ethers.provider.getBalance(requestor.address);
+        await core.postRequest(data.requests[1], 0, 0, 0, { value: 0 });
+
+        const requestorBalanceAfterRequest = await ethers.provider.getBalance(requestor.address);
+        expect(requestorBalanceBefore - requestorBalanceAfterRequest).to.be.lessThan(ethers.parseEther('0.01'));
+
+        // Submit result and verify no fee transfers occurred
+        const paybackBalanceBefore = await ethers.provider.getBalance(validPaybackAddress.toString());
+        await core.postResult(data.results[1], 0, data.proofs[1]);
+        const paybackBalanceAfter = await ethers.provider.getBalance(validPaybackAddress.toString());
+
+        // Verify no fees were transferred
+        expect(paybackBalanceAfter).to.equal(paybackBalanceBefore);
+      });
     });
 
-    it('should transfer result fee to result submitter', async () => {
-      const { core, data } = await loadFixture(deployCoreFixture);
-      const resultFee = ethers.parseEther('1.0');
-      const [, resultSubmitter] = await ethers.getSigners();
+    describe('result fee handling', () => {
+      it('should distribute result fees correctly', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const [, resultSubmitter] = await ethers.getSigners();
 
-      // Post request with result fee
-      await core.postRequest(data.requests[0], 0, resultFee, 0, { value: resultFee });
+        // Post multiple requests with different result fees
+        const requests = [
+          { index: 0, fee: ethers.parseEther('1.0') },
+          { index: 1, fee: ethers.parseEther('2.0') },
+          { index: 2, fee: ethers.parseEther('3.0') },
+        ];
 
-      // Check submitter's balance before
-      const balanceBefore = await ethers.provider.getBalance(resultSubmitter.address);
+        for (const req of requests) {
+          await core.postRequest(data.requests[req.index], 0, req.fee, 0, { value: req.fee });
+        }
 
-      // Post result from the result submitter account
-      await core.connect(resultSubmitter).postResult(data.results[0], 0, data.proofs[0]);
+        // Submit results and verify fee distribution
+        for (const req of requests) {
+          const balanceBefore = await ethers.provider.getBalance(resultSubmitter.address);
 
-      // Check submitter's balance after
-      const balanceAfter = await ethers.provider.getBalance(resultSubmitter.address);
+          await core.connect(resultSubmitter).postResult(data.results[req.index], 0, data.proofs[req.index]);
 
-      // Balance should have increased by resultFee (minus gas costs)
-      expect(balanceAfter).to.be.greaterThan(balanceBefore);
-      // The difference should be close to resultFee (accounting for gas costs)
-      expect(balanceAfter - balanceBefore).to.be.closeTo(resultFee, ethers.parseEther('0.01'));
+          const balanceAfter = await ethers.provider.getBalance(resultSubmitter.address);
+
+          // Verify result submitter received the correct fee (accounting for gas)
+          expect(balanceAfter - balanceBefore).to.be.closeTo(req.fee, ethers.parseEther('0.01'));
+        }
+      });
+
+      it('should handle zero result fees', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const [, resultSubmitter] = await ethers.getSigners();
+
+        // Post request with no result fee
+        await core.postRequest(data.requests[0], 0, 0, 0, { value: 0 });
+
+        const balanceBefore = await ethers.provider.getBalance(resultSubmitter.address);
+
+        // Submit result
+        await core.connect(resultSubmitter).postResult(data.results[0], 0, data.proofs[0]);
+
+        const balanceAfter = await ethers.provider.getBalance(resultSubmitter.address);
+
+        // Only gas should have been spent
+        expect(balanceAfter).to.be.lessThan(balanceBefore);
+        expect(balanceBefore - balanceAfter).to.be.lessThan(ethers.parseEther('0.01'));
+      });
     });
 
-    it('should transfer request fee back to requestor when paybackAddress is empty', async () => {
-      const { core, data } = await loadFixture(deployCoreFixture);
-      const requestFee = ethers.parseEther('10');
-      const [requestor] = await ethers.getSigners();
+    describe('combined fee scenarios', () => {
+      it('should handle concurrent result fees and request fees', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const [requestor, resultSubmitter] = await ethers.getSigners();
+        const requestFee = ethers.parseEther('10');
+        const resultFee = ethers.parseEther('20');
+        const validPaybackAddress = data.results[1].paybackAddress;
 
-      const initialBalance = await ethers.provider.getBalance(requestor.address);
+        // Post request with both request and result fees
+        await core.postRequest(data.requests[1], requestFee, resultFee, 0, { value: requestFee + resultFee });
 
-      // Post request with request fee
-      await core.postRequest(data.requests[0], requestFee, 0, 0, { value: requestFee });
+        const requestorBalanceAfterRequest = await ethers.provider.getBalance(requestor.address);
+        const submitterBalanceBefore = await ethers.provider.getBalance(resultSubmitter.address);
+        const paybackBalanceBefore = await ethers.provider.getBalance(validPaybackAddress.toString());
 
-      // Check requestor balance reflects the two request fees
-      const midBalance = await ethers.provider.getBalance(requestor.address);
-      expect(initialBalance - midBalance).closeTo(ethers.parseEther('10'), ethers.parseEther('0.01'));
+        // Submit result
+        await core.connect(resultSubmitter).postResult(data.results[1], 0, data.proofs[1]);
 
-      // Post result with empty payback address
-      await core.postResult(data.results[0], 0, data.proofs[0]);
+        // Verify both fees were distributed correctly
+        const submitterBalanceAfter = await ethers.provider.getBalance(resultSubmitter.address);
+        const paybackBalanceAfter = await ethers.provider.getBalance(validPaybackAddress.toString());
+        const requestorBalanceAfterResult = await ethers.provider.getBalance(requestor.address);
 
-      // Check requestor balance after
-      const finalBalance = await ethers.provider.getBalance(requestor.address);
+        // Calculate expected request fee distribution
+        const totalGasLimit = BigInt(data.requests[1].execGasLimit) + BigInt(data.requests[1].tallyGasLimit);
+        const expectedPaybackFee = (requestFee * BigInt(data.results[1].gasUsed)) / totalGasLimit;
+        const expectedRefund = requestFee - expectedPaybackFee;
 
-      // Balance should have increased by requestFee
-      expect(initialBalance - finalBalance).closeTo(0, ethers.parseEther('0.01'));
-    });
+        // Result submitter should receive result fee
+        expect(submitterBalanceAfter - submitterBalanceBefore).to.be.closeTo(resultFee, ethers.parseEther('0.01'));
 
-    it('should transfer request fee to specified payback address', async () => {
-      const { core, data } = await loadFixture(deployCoreFixture);
-      const requestFee = ethers.parseEther('10');
-      const validPaybackAddress = data.results[1].paybackAddress;
+        // Payback address should receive partial request fee based on gas used
+        expect(paybackBalanceAfter - paybackBalanceBefore).to.equal(expectedPaybackFee);
 
-      // Get initial balance of payback address
-      const initialBalance = await ethers.provider.getBalance(validPaybackAddress.toString());
-
-      // Post request with request fee
-      await core.postRequest(data.requests[1], requestFee, 0, 0, { value: requestFee });
-
-      // Post result with non-empty payback address
-      await core.postResult(data.results[1], 0, data.proofs[1]);
-
-      // Check payback address balance after
-      const finalBalance = await ethers.provider.getBalance(validPaybackAddress.toString());
-
-      // Balance should have increased by exactly requestFee
-      expect(finalBalance - initialBalance).to.equal(requestFee);
-    });
-
-    it('should transfer request fee back to requestor when paybackAddress is not valid', async () => {
-      const { core, data } = await loadFixture(deployCoreFixture);
-      const requestFee = ethers.parseEther('10');
-      const [requestor] = await ethers.getSigners();
-
-      const initialBalance = await ethers.provider.getBalance(requestor.address);
-
-      // Post request with request fee
-      await core.postRequest(data.requests[2], requestFee, 0, 0, { value: requestFee });
-
-      // Post request with request fee
-      await core.postRequest(data.requests[3], requestFee, 0, 0, { value: requestFee });
-
-      // Check requestor balance reflects the two request fees
-      const midBalance = await ethers.provider.getBalance(requestor.address);
-      expect(initialBalance - midBalance).closeTo(ethers.parseEther('20'), ethers.parseEther('0.01'));
-
-      // Post result with empty payback address
-      await core.postResult(data.results[2], 0, data.proofs[2]);
-
-      // Post result with empty payback address
-      await core.postResult(data.results[3], 0, data.proofs[3]);
-
-      // Check requestor balance after
-      const finalBalance = await ethers.provider.getBalance(requestor.address);
-
-      // Balance should have increased by requestFee
-      expect(initialBalance - finalBalance).closeTo(0, ethers.parseEther('0.01'));
+        // Requestor should receive refund of unused request fee
+        expect(requestorBalanceAfterResult - requestorBalanceAfterRequest).to.be.closeTo(
+          expectedRefund,
+          ethers.parseEther('0.01'),
+        );
+      });
     });
   });
 });

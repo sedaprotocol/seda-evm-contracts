@@ -106,7 +106,7 @@ export function generateDataFixtures(length: number): {
       result: ethers.keccak256(ethers.toUtf8Bytes('SUCCESS')),
       blockHeight: 0,
       blockTimestamp: Math.floor(Date.now() / 1000) + 3600,
-      gasUsed: 0,
+      gasUsed: 1000000n,
       paybackAddress: ethers.ZeroAddress,
       sedaPayload: ethers.ZeroHash,
     };
