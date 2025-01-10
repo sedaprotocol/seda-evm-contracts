@@ -38,6 +38,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         uint256 requestFee;
         uint256 resultFee;
         uint256 batchFee;
+        uint256 gasLimit;
     }
 
     /// @custom:storage-location erc7201:sedacore.storage.v1
@@ -99,7 +100,8 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
             timestamp: block.timestamp,
             requestFee: requestFee,
             resultFee: resultFee,
-            batchFee: batchFee
+            batchFee: batchFee,
+            gasLimit: inputs.execGasLimit + inputs.tallyGasLimit
         });
 
         return requestId;
@@ -141,11 +143,20 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
 
             if (payableAddress == address(0)) {
                 // If paybackAddress is invalid or empty, refund to original submitter
-                payableAddress = requestDetails.requestor;
-            }
+                (bool successRequestFee, ) = payable(requestDetails.requestor).call{value: requestDetails.requestFee}(
+                    ""
+                );
+                if (!successRequestFee) revert FeeTransferFailed();
+            } else {
+                // Calculate submitter fee based on gas usage ratio
+                uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
+                uint256 refundAmount = requestDetails.requestFee - submitterFee;
 
-            (bool successRequestFee, ) = payable(payableAddress).call{value: requestDetails.requestFee}("");
-            if (!successRequestFee) revert FeeTransferFailed();
+                (bool successRequestFee, ) = payable(payableAddress).call{value: submitterFee}("");
+                if (!successRequestFee) revert FeeTransferFailed();
+                (bool successRefund, ) = payable(requestDetails.requestor).call{value: refundAmount}("");
+                if (!successRefund) revert FeeTransferFailed();
+            }
         }
 
         // Handle result fee payment
