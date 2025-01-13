@@ -357,16 +357,21 @@ describe('SedaCoreV1', () => {
         const requestorBalanceAfterRequest = await ethers.provider.getBalance(requestor.address);
         expect(requestorBalanceBefore - requestorBalanceAfterRequest).closeTo(requestFee, ethers.parseEther('0.01'));
 
-        // Submit result and verify fee distribution
-        const paybackBalanceBefore = await ethers.provider.getBalance(validPaybackAddress.toString());
-        await core.postResult(data.results[1], 0, data.proofs[1]);
-        const paybackBalanceAfter = await ethers.provider.getBalance(validPaybackAddress.toString());
-        const requestorBalanceAfterResult = await ethers.provider.getBalance(requestor.address);
-
         // Calculate expected fee distribution
         const totalGasLimit = BigInt(data.requests[1].execGasLimit) + BigInt(data.requests[1].tallyGasLimit);
         const expectedPaybackFee = (requestFee * BigInt(data.results[1].gasUsed)) / totalGasLimit;
         const expectedRefund = requestFee - expectedPaybackFee;
+
+        // Submit result and verify fee distribution and events
+        const paybackBalanceBefore = await ethers.provider.getBalance(validPaybackAddress.toString());
+        await expect(core.postResult(data.results[1], 0, data.proofs[1]))
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, validPaybackAddress, expectedPaybackFee, 0) // REQUEST fee
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, requestor.address, expectedRefund, 3); // REFUND
+
+        const paybackBalanceAfter = await ethers.provider.getBalance(validPaybackAddress.toString());
+        const requestorBalanceAfterResult = await ethers.provider.getBalance(requestor.address);
 
         // Verify payback address received correct amount
         expect(paybackBalanceAfter - paybackBalanceBefore).to.equal(expectedPaybackFee);
@@ -390,9 +395,12 @@ describe('SedaCoreV1', () => {
           const initialBalance = await ethers.provider.getBalance(requestor.address);
 
           await core.postRequest(data.requests[i], requestFee, 0, 0, { value: requestFee });
-          await core.postResult(data.results[i], 0, data.proofs[i]);
 
-          // Full refund should be given for invalid addresses
+          // Verify full refund event and balance
+          await expect(core.postResult(data.results[i], 0, data.proofs[i]))
+            .to.emit(core, 'FeeDistributed')
+            .withArgs(data.results[i].drId, requestor.address, requestFee, 3); // REFUND
+
           const finalBalance = await ethers.provider.getBalance(requestor.address);
           expect(initialBalance - finalBalance).closeTo(0, ethers.parseEther('0.01'));
         }
@@ -440,11 +448,11 @@ describe('SedaCoreV1', () => {
         for (const req of requests) {
           const balanceBefore = await ethers.provider.getBalance(resultSubmitter.address);
 
-          await core.connect(resultSubmitter).postResult(data.results[req.index], 0, data.proofs[req.index]);
+          await expect(core.connect(resultSubmitter).postResult(data.results[req.index], 0, data.proofs[req.index]))
+            .to.emit(core, 'FeeDistributed')
+            .withArgs(data.results[req.index].drId, resultSubmitter.address, req.fee, 1); // RESULT fee
 
           const balanceAfter = await ethers.provider.getBalance(resultSubmitter.address);
-
-          // Verify result submitter received the correct fee (accounting for gas)
           expect(balanceAfter - balanceBefore).to.be.closeTo(req.fee, ethers.parseEther('0.01'));
         }
       });
@@ -481,8 +489,7 @@ describe('SedaCoreV1', () => {
         // Record batch sender's initial balance
         const batchSenderBalanceBefore = await ethers.provider.getBalance(batchSender.address);
 
-        // Submit batch (using prover fixture)
-        // Create a batch with same results
+        // Submit batch
         const batch = {
           ...data.initialBatch,
           batchHeight: 1,
@@ -491,8 +498,10 @@ describe('SedaCoreV1', () => {
         const signatures = [await data.wallets[0].signingKey.sign(newBatchId).serialized];
         await prover.connect(batchSender).postBatch(batch, signatures, [data.validatorProofs[0]]);
 
-        // Submit result (using new batch)
-        await core.connect(resultSender).postResult(data.results[0], 1, data.proofs[0]);
+        // Submit result and verify fee distribution and event
+        await expect(core.connect(resultSender).postResult(data.results[0], 1, data.proofs[0]))
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[0].drId, batchSender.address, batchFee, 2); // BATCH fee
 
         // Verify batch sender received the fee
         const batchSenderBalanceAfter = await ethers.provider.getBalance(batchSender.address);
@@ -509,8 +518,10 @@ describe('SedaCoreV1', () => {
 
         const requestorBalanceBefore = await ethers.provider.getBalance(requestor.address);
 
-        // Submit result without batch (using batch height 0)
-        await core.connect(resultSender).postResult(data.results[0], 0, data.proofs[0]);
+        // Submit result without batch and verify refund event
+        await expect(core.connect(resultSender).postResult(data.results[0], 0, data.proofs[0]))
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[0].drId, requestor.address, batchFee, 3); // REFUND
 
         // Verify requestor received refund
         const requestorBalanceAfter = await ethers.provider.getBalance(requestor.address);
@@ -615,33 +626,41 @@ describe('SedaCoreV1', () => {
         const signatures = [await data.wallets[0].signingKey.sign(newBatchId).serialized];
         await prover.connect(batchSender).postBatch(batch, signatures, [data.validatorProofs[0]]);
 
-        // Submit result
-        await core.connect(resultSender).postResult(data.results[1], 1, data.proofs[1]);
-
         // Calculate expected request fee distribution
         const totalGasLimit = BigInt(data.requests[1].execGasLimit) + BigInt(data.requests[1].tallyGasLimit);
         const expectedPaybackFee = (requestFee * BigInt(data.results[1].gasUsed)) / totalGasLimit;
         const expectedRefund = requestFee - expectedPaybackFee;
 
-        // Verify all fee distributions
+        // Submit result and verify all fee distribution events
+        await expect(core.connect(resultSender).postResult(data.results[1], 1, data.proofs[1]))
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, paybackAddress, expectedPaybackFee, 0) // REQUEST fee
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, resultSender.address, resultFee, 1) // RESULT fee
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, batchSender.address, batchFee, 2) // BATCH fee
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, requestor.address, expectedRefund, 3); // REFUND
+
+        // Verify final balances
         const paybackBalanceAfter = await ethers.provider.getBalance(paybackAddress.toString());
         const resultSenderBalanceAfter = await ethers.provider.getBalance(resultSender.address);
         const batchSenderBalanceAfter = await ethers.provider.getBalance(batchSender.address);
         const requestorBalanceAfter = await ethers.provider.getBalance(requestor.address);
 
-        // Check payback fee
+        // Verify payback fee
         expect(paybackBalanceAfter - paybackBalanceBefore).to.equal(expectedPaybackFee);
 
-        // Check result fee
+        // Verify result fee
         expect(resultSenderBalanceAfter - resultSenderBalanceBefore).to.be.closeTo(
           resultFee,
           ethers.parseEther('0.01'),
         );
 
-        // Check batch fee
+        // Verify batch fee
         expect(batchSenderBalanceAfter - batchSenderBalanceBefore).to.be.closeTo(batchFee, ethers.parseEther('0.01'));
 
-        // Check requestor refund
+        // Verify requestor's final balance (accounting for total fees paid minus refund)
         expect(requestorBalanceBefore - requestorBalanceAfter).to.be.closeTo(
           totalFee - expectedRefund,
           ethers.parseEther('0.01'),
