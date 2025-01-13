@@ -123,49 +123,67 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
             revert InvalidResultTimestamp(result.drId, result.blockTimestamp, requestDetails.timestamp);
         }
 
-        // Call parent postResult
-        bytes32 resultId = super.postResult(result, batchHeight, proof);
+        // Call parent postResult but return the batch sender for fee distribution
+        (bytes32 resultId, address batchSender) = postResultAndGetBatchSender(result, batchHeight, proof);
 
-        // Clean up state:
-        // - Remove the request from the pendingRequests set
-        // - Delete the request fields: timestamp, fee
+        // Clean up state
         _removeRequest(result.drId);
         delete _storageV1().requestDetails[result.drId];
 
-        // Handle request fee payment
+        // Handle fee distribution
+        uint256 refundAmount;
+
         if (requestDetails.requestFee > 0) {
-            address payableAddress;
-            // Try to decode paybackAddress if it exists
-            if (result.paybackAddress.length == 20) {
-                // Extract 20 bytes and convert to address
-                payableAddress = address(bytes20(result.paybackAddress));
-            }
+            address payableAddress = result.paybackAddress.length == 20
+                ? address(bytes20(result.paybackAddress))
+                : address(0);
 
             if (payableAddress == address(0)) {
-                // If paybackAddress is invalid or empty, refund to original submitter
-                (bool successRequestFee, ) = payable(requestDetails.requestor).call{value: requestDetails.requestFee}(
-                    ""
-                );
-                if (!successRequestFee) revert FeeTransferFailed();
+                // If no payback address, send all request fee to requestor
+                refundAmount += requestDetails.requestFee;
             } else {
-                // Calculate submitter fee based on gas usage ratio
+                // Calculate request fee split and send to payback address
                 uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
-                uint256 refundAmount = requestDetails.requestFee - submitterFee;
-
-                (bool successRequestFee, ) = payable(payableAddress).call{value: submitterFee}("");
-                if (!successRequestFee) revert FeeTransferFailed();
-                (bool successRefund, ) = payable(requestDetails.requestor).call{value: refundAmount}("");
-                if (!successRefund) revert FeeTransferFailed();
+                _sendFee(payableAddress, submitterFee);
+                emit FeeDistributed(result.drId, payableAddress, submitterFee, ISedaCore.FeeType.REQUEST);
+                // Update requestor amount with refund (executed at the end of the function)
+                refundAmount += requestDetails.requestFee - submitterFee;
             }
         }
 
-        // Handle result fee payment
+        // Send result fee to msg.sender
         if (requestDetails.resultFee > 0) {
-            (bool successResultFee, ) = payable(msg.sender).call{value: requestDetails.resultFee}("");
-            if (!successResultFee) revert FeeTransferFailed();
+            _sendFee(msg.sender, requestDetails.resultFee);
+            emit FeeDistributed(result.drId, msg.sender, requestDetails.resultFee, ISedaCore.FeeType.RESULT);
+        }
+
+        // Add batch fee to requestor amount if no valid batch sender
+        if (requestDetails.batchFee > 0) {
+            if (batchSender == address(0)) {
+                // If no batch sender, send all batch fee to requestor
+                refundAmount += requestDetails.batchFee;
+            } else {
+                // Send batch fee to batch sender
+                _sendFee(batchSender, requestDetails.batchFee);
+                emit FeeDistributed(result.drId, batchSender, requestDetails.batchFee, ISedaCore.FeeType.BATCH);
+            }
+        }
+
+        // Send combined amount to requestor if any (refunds)
+        if (refundAmount > 0) {
+            _sendFee(requestDetails.requestor, refundAmount);
+            emit FeeDistributed(result.drId, requestDetails.requestor, refundAmount, ISedaCore.FeeType.REFUND);
         }
 
         return resultId;
+    }
+
+    /// @dev Helper function to safely transfer fees
+    /// @param recipient Address to receive the fee
+    /// @param amount Amount to transfer
+    function _sendFee(address recipient, uint256 amount) private {
+        (bool success, ) = payable(recipient).call{value: amount}("");
+        if (!success) revert FeeTransferFailed();
     }
 
     // ============ Public View Functions ============

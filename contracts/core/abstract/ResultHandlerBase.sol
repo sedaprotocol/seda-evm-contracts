@@ -58,7 +58,8 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         bytes32[] calldata proof
     ) external view returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
-        if (!_resultHandlerStorage().sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
+        (bool isValid, ) = _resultHandlerStorage().sedaProver.verifyResultProof(resultId, batchHeight, proof);
+        if (!isValid) {
             revert InvalidResultProof(resultId);
         }
 
@@ -80,18 +81,41 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         uint64 batchHeight,
         bytes32[] calldata proof
     ) public payable virtual override(IResultHandler) returns (bytes32) {
+        (bytes32 resultId, ) = postResultAndGetBatchSender(result, batchHeight, proof);
+        return resultId;
+    }
+
+    /// @notice Posts a result and returns both the result ID and batch sender address
+    /// @dev Similar to postResult but also returns the batch sender address for fee distribution
+    /// @param result The result data to post
+    /// @param batchHeight The height of the batch containing the result
+    /// @param proof The Merkle proof verifying the result
+    /// @return resultId The unique identifier for the posted result
+    /// @return batchSender The address of the batch sender
+    function postResultAndGetBatchSender(
+        SedaDataTypes.Result calldata result,
+        uint64 batchHeight,
+        bytes32[] calldata proof
+    ) public payable virtual returns (bytes32, address) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (_resultHandlerStorage().results[result.drId].drId != bytes32(0)) {
             revert ResultAlreadyExists(resultId);
         }
-        if (!_resultHandlerStorage().sedaProver.verifyResultProof(resultId, batchHeight, proof)) {
+
+        (bool isValid, address sender) = _resultHandlerStorage().sedaProver.verifyResultProof(
+            resultId,
+            batchHeight,
+            proof
+        );
+
+        if (!isValid) {
             revert InvalidResultProof(resultId);
         }
 
         _resultHandlerStorage().results[result.drId] = result;
 
         emit ResultPosted(resultId);
-        return resultId;
+        return (resultId, sender);
     }
 
     /// @inheritdoc IResultHandler
