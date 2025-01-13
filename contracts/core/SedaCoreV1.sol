@@ -124,7 +124,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         }
 
         // Call parent postResult but return the batch sender for fee distribution
-        (bytes32 resultId, address batchSender) = postResultAndGetBatchSender(result, batchHeight, proof);
+        (bytes32 resultId, address batchSender) = super.postResultAndGetBatchSender(result, batchHeight, proof);
 
         // Clean up state
         _removeRequest(result.drId);
@@ -144,8 +144,10 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
             } else {
                 // Calculate request fee split and send to payback address
                 uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
-                _sendFee(payableAddress, submitterFee);
-                emit FeeDistributed(result.drId, payableAddress, submitterFee, ISedaCore.FeeType.REQUEST);
+                if (submitterFee > 0) {
+                    _sendFee(payableAddress, submitterFee);
+                    emit FeeDistributed(result.drId, payableAddress, submitterFee, ISedaCore.FeeType.REQUEST);
+                }
                 // Update requestor amount with refund (executed at the end of the function)
                 refundAmount += requestDetails.requestFee - submitterFee;
             }

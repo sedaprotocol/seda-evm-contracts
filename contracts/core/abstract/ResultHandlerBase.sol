@@ -80,10 +80,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public payable virtual override(IResultHandler) returns (bytes32) {
-        (bytes32 resultId, ) = postResultAndGetBatchSender(result, batchHeight, proof);
-        return resultId;
-    }
+    ) public payable virtual override(IResultHandler) returns (bytes32);
 
     /// @notice Posts a result and returns both the result ID and batch sender address
     /// @dev Similar to postResult but also returns the batch sender address for fee distribution
@@ -96,7 +93,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public payable virtual returns (bytes32, address) {
+    ) public payable returns (bytes32, address) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (_resultHandlerStorage().results[result.drId].drId != bytes32(0)) {
             revert ResultAlreadyExists(resultId);
