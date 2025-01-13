@@ -4,6 +4,7 @@ import { expect } from 'chai';
 import type { Wallet } from 'ethers';
 import { ethers, upgrades } from 'hardhat';
 import type { ProverDataTypes } from '../../ts-types';
+import type { Secp256k1ProverV1 } from '../../typechain-types';
 import {
   computeResultLeafHash,
   computeValidatorLeafHash,
@@ -133,7 +134,9 @@ describe('Secp256k1ProverV1', () => {
       const { newBatch, signatures, newBatchId } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
 
       const [batchSender] = await ethers.getSigners();
-      await expect(prover.connect(batchSender).postBatch(newBatch, signatures, [data.validatorProofs[0]]))
+      await expect(
+        (prover.connect(batchSender) as Secp256k1ProverV1).postBatch(newBatch, signatures, [data.validatorProofs[0]]),
+      )
         .to.emit(prover, 'BatchPosted')
         .withArgs(newBatch.batchHeight, newBatchId, batchSender.address);
     });
@@ -241,7 +244,7 @@ describe('Secp256k1ProverV1', () => {
       const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
 
       const [batchSender] = await ethers.getSigners();
-      await prover.connect(batchSender).postBatch(batch, signatures, [data.validatorProofs[0]]);
+      await (prover.connect(batchSender) as Secp256k1ProverV1).postBatch(batch, signatures, [data.validatorProofs[0]]);
 
       // Verify a valid proof
       const [isValid, sender] = await prover.verifyResultProof(resultIds[1], 1, resultsTree.getProof(1));
