@@ -4,7 +4,14 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 
 import { compareRequests, compareResults, convertToRequestInputs } from '../helpers';
-import { computeResultLeafHash, deriveDataResultId, deriveRequestId, generateDataFixtures } from '../utils';
+import {
+  computeResultLeafHash,
+  computeValidatorLeafHash,
+  deriveBatchId,
+  deriveDataResultId,
+  deriveRequestId,
+  generateDataFixtures,
+} from '../utils';
 
 describe('SedaCoreV1', () => {
   async function deployCoreFixture() {
@@ -31,16 +38,41 @@ describe('SedaCoreV1', () => {
     const leaves = results.map(deriveDataResultId).map(computeResultLeafHash);
 
     // Create merkle tree and proofs
-    const tree = SimpleMerkleTree.of(leaves, { sortLeaves: true });
-    const proofs = results.map((_, index) => tree.getProof(index));
+    const resultsTree = SimpleMerkleTree.of(leaves, { sortLeaves: true });
+    const proofs = results.map((_, index) => resultsTree.getProof(index));
 
-    const data = { requests, results, proofs };
+    // Create 2 validators
+    const wallets = Array.from({ length: 2 }, (_, i) => {
+      const seed = ethers.id(`validator${i}`);
+      return new ethers.Wallet(seed.slice(2, 66));
+    });
+
+    const validators = wallets.map((wallet) => wallet.address);
+    const votingPowers = Array(wallets.length).fill(10_000_000);
+    votingPowers[0] = 90_000_000; // 90% voting power
+
+    const validatorLeaves = validators.map((validator, index) =>
+      computeValidatorLeafHash(validator, votingPowers[index]),
+    );
+
+    // Validators: Create merkle tree and proofs
+    const validatorsTree = SimpleMerkleTree.of(validatorLeaves, {
+      sortLeaves: true,
+    });
+    const validatorProofs = validators.map((signer, index) => {
+      const proof = validatorsTree.getProof(index);
+      return {
+        signer,
+        votingPower: votingPowers[index],
+        merkleProof: proof,
+      };
+    });
 
     const initialBatch = {
       batchHeight: 0,
       blockHeight: 0,
-      validatorsRoot: ethers.ZeroHash,
-      resultsRoot: tree.root,
+      validatorsRoot: validatorsTree.root,
+      resultsRoot: resultsTree.root,
       provingMetadata: ethers.ZeroHash,
     };
 
@@ -51,6 +83,8 @@ describe('SedaCoreV1', () => {
     const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
     const core = await upgrades.deployProxy(CoreFactory, [await prover.getAddress()], { initializer: 'initialize' });
     await core.waitForDeployment();
+
+    const data = { requests, results, proofs, wallets, initialBatch, validatorProofs };
 
     return { prover, core, data };
   }
@@ -435,6 +469,82 @@ describe('SedaCoreV1', () => {
       });
     });
 
+    describe('batch fee handling', () => {
+      it('should distribute batch fees correctly', async () => {
+        const { core, prover, data } = await loadFixture(deployCoreFixture);
+        const batchFee = ethers.parseEther('3.0');
+        const [requestor, batchSender, resultSender] = await ethers.getSigners();
+
+        // Post request with batch fee
+        await core.connect(requestor).postRequest(data.requests[0], 0, 0, batchFee, { value: batchFee });
+
+        // Record batch sender's initial balance
+        const batchSenderBalanceBefore = await ethers.provider.getBalance(batchSender.address);
+
+        // Submit batch (using prover fixture)
+        // Create a batch with same results
+        const batch = {
+          ...data.initialBatch,
+          batchHeight: 1,
+        };
+        const newBatchId = deriveBatchId(batch);
+        const signatures = [await data.wallets[0].signingKey.sign(newBatchId).serialized];
+        await prover.connect(batchSender).postBatch(batch, signatures, [data.validatorProofs[0]]);
+
+        // Submit result (using new batch)
+        await core.connect(resultSender).postResult(data.results[0], 1, data.proofs[0]);
+
+        // Verify batch sender received the fee
+        const batchSenderBalanceAfter = await ethers.provider.getBalance(batchSender.address);
+        expect(batchSenderBalanceAfter - batchSenderBalanceBefore).to.be.closeTo(batchFee, ethers.parseEther('0.01'));
+      });
+
+      it('should refund batch fee if no batch is submitted', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const batchFee = ethers.parseEther('3.0');
+        const [requestor, , resultSender] = await ethers.getSigners();
+
+        // Post request with batch fee
+        await core.connect(requestor).postRequest(data.requests[0], 0, 0, batchFee, { value: batchFee });
+
+        const requestorBalanceBefore = await ethers.provider.getBalance(requestor.address);
+
+        // Submit result without batch (using batch height 0)
+        await core.connect(resultSender).postResult(data.results[0], 0, data.proofs[0]);
+
+        // Verify requestor received refund
+        const requestorBalanceAfter = await ethers.provider.getBalance(requestor.address);
+        expect(requestorBalanceAfter - requestorBalanceBefore).to.be.closeTo(batchFee, ethers.parseEther('0.01'));
+      });
+
+      it('should handle zero batch fees', async () => {
+        const { core, prover, data } = await loadFixture(deployCoreFixture);
+        const [requestor, batchSender, resultSender] = await ethers.getSigners();
+
+        // Post request with no batch fee
+        await core.connect(requestor).postRequest(data.requests[0], 0, 0, 0, { value: 0 });
+
+        // Record batch sender's initial balance
+        const batchSenderBalanceBefore = await ethers.provider.getBalance(batchSender.address);
+
+        // Submit batch
+        const batch = {
+          ...data.initialBatch,
+          batchHeight: 1,
+        };
+        const newBatchId = deriveBatchId(batch);
+        const signatures = [await data.wallets[0].signingKey.sign(newBatchId).serialized];
+        await prover.connect(batchSender).postBatch(batch, signatures, [data.validatorProofs[0]]);
+
+        // Submit result
+        await core.connect(resultSender).postResult(data.results[0], 1, data.proofs[0]);
+
+        // Verify no fees were transferred
+        const batchSenderBalanceAfter = await ethers.provider.getBalance(batchSender.address);
+        expect(batchSenderBalanceAfter).to.be.closeTo(batchSenderBalanceBefore, ethers.parseEther('0.01'));
+      });
+    });
+
     describe('combined fee scenarios', () => {
       it('should handle concurrent result fees and request fees', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
@@ -472,6 +582,68 @@ describe('SedaCoreV1', () => {
         // Requestor should receive refund of unused request fee
         expect(requestorBalanceAfterResult - requestorBalanceAfterRequest).to.be.closeTo(
           expectedRefund,
+          ethers.parseEther('0.01'),
+        );
+      });
+
+      it('should handle all fee types together', async () => {
+        const { core, prover, data } = await loadFixture(deployCoreFixture);
+        const [requestor, batchSender, resultSender] = await ethers.getSigners();
+        const requestFee = ethers.parseEther('1.0');
+        const resultFee = ethers.parseEther('2.0');
+        const batchFee = ethers.parseEther('3.0');
+        const totalFee = requestFee + resultFee + batchFee;
+
+        // Record initial balances
+        const requestorBalanceBefore = await ethers.provider.getBalance(requestor.address);
+        const resultSenderBalanceBefore = await ethers.provider.getBalance(resultSender.address);
+        const batchSenderBalanceBefore = await ethers.provider.getBalance(batchSender.address);
+        const paybackAddress = data.results[1].paybackAddress;
+        const paybackBalanceBefore = await ethers.provider.getBalance(paybackAddress.toString());
+
+        // Post request with all fees
+        await core
+          .connect(requestor)
+          .postRequest(data.requests[1], requestFee, resultFee, batchFee, { value: totalFee });
+
+        // Submit batch
+        const batch = {
+          ...data.initialBatch,
+          batchHeight: 1,
+        };
+        const newBatchId = deriveBatchId(batch);
+        const signatures = [await data.wallets[0].signingKey.sign(newBatchId).serialized];
+        await prover.connect(batchSender).postBatch(batch, signatures, [data.validatorProofs[0]]);
+
+        // Submit result
+        await core.connect(resultSender).postResult(data.results[1], 1, data.proofs[1]);
+
+        // Calculate expected request fee distribution
+        const totalGasLimit = BigInt(data.requests[1].execGasLimit) + BigInt(data.requests[1].tallyGasLimit);
+        const expectedPaybackFee = (requestFee * BigInt(data.results[1].gasUsed)) / totalGasLimit;
+        const expectedRefund = requestFee - expectedPaybackFee;
+
+        // Verify all fee distributions
+        const paybackBalanceAfter = await ethers.provider.getBalance(paybackAddress.toString());
+        const resultSenderBalanceAfter = await ethers.provider.getBalance(resultSender.address);
+        const batchSenderBalanceAfter = await ethers.provider.getBalance(batchSender.address);
+        const requestorBalanceAfter = await ethers.provider.getBalance(requestor.address);
+
+        // Check payback fee
+        expect(paybackBalanceAfter - paybackBalanceBefore).to.equal(expectedPaybackFee);
+
+        // Check result fee
+        expect(resultSenderBalanceAfter - resultSenderBalanceBefore).to.be.closeTo(
+          resultFee,
+          ethers.parseEther('0.01'),
+        );
+
+        // Check batch fee
+        expect(batchSenderBalanceAfter - batchSenderBalanceBefore).to.be.closeTo(batchFee, ethers.parseEther('0.01'));
+
+        // Check requestor refund
+        expect(requestorBalanceBefore - requestorBalanceAfter).to.be.closeTo(
+          totalFee - expectedRefund,
           ethers.parseEther('0.01'),
         );
       });
