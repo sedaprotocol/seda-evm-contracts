@@ -33,11 +33,15 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
     // ============ Storage ============
 
+    struct BatchData {
+        bytes32 resultsRoot;
+        address sender;
+    }
     /// @custom:storage-location secp256k1prover.storage.v1
     struct Secp256k1ProverStorage {
         uint64 lastBatchHeight;
         bytes32 lastValidatorsRoot;
-        mapping(uint64 => bytes32) batchToResultsRoot;
+        mapping(uint64 => BatchData) batches;
     }
 
     // ============ Constructor & Initializer ============
@@ -57,10 +61,10 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
         // Existing initialization code
         Secp256k1ProverStorage storage s = _storageV1();
-        s.batchToResultsRoot[initialBatch.batchHeight] = initialBatch.resultsRoot;
+        s.batches[initialBatch.batchHeight] = BatchData({resultsRoot: initialBatch.resultsRoot, sender: address(0)});
         s.lastBatchHeight = initialBatch.batchHeight;
         s.lastValidatorsRoot = initialBatch.validatorsRoot;
-        emit BatchPosted(initialBatch.batchHeight, SedaDataTypes.deriveBatchId(initialBatch));
+        emit BatchPosted(initialBatch.batchHeight, SedaDataTypes.deriveBatchId(initialBatch), address(0));
     }
 
     // ============ External Functions ============
@@ -113,8 +117,8 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         // Update current batch
         s.lastBatchHeight = newBatch.batchHeight;
         s.lastValidatorsRoot = newBatch.validatorsRoot;
-        s.batchToResultsRoot[newBatch.batchHeight] = newBatch.resultsRoot;
-        emit BatchPosted(newBatch.batchHeight, batchId);
+        s.batches[newBatch.batchHeight] = BatchData({resultsRoot: newBatch.resultsRoot, sender: msg.sender});
+        emit BatchPosted(newBatch.batchHeight, batchId, msg.sender);
     }
 
     // ============ External View Functions ============
@@ -128,10 +132,10 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         bytes32 resultId,
         uint64 batchHeight,
         bytes32[] calldata merkleProof
-    ) external view override(ProverBase) returns (bool) {
-        Secp256k1ProverStorage storage s = _storageV1();
+    ) external view override(ProverBase) returns (bool, address) {
+        BatchData memory batch = _storageV1().batches[batchHeight];
         bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
-        return MerkleProof.verify(merkleProof, s.batchToResultsRoot[batchHeight], leaf);
+        return MerkleProof.verify(merkleProof, batch.resultsRoot, leaf) ? (true, batch.sender) : (false, address(0));
     }
 
     /// @notice Returns the last processed batch height
@@ -144,13 +148,6 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @return The Merkle root of the last validator set
     function getLastValidatorsRoot() external view returns (bytes32) {
         return _storageV1().lastValidatorsRoot;
-    }
-
-    /// @notice Returns the results root for a specific batch height
-    /// @param batchHeight The batch height to query
-    /// @return The results root for the specified batch
-    function getBatchResultsRoot(uint64 batchHeight) external view returns (bytes32) {
-        return _storageV1().batchToResultsRoot[batchHeight];
     }
 
     // ============ Internal Functions ============

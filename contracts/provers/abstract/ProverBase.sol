@@ -34,7 +34,7 @@ abstract contract ProverBase is IProver {
         bytes32 resultId,
         uint64 batchHeight,
         bytes32[] calldata merkleProof
-    ) external view virtual override(IProver) returns (bool);
+    ) external view virtual override(IProver) returns (bool, address);
 
     /// @inheritdoc IProver
     function getLastBatchHeight() external view virtual override(IProver) returns (uint64);
