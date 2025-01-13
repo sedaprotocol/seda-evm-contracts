@@ -3,9 +3,5 @@ module.exports = {
     grep: '[Gg]as.*[Aa]nalysis',
     invert: true,
   },
-  skipFiles: [
-    'mocks/',
-    'interfaces/',
-    'libraries/SedaDataTypes.sol',
-  ]
+  skipFiles: ['mocks/', 'interfaces/', 'libraries/SedaDataTypes.sol'],
 };

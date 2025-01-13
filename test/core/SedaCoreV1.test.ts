@@ -542,5 +542,93 @@ describe('SedaCoreV1', () => {
           .withArgs(data.results[5].drId, resultSolver.address, resultFee, 1);
       });
     });
+
+    describe('fee increase', () => {
+      it('should allow increasing fees for pending requests', async () => {
+        const { prover, core, data } = await loadFixture(deployCoreFixture);
+        const fees = {
+          request: ethers.parseEther('1.0'),
+          result: ethers.parseEther('2.0'),
+          batch: ethers.parseEther('3.0'),
+        };
+        const totalFee = fees.request + fees.result + fees.batch;
+        const additionalFees = {
+          request: ethers.parseEther('0.5'),
+          result: ethers.parseEther('1.0'),
+          batch: ethers.parseEther('1.5'),
+        };
+        const totalAdditionalFee = additionalFees.request + additionalFees.result + additionalFees.batch;
+        const [requestor, resultSubmitter, batchSubmitter] = await ethers.getSigners();
+
+        // Post request with all fees
+        await core.postRequest(data.requests[1], fees.request, fees.result, fees.batch, { value: totalFee });
+
+        // Increase fees
+        await core.increaseFees(
+          data.results[1].drId,
+          additionalFees.request,
+          additionalFees.result,
+          additionalFees.batch,
+          { value: totalAdditionalFee },
+        );
+
+        // Submit batch
+        const batch = { ...data.initialBatch, batchHeight: 1 };
+        const signatures = [await data.wallets[0].signingKey.sign(deriveBatchId(batch)).serialized];
+        await (prover.connect(batchSubmitter) as Secp256k1ProverV1).postBatch(batch, signatures, [
+          data.validatorProofs[0],
+        ]);
+
+        // Calculate expected request fee distribution
+        const totalGas = BigInt(data.requests[1].execGasLimit) + BigInt(data.requests[1].tallyGasLimit);
+        const expectedPayback = ((fees.request + additionalFees.request) * BigInt(data.results[1].gasUsed)) / totalGas;
+        const expectedRefund = fees.request + additionalFees.request - expectedPayback;
+
+        // Submit result and verify all fee distributions
+        await expect((core.connect(resultSubmitter) as SedaCoreV1).postResult(data.results[1], 1, data.proofs[1]))
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, data.results[1].paybackAddress, expectedPayback, 0) // Request fee to executor
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, resultSubmitter.address, fees.result + additionalFees.result, 1) // Result fee to result submitter
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, batchSubmitter.address, fees.batch + additionalFees.batch, 2) // Batch fee to batch submitter
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[1].drId, requestor.address, expectedRefund, 3); // Remaining request fee refund
+      });
+
+      it('should reject fee increase for non-existent request', async () => {
+        const { core } = await loadFixture(deployCoreFixture);
+        const nonExistentRequestId = ethers.randomBytes(32);
+
+        await expect(
+          core.increaseFees(
+            nonExistentRequestId,
+            ethers.parseEther('1.0'),
+            ethers.parseEther('1.0'),
+            ethers.parseEther('1.0'),
+            { value: ethers.parseEther('3.0') },
+          ),
+        ).to.be.revertedWithCustomError(core, 'RequestNotFound');
+      });
+
+      it('should reject fee increase with incorrect payment amount', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+
+        // First post a request
+        await core.postRequest(data.requests[0], 0, 0, 0);
+        const requestId = await deriveRequestId(data.requests[0]);
+
+        // Try to increase fees with incorrect amount
+        await expect(
+          core.increaseFees(
+            requestId,
+            ethers.parseEther('1.0'),
+            ethers.parseEther('1.0'),
+            ethers.parseEther('1.0'),
+            { value: ethers.parseEther('2.0') }, // Sending less than total additional fees
+          ),
+        ).to.be.revertedWithCustomError(core, 'InvalidFeeAmount');
+      });
+    });
   });
 });
