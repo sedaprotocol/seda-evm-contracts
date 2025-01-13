@@ -132,9 +132,10 @@ describe('Secp256k1ProverV1', () => {
 
       const { newBatch, signatures, newBatchId } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
 
-      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]))
+      const [batchSender] = await ethers.getSigners();
+      await expect(prover.connect(batchSender).postBatch(newBatch, signatures, [data.validatorProofs[0]]))
         .to.emit(prover, 'BatchPosted')
-        .withArgs(newBatch.batchHeight, newBatchId);
+        .withArgs(newBatch.batchHeight, newBatchId, batchSender.address);
     });
 
     it('should fail to update a batch with 1 validator (25% voting power)', async () => {
@@ -238,11 +239,14 @@ describe('Secp256k1ProverV1', () => {
       };
       const newBatchId = deriveBatchId(batch);
       const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
-      await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
+
+      const [batchSender] = await ethers.getSigners();
+      await prover.connect(batchSender).postBatch(batch, signatures, [data.validatorProofs[0]]);
 
       // Verify a valid proof
-      const isValid = await prover.verifyResultProof(resultIds[1], 1, resultsTree.getProof(1));
+      const [isValid, sender] = await prover.verifyResultProof(resultIds[1], 1, resultsTree.getProof(1));
       expect(isValid).to.be.true;
+      expect(sender).to.equal(batchSender.address);
     });
 
     it('should reject an invalid result proof', async () => {
@@ -265,8 +269,9 @@ describe('Secp256k1ProverV1', () => {
       await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
 
       // Verify an invalid proof
-      const isValid = await prover.verifyResultProof(resultIds[0], 1, resultsTree.getProof(1));
+      const [isValid, batchSender] = await prover.verifyResultProof(resultIds[0], 1, resultsTree.getProof(1));
       expect(isValid).to.be.false;
+      expect(batchSender).to.equal(ethers.ZeroAddress);
     });
   });
 
@@ -291,7 +296,7 @@ describe('Secp256k1ProverV1', () => {
       await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
 
       // Verify a valid proof
-      const resultBatch = await prover.verifyResultProof(resultIds[0], batch.batchHeight, resultsTree.getProof(0));
+      const [resultBatch] = await prover.verifyResultProof(resultIds[0], batch.batchHeight, resultsTree.getProof(0));
       expect(resultBatch).to.be.true;
     });
 
@@ -315,8 +320,13 @@ describe('Secp256k1ProverV1', () => {
       await prover.postBatch(batch1, signatures1, [data.validatorProofs[0]]);
 
       // Verify an invalid proof
-      const resultBatch1 = await prover.verifyResultProof(resultIds[0], batch1.batchHeight, resultsTree.getProof(0));
+      const [resultBatch1, batchSender] = await prover.verifyResultProof(
+        resultIds[0],
+        batch1.batchHeight,
+        resultsTree.getProof(0),
+      );
       expect(resultBatch1).to.be.false;
+      expect(batchSender).to.equal(ethers.ZeroAddress);
     });
   });
 
