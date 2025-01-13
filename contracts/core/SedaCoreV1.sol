@@ -16,9 +16,21 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @notice Core contract for the Seda protocol, managing requests and results
 /// @dev Implements ResultHandler and RequestHandler functionalities, and manages active requests
 contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, OwnableUpgradeable {
-    using EnumerableSet for EnumerableSet.Bytes32Set;
+    // ============ Types ============
+
+    // Request details struct
+    struct RequestDetails {
+        address requestor;
+        uint256 timestamp;
+        uint256 requestFee;
+        uint256 resultFee;
+        uint256 batchFee;
+        uint256 gasLimit;
+    }
 
     // ============ Constants ============
+
+    using EnumerableSet for EnumerableSet.Bytes32Set;
 
     // Constant storage slot for the state following the ERC-7201 standard
     bytes32 private constant CORE_V1_STORAGE_SLOT =
@@ -30,16 +42,6 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     error InvalidResultTimestamp(bytes32 drId, uint256 resultTimestamp, uint256 requestTimestamp);
 
     // ============ Storage ============
-
-    // Request details struct
-    struct RequestDetails {
-        address requestor;
-        uint256 timestamp;
-        uint256 requestFee;
-        uint256 resultFee;
-        uint256 batchFee;
-        uint256 gasLimit;
-    }
 
     /// @custom:storage-location erc7201:sedacore.storage.v1
     struct SedaCoreStorage {
@@ -145,7 +147,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
                 // Calculate request fee split and send to payback address
                 uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
                 if (submitterFee > 0) {
-                    _sendFee(payableAddress, submitterFee);
+                    _transferFee(payableAddress, submitterFee);
                     emit FeeDistributed(result.drId, payableAddress, submitterFee, ISedaCore.FeeType.REQUEST);
                 }
                 // Update requestor amount with refund (executed at the end of the function)
@@ -155,7 +157,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
 
         // Send result fee to msg.sender
         if (requestDetails.resultFee > 0) {
-            _sendFee(msg.sender, requestDetails.resultFee);
+            _transferFee(msg.sender, requestDetails.resultFee);
             emit FeeDistributed(result.drId, msg.sender, requestDetails.resultFee, ISedaCore.FeeType.RESULT);
         }
 
@@ -166,26 +168,46 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
                 refundAmount += requestDetails.batchFee;
             } else {
                 // Send batch fee to batch sender
-                _sendFee(batchSender, requestDetails.batchFee);
+                _transferFee(batchSender, requestDetails.batchFee);
                 emit FeeDistributed(result.drId, batchSender, requestDetails.batchFee, ISedaCore.FeeType.BATCH);
             }
         }
 
         // Send combined amount to requestor if any (refunds)
         if (refundAmount > 0) {
-            _sendFee(requestDetails.requestor, refundAmount);
+            _transferFee(requestDetails.requestor, refundAmount);
             emit FeeDistributed(result.drId, requestDetails.requestor, refundAmount, ISedaCore.FeeType.REFUND);
         }
 
         return resultId;
     }
 
-    /// @dev Helper function to safely transfer fees
-    /// @param recipient Address to receive the fee
-    /// @param amount Amount to transfer
-    function _sendFee(address recipient, uint256 amount) private {
-        (bool success, ) = payable(recipient).call{value: amount}("");
-        if (!success) revert FeeTransferFailed();
+    /// @inheritdoc ISedaCore
+    function increaseFees(
+        bytes32 requestId,
+        uint256 additionalRequestFee,
+        uint256 additionalResultFee,
+        uint256 additionalBatchFee
+    ) public payable override {
+        // Check that amount is equal to sum of fees
+        if (msg.value != additionalRequestFee + additionalResultFee + additionalBatchFee) {
+            revert InvalidFeeAmount();
+        }
+
+        // Get request details from storage
+        RequestDetails storage details = _storageV1().requestDetails[requestId];
+
+        // Check that request exists
+        if (details.timestamp == 0) {
+            revert RequestNotFound(requestId);
+        }
+
+        // Update the fees
+        details.requestFee += additionalRequestFee;
+        details.resultFee += additionalResultFee;
+        details.batchFee += additionalBatchFee;
+
+        emit FeesIncreased(requestId, additionalRequestFee, additionalResultFee, additionalBatchFee);
     }
 
     // ============ Public View Functions ============
@@ -239,6 +261,14 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     /// @param requestId The ID of the request to remove
     function _removeRequest(bytes32 requestId) internal {
         _storageV1().pendingRequests.remove(requestId);
+    }
+
+    /// @dev Helper function to safely transfer fees
+    /// @param recipient Address to receive the fee
+    /// @param amount Amount to transfer
+    function _transferFee(address recipient, uint256 amount) internal {
+        (bool success, ) = payable(recipient).call{value: amount}("");
+        if (!success) revert FeeTransferFailed();
     }
 
     /// @dev Required override for UUPSUpgradeable. Ensures only the owner can upgrade the implementation.

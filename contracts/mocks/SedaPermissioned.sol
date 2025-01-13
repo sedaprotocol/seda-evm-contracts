@@ -25,6 +25,10 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
+    // ============ Errors ============
+
+    error FeesNotImplemented();
+
     // ============ State Variables ============
 
     uint16 public maxReplicationFactor;
@@ -95,12 +99,17 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
 
     // ============ Public Functions ============
 
+    /// @inheritdoc IRequestHandler
+    /// @notice Posts a new request without any fees
+    /// @param inputs The request inputs containing the request parameters
+    /// @return The unique identifier of the posted request
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
     ) public payable override(RequestHandlerBase, IRequestHandler) returns (bytes32) {
         return postRequest(inputs, 0, 0, 0);
     }
 
+    /// @inheritdoc ISedaCore
     /// @notice Posts a new request
     /// @param inputs The request inputs
     /// @return requestId The ID of the posted request
@@ -110,6 +119,11 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
         uint256,
         uint256
     ) public payable override(ISedaCore) whenNotPaused returns (bytes32) {
+        // Check if amount is greater than 0
+        if (msg.value != 0) {
+            revert FeesNotImplemented();
+        }
+
         // Check max replication factor first
         if (inputs.replicationFactor > maxReplicationFactor) {
             revert InvalidReplicationFactor();
@@ -124,6 +138,7 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
         return requestId;
     }
 
+    /// @inheritdoc ISedaCore
     /// @notice Retrieves a list of pending request IDs
     /// @param offset The starting index in the pendingRequests set
     /// @param limit The maximum number of request IDs to return
@@ -142,6 +157,12 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
         }
 
         return queriedPendingRequests;
+    }
+
+    /// @inheritdoc ISedaCore
+    /// @dev This is a mock implementation that does nothing and requires admin role
+    function increaseFees(bytes32, uint256, uint256, uint256) external payable override(ISedaCore) {
+        revert FeesNotImplemented();
     }
 
     // ============ Admin Functions ============

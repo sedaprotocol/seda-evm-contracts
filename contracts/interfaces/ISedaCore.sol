@@ -30,6 +30,18 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @param amount The amount of fees distributed to the recipient
     event FeeDistributed(bytes32 indexed drId, address indexed recipient, uint256 amount, FeeType indexed feeType);
 
+    /// @notice Emitted when fees are increased for a data request
+    /// @param drId The unique identifier for the data request
+    /// @param additionalRequestFee The additional request fee
+    /// @param additionalResultFee The additional result fee
+    /// @param additionalBatchFee The additional batch fee
+    event FeesIncreased(
+        bytes32 indexed drId,
+        uint256 additionalRequestFee,
+        uint256 additionalResultFee,
+        uint256 additionalBatchFee
+    );
+
     /// @notice Retrieves a paginated list of pending requests
     /// @param offset The starting position in the list
     /// @param limit The maximum number of requests to return
@@ -48,4 +60,16 @@ interface ISedaCore is IResultHandler, IRequestHandler {
         uint256 resultFee,
         uint256 batchFee
     ) external payable returns (bytes32);
+
+    /// @notice Increases the fees for an existing request. New fees must be greater than current fees.
+    /// @param requestId The unique identifier of the request to update
+    /// @param additionalRequestFee Additional fee to add for request submission
+    /// @param additionalResultFee Additional fee to add for result submission
+    /// @param additionalBatchFee Additional fee to add for batch processing
+    function increaseFees(
+        bytes32 requestId,
+        uint256 additionalRequestFee,
+        uint256 additionalResultFee,
+        uint256 additionalBatchFee
+    ) external payable;
 }
