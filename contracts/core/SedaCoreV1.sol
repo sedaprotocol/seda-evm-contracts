@@ -16,9 +16,8 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @notice Core contract for the Seda protocol, managing requests and results
 /// @dev Implements ResultHandler and RequestHandler functionalities, and manages active requests
 contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, OwnableUpgradeable {
-    // ============ Types ============
+    // ============ Types & Constants============
 
-    // Request details struct
     struct RequestDetails {
         address requestor;
         uint256 timestamp;
@@ -27,8 +26,6 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         uint256 batchFee;
         uint256 gasLimit;
     }
-
-    // ============ Constants ============
 
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -45,15 +42,11 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
 
     /// @custom:storage-location erc7201:sedacore.storage.v1
     struct SedaCoreStorage {
-        // Enumerable Set to store the request IDs that are pending
-        // `pendingRequests` keeps track of all active data requests that have been posted but not yet fulfilled.
-        // This set is used to manage the lifecycle of requests, allowing easy retrieval and status tracking.
-        // When a request is posted, it is added to `pendingRequests`.
-        // When a result is posted and the request is fulfilled, it is removed from `pendingRequests`
+        // Tracks active data requests to ensure proper lifecycle management and prevent
+        // duplicate fulfillments. Requests are removed only after successful fulfillment
         EnumerableSet.Bytes32Set pendingRequests;
-        // Mapping to store request details for pending requests:
-        // - timestamps
-        // - request fee
+        // Associates request IDs with their metadata to enable fee distribution and
+        // timestamp validation during result submission
         mapping(bytes32 => RequestDetails) requestDetails;
     }
 
@@ -68,9 +61,12 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     /// @param sedaProverAddress The address of the Seda prover contract
     /// @dev This function replaces the constructor for proxy compatibility and can only be called once
     function initialize(address sedaProverAddress) external initializer {
-        __ResultHandler_init(sedaProverAddress);
-        __Ownable_init(msg.sender);
+        // Initialize inherited contracts
         __UUPSUpgradeable_init();
+        __Ownable_init(msg.sender);
+
+        // Initialize derived contracts
+        __ResultHandler_init(sedaProverAddress);
     }
 
     // ============ Public Functions ============
@@ -88,15 +84,18 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         uint256 requestFee,
         uint256 resultFee,
         uint256 batchFee
-    ) public payable override returns (bytes32) {
-        // Check that amount is equal to sum of fees
+    ) public payable returns (bytes32) {
+        // Validate that the sent ETH matches exactly the sum of all specified fees
+        // This prevents users from accidentally overpaying or underpaying fees
         if (msg.value != requestFee + resultFee + batchFee) {
             revert InvalidFeeAmount();
         }
 
-        bytes32 requestId = super.postRequest(inputs);
+        // Call parent contract's postResult base implementation
+        bytes32 requestId = RequestHandlerBase.postRequest(inputs);
+
+        // Store pending request and request details
         _addRequest(requestId);
-        // Store the request details
         _storageV1().requestDetails[requestId] = RequestDetails({
             requestor: msg.sender,
             timestamp: block.timestamp,
@@ -116,52 +115,60 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         uint64 batchHeight,
         bytes32[] calldata proof
     ) public payable override(ResultHandlerBase, IResultHandler) returns (bytes32) {
-        // Get request details from storage
         RequestDetails memory requestDetails = _storageV1().requestDetails[result.drId];
 
-        // Check: Validate result timestamp comes after request timestamp
-        // Note: requestTimestamp = 0 for requests not tracked by this contract (always passes validation)
+        // Ensures results can't be submitted with timestamps from before the request was made,
+        // preventing potential replay or front-running attacks
+        // Note: Validation always passes for non-tracked requests (where requestDetails.timestamp is 0)
         if (result.blockTimestamp <= requestDetails.timestamp) {
             revert InvalidResultTimestamp(result.drId, result.blockTimestamp, requestDetails.timestamp);
         }
 
-        // Call parent postResult but return the batch sender for fee distribution
+        // Call parent contract's postResult implementation and retrieve both the result ID
+        // and the batch sender address for subsequent fee distribution logic
         (bytes32 resultId, address batchSender) = super.postResultAndGetBatchSender(result, batchHeight, proof);
 
         // Clean up state
         _removeRequest(result.drId);
         delete _storageV1().requestDetails[result.drId];
 
-        // Handle fee distribution
+        // Fee distribution: handles three types of fees (request, result, batch)
+        // and manages refunds back to the requestor when applicable
+
+        // Amount to refund to requestor
         uint256 refundAmount;
 
+        // Request fee distribution:
+        // - if invalid payback address, send all request fee to requestor
+        // - if valid payback address, split request fee proportionally based on gas used vs gas limit
         if (requestDetails.requestFee > 0) {
             address payableAddress = result.paybackAddress.length == 20
                 ? address(bytes20(result.paybackAddress))
                 : address(0);
 
             if (payableAddress == address(0)) {
-                // If no payback address, send all request fee to requestor
                 refundAmount += requestDetails.requestFee;
             } else {
-                // Calculate request fee split and send to payback address
+                // Split request fee proportionally based on gas used vs gas limit
                 uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
                 if (submitterFee > 0) {
                     _transferFee(payableAddress, submitterFee);
                     emit FeeDistributed(result.drId, payableAddress, submitterFee, ISedaCore.FeeType.REQUEST);
                 }
-                // Update requestor amount with refund (executed at the end of the function)
                 refundAmount += requestDetails.requestFee - submitterFee;
             }
         }
 
-        // Send result fee to msg.sender
+        // Result fee distribution:
+        // - send all result fee to `msg.sender` (result sender/solver)
         if (requestDetails.resultFee > 0) {
             _transferFee(msg.sender, requestDetails.resultFee);
             emit FeeDistributed(result.drId, msg.sender, requestDetails.resultFee, ISedaCore.FeeType.RESULT);
         }
 
-        // Add batch fee to requestor amount if no valid batch sender
+        // Batch fee distribution:
+        // - if no batch sender, send all batch fee to requestor
+        // - if valid batch sender, send batch fee to batch sender
         if (requestDetails.batchFee > 0) {
             if (batchSender == address(0)) {
                 // If no batch sender, send all batch fee to requestor
@@ -173,7 +180,10 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
             }
         }
 
-        // Send combined amount to requestor if any (refunds)
+        // Aggregate refund to requestor containing:
+        // - unused request fees (when gas used < gas limit)
+        // - full request fee (when invalid payback address)
+        // - batch fee (when no batch sender)
         if (refundAmount > 0) {
             _transferFee(requestDetails.requestor, refundAmount);
             emit FeeDistributed(result.drId, requestDetails.requestor, refundAmount, ISedaCore.FeeType.REFUND);
@@ -183,26 +193,23 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     }
 
     /// @inheritdoc ISedaCore
+    /// @dev Allows the owner to increase fees for a pending request
     function increaseFees(
         bytes32 requestId,
         uint256 additionalRequestFee,
         uint256 additionalResultFee,
         uint256 additionalBatchFee
     ) public payable override {
-        // Check that amount is equal to sum of fees
+        // Validate ETH payment matches fee sum to prevent over/underpayment
         if (msg.value != additionalRequestFee + additionalResultFee + additionalBatchFee) {
             revert InvalidFeeAmount();
         }
 
-        // Get request details from storage
         RequestDetails storage details = _storageV1().requestDetails[requestId];
-
-        // Check that request exists
         if (details.timestamp == 0) {
             revert RequestNotFound(requestId);
         }
 
-        // Update the fees
         details.requestFee += additionalRequestFee;
         details.resultFee += additionalResultFee;
         details.batchFee += additionalBatchFee;
@@ -267,6 +274,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     /// @param recipient Address to receive the fee
     /// @param amount Amount to transfer
     function _transferFee(address recipient, uint256 amount) internal {
+        // Using low-level call instead of transfer()
         (bool success, ) = payable(recipient).call{value: amount}("");
         if (!success) revert FeeTransferFailed();
     }

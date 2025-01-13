@@ -22,13 +22,16 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
     // The percentage of voting power required for consensus (66.666666%, represented as parts per 100,000,000)
     uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
+
     // Domain separator for Secp256k1 Merkle Tree leaves
     bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
+
     // Constant storage slot for the state following the ERC-7201 standard
     bytes32 private constant PROVER_V1_STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("secp256k1prover.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
 
     // ============ Errors ============
+
     error ConsensusNotReached();
 
     // ============ Storage ============
@@ -37,10 +40,14 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         bytes32 resultsRoot;
         address sender;
     }
+
     /// @custom:storage-location secp256k1prover.storage.v1
     struct Secp256k1ProverStorage {
+        // Hight of the most recently processed batch to ensure strictly increasing batch order
         uint64 lastBatchHeight;
+        // Merkle root of the current validator set, used to verify validator proofs in subsequent batches
         bytes32 lastValidatorsRoot;
+        // Mapping of batch heights to batch data, including results root and sender address
         mapping(uint64 => BatchData) batches;
     }
 
@@ -86,35 +93,39 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
     ) external override(ProverBase) {
         Secp256k1ProverStorage storage s = _storageV1();
-        // Check that new batch invariants hold
+        // Prevents replay attacks via strictly ordered batches
         if (newBatch.batchHeight <= s.lastBatchHeight) {
             revert InvalidBatchHeight();
         }
+        // Each signature needs a validator Merkle Proof
         if (signatures.length != validatorProofs.length) {
             revert MismatchedSignaturesAndProofs();
         }
 
-        // Derive Batch Id
         bytes32 batchId = SedaDataTypes.deriveBatchId(newBatch);
 
-        // Check that all validator proofs are valid and accumulate voting power
+        // Accumulate voting power from valid validators to ensure sufficient consensus
+        // Each validator must prove membership and provide a valid signature
         uint64 votingPower = 0;
         for (uint256 i = 0; i < validatorProofs.length; i++) {
+            // Verify validator is part of the current validator set using Merkle proof
             if (!_verifyValidatorProof(validatorProofs[i], s.lastValidatorsRoot)) {
                 revert InvalidValidatorProof();
             }
+            // Verify signature is valid and signed by the validator
             if (!_verifySignature(batchId, signatures[i], validatorProofs[i].signer)) {
                 revert InvalidSignature();
             }
             votingPower += validatorProofs[i].votingPower;
         }
 
-        // Check voting power consensus
+        // Check that voting power meets or exceeds the consensus threshold (2/3)
         if (votingPower < CONSENSUS_PERCENTAGE) {
             revert ConsensusNotReached();
         }
 
-        // Update current batch
+        // After consensus is reached, commit the new batch and update validator set
+        // This establishes the new state for future batch validations
         s.lastBatchHeight = newBatch.batchHeight;
         s.lastValidatorsRoot = newBatch.validatorsRoot;
         s.batches[newBatch.batchHeight] = BatchData({resultsRoot: newBatch.resultsRoot, sender: msg.sender});

@@ -88,7 +88,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     /// @param batchHeight The height of the batch containing the result
     /// @param proof The Merkle proof verifying the result
     /// @return resultId The unique identifier for the posted result
-    /// @return batchSender The address of the batch sender
+    /// @return batchSender The address of the solver that posted the batch
     function postResultAndGetBatchSender(
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
@@ -99,7 +99,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
             revert ResultAlreadyExists(resultId);
         }
 
-        (bool isValid, address sender) = _resultHandlerStorage().sedaProver.verifyResultProof(
+        (bool isValid, address batchSender) = _resultHandlerStorage().sedaProver.verifyResultProof(
             resultId,
             batchHeight,
             proof
@@ -112,7 +112,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         _resultHandlerStorage().results[result.drId] = result;
 
         emit ResultPosted(resultId);
-        return (resultId, sender);
+        return (resultId, batchSender);
     }
 
     /// @inheritdoc IResultHandler
