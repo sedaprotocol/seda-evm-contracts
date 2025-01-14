@@ -168,7 +168,7 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
     }
 
     /// @inheritdoc ISedaCore
-    /// @dev This is a mock implementation that does nothing and requires admin role
+    /// @dev This is a mock implementation that does nothing
     function increaseFees(bytes32, uint256, uint256, uint256) external payable override(ISedaCore) {
         revert FeesNotImplemented();
     }
