@@ -248,17 +248,31 @@ contract SedaCoreV1 is
     /// @param offset The starting index in the pendingRequests array
     /// @param limit The maximum number of requests to return
     /// @return An array of SedaDataTypes.Request structs
-    function getPendingRequests(uint256 offset, uint256 limit) public view returns (SedaDataTypes.Request[] memory) {
+    function getPendingRequests(uint256 offset, uint256 limit) public view returns (PendingRequest[] memory) {
+        // Return empty array if paused to save Solvers an RPC call
+        if (paused()) {
+            return new PendingRequest[](0);
+        }
+
         uint256 totalRequests = _storageV1().pendingRequests.length();
         if (offset >= totalRequests) {
-            return new SedaDataTypes.Request[](0);
+            return new PendingRequest[](0);
         }
 
         uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
-        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
+        PendingRequest[] memory queriedPendingRequests = new PendingRequest[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
             bytes32 requestId = _storageV1().pendingRequests.at(offset + i);
-            queriedPendingRequests[i] = getRequest(requestId);
+            RequestDetails memory details = _storageV1().requestDetails[requestId];
+
+            queriedPendingRequests[i] = PendingRequest({
+                request: getRequest(requestId),
+                requestor: details.requestor,
+                timestamp: details.timestamp,
+                requestFee: details.requestFee,
+                resultFee: details.resultFee,
+                batchFee: details.batchFee
+            });
         }
 
         return queriedPendingRequests;

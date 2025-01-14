@@ -143,17 +143,25 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
     /// @param offset The starting index in the pendingRequests set
     /// @param limit The maximum number of request IDs to return
     /// @return An array of pending request IDs
-    function getPendingRequests(uint256 offset, uint256 limit) public view returns (SedaDataTypes.Request[] memory) {
+    function getPendingRequests(uint256 offset, uint256 limit) public view returns (PendingRequest[] memory) {
         uint256 totalRequests = pendingRequests.length();
         if (offset >= totalRequests) {
-            return new SedaDataTypes.Request[](0);
+            return new PendingRequest[](0);
         }
 
         uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
-        SedaDataTypes.Request[] memory queriedPendingRequests = new SedaDataTypes.Request[](actualLimit);
+        PendingRequest[] memory queriedPendingRequests = new PendingRequest[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
             bytes32 requestId = pendingRequests.at(offset + i);
-            queriedPendingRequests[i] = getRequest(requestId);
+
+            queriedPendingRequests[i] = PendingRequest({
+                request: getRequest(requestId),
+                requestor: address(0),
+                timestamp: 0,
+                requestFee: 0,
+                resultFee: 0,
+                batchFee: 0
+            });
         }
 
         return queriedPendingRequests;

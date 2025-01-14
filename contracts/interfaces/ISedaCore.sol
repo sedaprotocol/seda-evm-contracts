@@ -8,6 +8,17 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title ISedaCoreV1
 /// @notice Interface for the main Seda protocol contract that handles both requests and results
 interface ISedaCore is IResultHandler, IRequestHandler {
+    /// @notice Aggregates request data and fees to help solvers evaluate pending requests
+    /// @dev Used as return type for getPendingRequests() view function, not for storage
+    struct PendingRequest {
+        SedaDataTypes.Request request;
+        address requestor;
+        uint256 timestamp;
+        uint256 requestFee;
+        uint256 resultFee;
+        uint256 batchFee;
+    }
+
     /// @notice Enum representing different types of fee distributions
     /// @dev Used to identify fee types in events and fee distribution logic
     /// @param REQUEST Fee paid to solver submitting the data request to SEDA network
@@ -45,8 +56,8 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @notice Retrieves a paginated list of pending requests
     /// @param offset The starting position in the list
     /// @param limit The maximum number of requests to return
-    /// @return An array of Request structs
-    function getPendingRequests(uint256 offset, uint256 limit) external view returns (SedaDataTypes.Request[] memory);
+    /// @return An array of PendingRequest structs
+    function getPendingRequests(uint256 offset, uint256 limit) external view returns (PendingRequest[] memory);
 
     /// @notice Posts a request with associated fees
     /// @param inputs The input parameters for the data request
