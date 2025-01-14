@@ -5,6 +5,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import {ProverBase} from "./abstract/ProverBase.sol";
@@ -17,7 +18,7 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 ///      - Increasing batch and block heights
 ///      - Valid validator proofs and signatures
 ///      - Sufficient voting power to meet the consensus threshold
-contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     // ============ Constants ============
 
     // The percentage of voting power required for consensus (66.666666%, represented as parts per 100,000,000)
@@ -65,7 +66,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         // Initialize inherited contracts
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
-
+        __Pausable_init();
         // Existing initialization code
         Secp256k1ProverStorage storage s = _storageV1();
         s.batches[initialBatch.batchHeight] = BatchData({resultsRoot: initialBatch.resultsRoot, sender: address(0)});
@@ -91,7 +92,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         SedaDataTypes.Batch calldata newBatch,
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
-    ) external override(ProverBase) {
+    ) external override(ProverBase) whenNotPaused {
         Secp256k1ProverStorage storage s = _storageV1();
         // Prevents replay attacks via strictly ordered batches
         if (newBatch.batchHeight <= s.lastBatchHeight) {
@@ -130,6 +131,20 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         s.lastValidatorsRoot = newBatch.validatorsRoot;
         s.batches[newBatch.batchHeight] = BatchData({resultsRoot: newBatch.resultsRoot, sender: msg.sender});
         emit BatchPosted(newBatch.batchHeight, batchId, msg.sender);
+    }
+
+    /// @notice Pauses all contract operations
+    /// @dev Can only be called by the contract owner
+    /// @dev When paused, all state-modifying functions will revert
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /// @notice Unpauses contract operations
+    /// @dev Can only be called by the contract owner
+    /// @dev Restores normal contract functionality after being paused
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     // ============ External View Functions ============

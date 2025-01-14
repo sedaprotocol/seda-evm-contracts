@@ -76,11 +76,24 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     // ============ Public Functions ============
 
     /// @inheritdoc IResultHandler
+    /// @dev This is left abstract as implementations need to decide how to handle the batch sender
+    /// @dev See postResultAndGetBatchSender for the core result posting logic
     function postResult(
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
     ) public payable virtual override(IResultHandler) returns (bytes32);
+
+    /// @inheritdoc IResultHandler
+    function getResult(bytes32 requestId) public view override(IResultHandler) returns (SedaDataTypes.Result memory) {
+        SedaDataTypes.Result memory result = _resultHandlerStorage().results[requestId];
+        if (bytes(result.version).length == 0) {
+            revert ResultNotFound(requestId);
+        }
+        return result;
+    }
+
+    // ============ Internal Functions ============
 
     /// @notice Posts a result and returns both the result ID and batch sender address
     /// @dev Similar to postResult but also returns the batch sender address for fee distribution
@@ -93,7 +106,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public payable returns (bytes32, address) {
+    ) internal returns (bytes32, address) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (_resultHandlerStorage().results[result.drId].drId != bytes32(0)) {
             revert ResultAlreadyExists(resultId);
@@ -114,17 +127,6 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         emit ResultPosted(resultId);
         return (resultId, batchSender);
     }
-
-    /// @inheritdoc IResultHandler
-    function getResult(bytes32 requestId) public view override(IResultHandler) returns (SedaDataTypes.Result memory) {
-        SedaDataTypes.Result memory result = _resultHandlerStorage().results[requestId];
-        if (bytes(result.version).length == 0) {
-            revert ResultNotFound(requestId);
-        }
-        return _resultHandlerStorage().results[requestId];
-    }
-
-    // ============ Internal Functions ============
 
     /// @notice Returns the storage struct for the contract
     /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot

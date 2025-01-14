@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import {IRequestHandler} from "../interfaces/IRequestHandler.sol";
@@ -15,7 +16,14 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title SedaCoreV1
 /// @notice Core contract for the Seda protocol, managing requests and results
 /// @dev Implements ResultHandler and RequestHandler functionalities, and manages active requests
-contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpgradeable, OwnableUpgradeable {
+contract SedaCoreV1 is
+    ISedaCore,
+    RequestHandlerBase,
+    ResultHandlerBase,
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    PausableUpgradeable
+{
     // ============ Types & Constants============
 
     struct RequestDetails {
@@ -64,6 +72,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         // Initialize inherited contracts
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
+        __Pausable_init();
 
         // Initialize derived contracts
         __ResultHandler_init(sedaProverAddress);
@@ -75,7 +84,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
     /// @dev Overrides the base implementation to also add the request ID and timestamp to storage
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
-    ) public payable override(RequestHandlerBase, IRequestHandler) returns (bytes32) {
+    ) public payable override(RequestHandlerBase, IRequestHandler) whenNotPaused returns (bytes32) {
         return postRequest(inputs, 0, 0, 0);
     }
 
@@ -84,7 +93,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         uint256 requestFee,
         uint256 resultFee,
         uint256 batchFee
-    ) public payable returns (bytes32) {
+    ) public payable whenNotPaused returns (bytes32) {
         // Validate that the sent ETH matches exactly the sum of all specified fees
         // This prevents users from accidentally overpaying or underpaying fees
         if (msg.value != requestFee + resultFee + batchFee) {
@@ -114,7 +123,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public payable override(ResultHandlerBase, IResultHandler) returns (bytes32) {
+    ) public payable override(ResultHandlerBase, IResultHandler) whenNotPaused returns (bytes32) {
         RequestDetails memory requestDetails = _storageV1().requestDetails[result.drId];
 
         // Ensures results can't be submitted with timestamps from before the request was made,
@@ -199,7 +208,7 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         uint256 additionalRequestFee,
         uint256 additionalResultFee,
         uint256 additionalBatchFee
-    ) public payable override {
+    ) public payable override whenNotPaused {
         // Validate ETH payment matches fee sum to prevent over/underpayment
         if (msg.value != additionalRequestFee + additionalResultFee + additionalBatchFee) {
             revert InvalidFeeAmount();
@@ -215,6 +224,20 @@ contract SedaCoreV1 is ISedaCore, RequestHandlerBase, ResultHandlerBase, UUPSUpg
         details.batchFee += additionalBatchFee;
 
         emit FeesIncreased(requestId, additionalRequestFee, additionalResultFee, additionalBatchFee);
+    }
+
+    /// @notice Pauses all contract operations
+    /// @dev Can only be called by the contract owner
+    /// @dev When paused, all state-modifying functions will revert
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /// @notice Unpauses contract operations
+    /// @dev Can only be called by the contract owner
+    /// @dev Restores normal contract functionality after being paused
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     // ============ Public View Functions ============
