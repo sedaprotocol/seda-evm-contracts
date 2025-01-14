@@ -694,7 +694,7 @@ describe('SedaCoreV1', () => {
       ).to.be.revertedWithCustomError(core, 'EnforcedPause');
     });
 
-    it('should return empty array for getPendingRequests while paused', async () => {
+    it('should revert getPendingRequests while paused', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
       const [owner] = await ethers.getSigners();
 
@@ -709,9 +709,8 @@ describe('SedaCoreV1', () => {
       // Pause the contract
       await (core.connect(owner) as SedaCoreV1).pause();
 
-      // Verify no requests are returned while paused
-      requests = await core.getPendingRequests(0, 10);
-      expect(requests.length).to.equal(0);
+      // Verify getPendingRequests reverts while paused
+      await expect(core.getPendingRequests(0, 10)).to.be.revertedWithCustomError(core, 'EnforcedPause');
 
       // Unpause and verify requests are visible again
       await (core.connect(owner) as SedaCoreV1).unpause();

@@ -245,15 +245,14 @@ contract SedaCoreV1 is
     /// @notice Retrieves a list of active requests
     /// @dev This function is gas-intensive due to iteration over the pendingRequests array.
     /// Users should be cautious when using high `limit` values in production environments, as it can result in high gas consumption.
+    /// @dev This function will revert when the contract is paused
     /// @param offset The starting index in the pendingRequests array
     /// @param limit The maximum number of requests to return
     /// @return An array of SedaDataTypes.Request structs
-    function getPendingRequests(uint256 offset, uint256 limit) public view returns (PendingRequest[] memory) {
-        // Return empty array if paused to save Solvers an RPC call
-        if (paused()) {
-            return new PendingRequest[](0);
-        }
-
+    function getPendingRequests(
+        uint256 offset,
+        uint256 limit
+    ) public view whenNotPaused returns (PendingRequest[] memory) {
         uint256 totalRequests = _storageV1().pendingRequests.length();
         if (offset >= totalRequests) {
             return new PendingRequest[](0);
