@@ -1,7 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { compareRequests, compareResults, convertToRequestInputs } from '../helpers';
+import { compareRequests, compareResults, convertPendingToRequestInputs } from '../helpers';
 import { deriveDataResultId, deriveRequestId, generateDataFixtures } from '../utils';
 
 describe('SedaPermissioned', () => {
@@ -37,7 +37,7 @@ describe('SedaPermissioned', () => {
     // Verify the request is in the pending list
     const pendingRequests = await core.getPendingRequests(0, 10);
     expect(pendingRequests).to.have.lengthOf(1);
-    compareRequests(pendingRequests[0], requests[0]);
+    compareRequests(pendingRequests[0].request, requests[0]);
 
     // Verify the request details
     const storedRequest = await core.getRequest(expectedRequestId);
@@ -99,20 +99,20 @@ describe('SedaPermissioned', () => {
       requestIds.push(requestId);
     }
 
-    let pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
+    let pending = (await core.getPendingRequests(0, 10)).map(convertPendingToRequestInputs);
     expect(pending.length).to.equal(5);
     expect(pending).to.deep.include.members(requests);
 
     await core.connect(signers.relayer).postResult(results[0], 0, []);
     await core.connect(signers.relayer).postResult(results[2], 0, []);
 
-    pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
+    pending = (await core.getPendingRequests(0, 10)).map(convertPendingToRequestInputs);
     expect(pending.length).to.equal(3);
     expect(pending).to.deep.include.members([requests[1], requests[3], requests[4]]);
 
     await core.connect(signers.relayer).postResult(results[4], 0, []);
 
-    pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
+    pending = (await core.getPendingRequests(0, 10)).map(convertPendingToRequestInputs);
     expect(pending).to.have.lengthOf(2);
     expect(pending).to.deep.include.members([requests[1], requests[3]]);
   });

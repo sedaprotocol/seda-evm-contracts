@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 
 import type { Secp256k1ProverV1, SedaCoreV1 } from '../../typechain-types';
-import { compareRequests, compareResults, convertToRequestInputs } from '../helpers';
+import { compareRequests, compareResults, convertPendingToRequestInputs } from '../helpers';
 import {
   computeResultLeafHash,
   computeValidatorLeafHash,
@@ -147,7 +147,7 @@ describe('SedaCoreV1', () => {
       await core.postRequest(data.requests[0]);
       let requests = await core.getPendingRequests(0, 1);
       expect(requests.length).to.equal(1);
-      compareRequests(requests[0], data.requests[0]);
+      compareRequests(requests[0].request, data.requests[0]);
 
       await core.postResult(data.results[0], 0, data.proofs[0]);
       requests = await core.getPendingRequests(0, 1);
@@ -203,7 +203,7 @@ describe('SedaCoreV1', () => {
 
       const allRequests = await core.getPendingRequests(0, data.requests.length);
       for (let i = 0; i < data.requests.length; i++) {
-        compareRequests(allRequests[i], data.requests[i]);
+        compareRequests(allRequests[i].request, data.requests[i]);
       }
     });
 
@@ -268,7 +268,7 @@ describe('SedaCoreV1', () => {
 
       // Verify that all requests are pending
       // (order should be preserved because there are no removals)
-      let pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
+      let pending = (await core.getPendingRequests(0, 10)).map(convertPendingToRequestInputs);
       expect(pending.length).to.equal(5);
       expect(pending).to.deep.include.members(requests);
 
@@ -280,7 +280,7 @@ describe('SedaCoreV1', () => {
       const expectedPending = [requests[1], requests[3], requests[4]];
 
       // Retrieve pending requests (order is not preserved because there were 2 removals)
-      pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
+      pending = (await core.getPendingRequests(0, 10)).map(convertPendingToRequestInputs);
       expect(pending.length).to.equal(3);
       expect(pending).to.deep.include.members(expectedPending);
 
@@ -291,7 +291,7 @@ describe('SedaCoreV1', () => {
       const finalPending = [requests[1], requests[3]];
 
       // Retrieve final pending requests
-      pending = (await core.getPendingRequests(0, 10)).map(convertToRequestInputs);
+      pending = (await core.getPendingRequests(0, 10)).map(convertPendingToRequestInputs);
       expect(pending.length).to.equal(2);
       expect(pending).to.deep.include.members(finalPending);
     });
@@ -317,8 +317,8 @@ describe('SedaCoreV1', () => {
       expect(pendingRequests).to.not.include(data.requests[2]);
 
       // Verify the remaining requests are still in order
-      compareRequests(pendingRequests[0], data.requests[0]);
-      compareRequests(pendingRequests[1], data.requests[1]);
+      compareRequests(pendingRequests[0].request, data.requests[0]);
+      compareRequests(pendingRequests[1].request, data.requests[1]);
     });
   });
 
