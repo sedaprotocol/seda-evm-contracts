@@ -631,4 +631,114 @@ describe('SedaCoreV1', () => {
       });
     });
   });
+
+  describe('pause functionality', () => {
+    it('should allow owner to pause and unpause', async () => {
+      const { core } = await loadFixture(deployCoreFixture);
+      const [owner] = await ethers.getSigners();
+
+      expect(await core.paused()).to.be.false;
+
+      await expect((core.connect(owner) as SedaCoreV1).pause())
+        .to.emit(core, 'Paused')
+        .withArgs(owner.address);
+
+      expect(await core.paused()).to.be.true;
+
+      await expect((core.connect(owner) as SedaCoreV1).unpause())
+        .to.emit(core, 'Unpaused')
+        .withArgs(owner.address);
+
+      expect(await core.paused()).to.be.false;
+    });
+
+    it('should prevent non-owner from pausing/unpausing', async () => {
+      const { core } = await loadFixture(deployCoreFixture);
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect((core.connect(nonOwner) as SedaCoreV1).pause()).to.be.revertedWithCustomError(
+        core,
+        'OwnableUnauthorizedAccount',
+      );
+
+      await expect((core.connect(nonOwner) as SedaCoreV1).unpause()).to.be.revertedWithCustomError(
+        core,
+        'OwnableUnauthorizedAccount',
+      );
+    });
+
+    it('should prevent operations while paused', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const [owner] = await ethers.getSigners();
+
+      // Pause the contract
+      await (core.connect(owner) as SedaCoreV1).pause();
+
+      // Test postRequest
+      await expect(core.postRequest(data.requests[0])).to.be.revertedWithCustomError(core, 'EnforcedPause');
+
+      // Test postRequest with fees
+      await expect(
+        core.postRequest(data.requests[0], ethers.parseEther('1'), 0, 0, { value: ethers.parseEther('1') }),
+      ).to.be.revertedWithCustomError(core, 'EnforcedPause');
+
+      // Test postResult
+      await expect(core.postResult(data.results[0], 0, data.proofs[0])).to.be.revertedWithCustomError(
+        core,
+        'EnforcedPause',
+      );
+
+      // Test increaseFees
+      await expect(
+        core.increaseFees(data.results[0].drId, ethers.parseEther('1'), 0, 0, { value: ethers.parseEther('1') }),
+      ).to.be.revertedWithCustomError(core, 'EnforcedPause');
+    });
+
+    it('should return empty array for getPendingRequests while paused', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const [owner] = await ethers.getSigners();
+
+      // Post some requests
+      await core.postRequest(data.requests[0]);
+      await core.postRequest(data.requests[1]);
+
+      // Verify requests are visible
+      let requests = await core.getPendingRequests(0, 10);
+      expect(requests.length).to.equal(2);
+
+      // Pause the contract
+      await (core.connect(owner) as SedaCoreV1).pause();
+
+      // Verify no requests are returned while paused
+      requests = await core.getPendingRequests(0, 10);
+      expect(requests.length).to.equal(0);
+
+      // Unpause and verify requests are visible again
+      await (core.connect(owner) as SedaCoreV1).unpause();
+      requests = await core.getPendingRequests(0, 10);
+      expect(requests.length).to.equal(2);
+    });
+
+    it('should resume operations after unpausing', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const [owner] = await ethers.getSigners();
+
+      // Pause the contract
+      await (core.connect(owner) as SedaCoreV1).pause();
+
+      // Unpause the contract
+      await (core.connect(owner) as SedaCoreV1).unpause();
+
+      // Should now be able to perform operations
+      await expect(core.postRequest(data.requests[0]))
+        .to.emit(core, 'RequestPosted')
+        .withArgs(await deriveRequestId(data.requests[0]));
+
+      await expect(core.postResult(data.results[0], 0, data.proofs[0])).to.emit(core, 'ResultPosted');
+
+      // Verify the request was removed after posting result
+      const requests = await (core.connect(owner) as SedaCoreV1).getPendingRequests(0, 10);
+      expect(requests.length).to.equal(0);
+    });
+  });
 });

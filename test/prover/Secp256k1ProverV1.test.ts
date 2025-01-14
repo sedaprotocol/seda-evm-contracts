@@ -382,4 +382,78 @@ describe('Secp256k1ProverV1', () => {
       expect(prover).to.emit(prover, 'BatchPosted').withArgs(testBatch.batchHeight, expectedBatchId);
     });
   });
+
+  describe('pause functionality', () => {
+    it('should allow owner to pause and unpause', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [owner] = await ethers.getSigners();
+
+      expect(await prover.paused()).to.be.false;
+
+      await expect((prover.connect(owner) as Secp256k1ProverV1).pause())
+        .to.emit(prover, 'Paused')
+        .withArgs(owner.address);
+
+      expect(await prover.paused()).to.be.true;
+
+      await expect((prover.connect(owner) as Secp256k1ProverV1).unpause())
+        .to.emit(prover, 'Unpaused')
+        .withArgs(owner.address);
+
+      expect(await prover.paused()).to.be.false;
+    });
+
+    it('should prevent non-owner from pausing/unpausing', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect((prover.connect(nonOwner) as Secp256k1ProverV1).pause()).to.be.revertedWithCustomError(
+        prover,
+        'OwnableUnauthorizedAccount',
+      );
+
+      await expect((prover.connect(nonOwner) as Secp256k1ProverV1).unpause()).to.be.revertedWithCustomError(
+        prover,
+        'OwnableUnauthorizedAccount',
+      );
+    });
+
+    it('should prevent postBatch while paused', async () => {
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+      const [owner] = await ethers.getSigners();
+
+      // Pause the contract
+      await (prover.connect(owner) as Secp256k1ProverV1).pause();
+
+      // Try to post a batch while paused
+      const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])).to.be.revertedWithCustomError(
+        prover,
+        'EnforcedPause',
+      );
+    });
+
+    it('should resume operations after unpausing', async () => {
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+      const [owner] = await ethers.getSigners();
+
+      // Pause the contract
+      await (prover.connect(owner) as Secp256k1ProverV1).pause();
+
+      // Try to post a batch while paused
+      const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])).to.be.revertedWithCustomError(
+        prover,
+        'EnforcedPause',
+      );
+
+      // Unpause the contract
+      await (prover.connect(owner) as Secp256k1ProverV1).unpause();
+
+      // Should now be able to post batch
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]))
+        .to.emit(prover, 'BatchPosted')
+        .withArgs(newBatch.batchHeight, deriveBatchId(newBatch), owner.address);
+    });
+  });
 });
