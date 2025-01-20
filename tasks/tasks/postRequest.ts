@@ -1,11 +1,15 @@
+import { parseUnits } from 'ethers';
 import { logger } from '../common/logger';
 import { sedaScope } from '../index';
 
 sedaScope
-  .task('post-request', 'Post a data request to a ISedaCore contract')
+  .task('post-request', 'Post a data request to a ISedaCore contract with attached funds')
   .addParam('core', 'The address of the SedaCore contract')
+  .addOptionalParam('requestFee', 'The fee for executing the request in gwei', '10000')
+  .addOptionalParam('resultFee', 'The fee for posting the result in gwei', '10000')
+  .addOptionalParam('batchFee', 'The fee for posting the batch in gwei', '10000')
   .setAction(async (taskArgs, hre) => {
-    logger.section('Post Data Request', 'deploy');
+    logger.section('Post Data Request with funds', 'deploy');
 
     const core = await hre.ethers.getContractAt('ISedaCore', taskArgs.core);
     logger.info(`SedaCore address: ${taskArgs.core}`);
@@ -24,8 +28,17 @@ sedaScope
       memo: `0x${timestamp}`,
     };
 
+    const requestFee = parseUnits(taskArgs.requestFee, 'gwei');
+    const resultFee = parseUnits(taskArgs.resultFee, 'gwei');
+    const batchFee = parseUnits(taskArgs.batchFee, 'gwei');
+    const totalValue = requestFee + resultFee + batchFee;
+
     logger.info(`Posting DR with memo: ${request.memo}`);
-    const tx = await core.postRequest(request);
+
+    const tx = await core.postRequest(request, requestFee, resultFee, batchFee, {
+      value: totalValue,
+    });
+
     logger.info(`Tx hash: ${tx?.hash}`);
     const receipt = await tx.wait();
 
