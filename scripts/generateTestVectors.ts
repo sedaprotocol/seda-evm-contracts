@@ -69,6 +69,7 @@ const dataJSON = {
   results: results.map((result, index) => ({
     resultId: resultIds[index],
     ...result,
+    gasUsed: result.gasUsed.toString(),
   })),
   resultsTree: {
     root: resultsTree.root,
