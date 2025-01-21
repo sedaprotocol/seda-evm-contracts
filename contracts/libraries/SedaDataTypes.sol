@@ -74,7 +74,7 @@ library SedaDataTypes {
         /// The timestamp of the block the data result is included
         uint64 blockTimestamp;
         /// Gas used by the complete data request execution
-        uint64 gasUsed;
+        uint128 gasUsed;
         // Fields from Data Request Execution
         /// Payback address set by the relayer
         bytes paybackAddress;
@@ -130,7 +130,7 @@ library SedaDataTypes {
                     keccak256(result.result),
                     bytes8(result.blockHeight),
                     bytes8(result.blockTimestamp),
-                    bytes8(result.gasUsed),
+                    bytes16(result.gasUsed),
                     keccak256(result.paybackAddress),
                     keccak256(result.sedaPayload)
                 )

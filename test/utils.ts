@@ -61,7 +61,7 @@ export function deriveDataResultId(dataResult: CoreResultTypes.ResultStruct): st
       ethers.keccak256(dataResult.result),
       padBigIntToBytes(BigInt(dataResult.blockHeight), 8),
       padBigIntToBytes(BigInt(dataResult.blockTimestamp), 8),
-      padBigIntToBytes(BigInt(dataResult.gasUsed), 8),
+      padBigIntToBytes(BigInt(dataResult.gasUsed), 16),
       ethers.keccak256(dataResult.paybackAddress),
       ethers.keccak256(dataResult.sedaPayload),
     ]),
