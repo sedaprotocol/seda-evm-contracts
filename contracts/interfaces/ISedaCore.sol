@@ -29,11 +29,15 @@ interface ISedaCore is IResultHandler, IRequestHandler {
         REQUEST,
         RESULT,
         BATCH,
-        REFUND
+        REFUND,
+        WITHDRAW
     }
 
     /// @notice Error thrown when the fee amount is not equal to the sum of the request, result, and batch fees
     error InvalidFeeAmount();
+
+    error RequestNotTimedOut(bytes32 requestId, uint256 currentTime, uint256 timeoutTime);
+    error InvalidTimeoutPeriod();
 
     /// @notice Emitted when fees are distributed for a data request and result
     /// @param drId The unique identifier for the data request
@@ -52,6 +56,10 @@ interface ISedaCore is IResultHandler, IRequestHandler {
         uint256 additionalResultFee,
         uint256 additionalBatchFee
     );
+
+    /// @notice Emitted when the timeout period is updated
+    /// @param newTimeoutPeriod The new timeout period in seconds
+    event TimeoutPeriodUpdated(uint256 newTimeoutPeriod);
 
     /// @notice Retrieves a paginated list of pending requests
     /// @param offset The starting position in the list

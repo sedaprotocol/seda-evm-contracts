@@ -50,6 +50,8 @@ contract SedaCoreV1 is
 
     /// @custom:storage-location erc7201:sedacore.storage.v1
     struct SedaCoreStorage {
+        // Period in seconds after which a request can be withdrawn
+        uint256 timeoutPeriod;
         // Tracks active data requests to ensure proper lifecycle management and prevent
         // duplicate fulfillments. Requests are removed only after successful fulfillment
         EnumerableSet.Bytes32Set pendingRequests;
@@ -68,7 +70,7 @@ contract SedaCoreV1 is
     /// @notice Initializes the SedaCoreV1 contract
     /// @param sedaProverAddress The address of the Seda prover contract
     /// @dev This function replaces the constructor for proxy compatibility and can only be called once
-    function initialize(address sedaProverAddress) external initializer {
+    function initialize(address sedaProverAddress, uint256 initialTimeoutPeriod) external initializer {
         // Initialize inherited contracts
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
@@ -76,6 +78,7 @@ contract SedaCoreV1 is
 
         // Initialize derived contracts
         __ResultHandler_init(sedaProverAddress);
+        _storageV1().timeoutPeriod = initialTimeoutPeriod;
     }
 
     // ============ Public Functions ============
@@ -226,6 +229,35 @@ contract SedaCoreV1 is
         emit FeesIncreased(requestId, additionalRequestFee, additionalResultFee, additionalBatchFee);
     }
 
+    /// @notice Allows anyone to withdraw fees for a timed out request to their address
+    /// @param requestId The ID of the request to withdraw
+    function withdrawTimedOutRequest(bytes32 requestId) external {
+        RequestDetails memory details = _storageV1().requestDetails[requestId];
+
+        // Verify request exists
+        if (details.timestamp == 0) {
+            revert RequestNotFound(requestId);
+        }
+
+        // Check if request has timed out using current timeout period
+        if (block.timestamp < details.timestamp + _storageV1().timeoutPeriod) {
+            revert RequestNotTimedOut(requestId, block.timestamp, details.timestamp + _storageV1().timeoutPeriod);
+        }
+
+        // Calculate total refund
+        uint256 totalRefund = details.requestFee + details.resultFee + details.batchFee;
+
+        // Clean up state before transfer to prevent reentrancy
+        _removeRequest(requestId);
+        delete _storageV1().requestDetails[requestId];
+
+        // Transfer total fees to caller
+        if (totalRefund > 0) {
+            _transferFee(msg.sender, totalRefund);
+            emit FeeDistributed(requestId, msg.sender, totalRefund, FeeType.WITHDRAW);
+        }
+    }
+
     /// @notice Pauses all contract operations
     /// @dev Can only be called by the contract owner
     /// @dev When paused, all state-modifying functions will revert
@@ -238,6 +270,15 @@ contract SedaCoreV1 is
     /// @dev Restores normal contract functionality after being paused
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /// @notice Allows the owner to update the timeout period
+    /// @dev Affects all requests, including existing ones
+    /// @param newTimeoutPeriod New timeout period in seconds
+    function setTimeoutPeriod(uint256 newTimeoutPeriod) external onlyOwner {
+        if (newTimeoutPeriod == 0) revert InvalidTimeoutPeriod();
+        _storageV1().timeoutPeriod = newTimeoutPeriod;
+        emit TimeoutPeriodUpdated(newTimeoutPeriod);
     }
 
     // ============ Public View Functions ============
@@ -275,6 +316,11 @@ contract SedaCoreV1 is
         }
 
         return queriedPendingRequests;
+    }
+
+    /// @notice Returns the current timeout period
+    function getTimeoutPeriod() external view returns (uint256) {
+        return _storageV1().timeoutPeriod;
     }
 
     // ============ Internal Functions ============
