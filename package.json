@@ -1,6 +1,6 @@
 {
   "name": "@seda-protocol/evm",
-  "version": "0.0.4",
+  "version": "0.5.0",
   "description": "EVM smart contracts enabling any blockchain to connect with the SEDA decentralized network",
   "keywords": ["ethereum", "evm", "oracle", "seda", "smart-contracts", "solidity", "cross-chain"],
   "author": "SEDA Protocol <info@seda.xyz>",
