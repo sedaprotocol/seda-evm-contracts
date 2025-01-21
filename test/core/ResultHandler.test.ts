@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 
 import { compareResults } from '../helpers';
-import { computeResultLeafHash, deriveDataResultId, generateDataFixtures } from '../utils';
+import { ONE_DAY_IN_SECONDS, computeResultLeafHash, deriveDataResultId, generateDataFixtures } from '../utils';
 
 describe('ResultHandler', () => {
   async function deployResultHandlerFixture() {
@@ -38,7 +38,9 @@ describe('ResultHandler', () => {
     await prover.waitForDeployment();
 
     const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
-    const core = await upgrades.deployProxy(CoreFactory, [await prover.getAddress()], { initializer: 'initialize' });
+    const core = await upgrades.deployProxy(CoreFactory, [await prover.getAddress(), ONE_DAY_IN_SECONDS], {
+      initializer: 'initialize',
+    });
     await core.waitForDeployment();
 
     return { core, data };

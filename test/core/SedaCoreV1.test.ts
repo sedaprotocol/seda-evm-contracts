@@ -6,6 +6,7 @@ import { ethers, upgrades } from 'hardhat';
 import type { Secp256k1ProverV1, SedaCoreV1 } from '../../typechain-types';
 import { compareRequests, compareResults, convertPendingToRequestInputs } from '../helpers';
 import {
+  ONE_DAY_IN_SECONDS,
   computeResultLeafHash,
   computeValidatorLeafHash,
   deriveBatchId,
@@ -88,7 +89,9 @@ describe('SedaCoreV1', () => {
     await prover.waitForDeployment();
 
     const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
-    const core = await upgrades.deployProxy(CoreFactory, [await prover.getAddress()], { initializer: 'initialize' });
+    const core = await upgrades.deployProxy(CoreFactory, [await prover.getAddress(), ONE_DAY_IN_SECONDS], {
+      initializer: 'initialize',
+    });
     await core.waitForDeployment();
 
     const data = { requests, results, proofs, wallets, initialBatch, validatorProofs };
@@ -629,6 +632,133 @@ describe('SedaCoreV1', () => {
           ),
         ).to.be.revertedWithCustomError(core, 'InvalidFeeAmount');
       });
+    });
+  });
+
+  describe('request withdrawal', () => {
+    it('should allow withdrawing timed out requests', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const fees = {
+        request: ethers.parseEther('1.0'),
+        result: ethers.parseEther('2.0'),
+        batch: ethers.parseEther('3.0'),
+      };
+      const totalFee = fees.request + fees.result + fees.batch;
+      const [, withdrawer] = await ethers.getSigners();
+
+      // Post request with fees
+      await core.postRequest(data.requests[0], fees.request, fees.result, fees.batch, { value: totalFee });
+      const requestId = await deriveRequestId(data.requests[0]);
+
+      // Try to withdraw before timeout - should fail
+      await expect(core.withdrawTimedOutRequest(requestId)).to.be.revertedWithCustomError(core, 'RequestNotTimedOut');
+
+      // Fast forward past timeout period
+      await ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS]);
+      await ethers.provider.send('evm_mine', []);
+
+      // Record initial balance
+      const initialBalance = await ethers.provider.getBalance(withdrawer.address);
+
+      // Withdraw as different address
+      const tx = await (core.connect(withdrawer) as SedaCoreV1).withdrawTimedOutRequest(requestId);
+
+      // Verify event emission
+      await expect(tx).to.emit(core, 'FeeDistributed').withArgs(requestId, withdrawer.address, totalFee, 4); // FeeType.WITHDRAW = 4
+
+      // Verify balance change (accounting for gas costs)
+      const finalBalance = await ethers.provider.getBalance(withdrawer.address);
+      const txReceipt = await tx.wait();
+      if (!txReceipt) throw new Error('Transaction receipt not found');
+      const gasCost = txReceipt.gasUsed * txReceipt.gasPrice;
+      expect(finalBalance - initialBalance + gasCost).to.equal(totalFee);
+
+      // Verify request was removed
+      const requests = await core.getPendingRequests(0, 10);
+      expect(requests.length).to.equal(0);
+
+      // Try to withdraw again - should fail
+      await expect(core.withdrawTimedOutRequest(requestId))
+        .to.be.revertedWithCustomError(core, 'RequestNotFound')
+        .withArgs(requestId);
+    });
+
+    it('should handle withdrawal of request with zero fees', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+
+      // Post request without fees
+      await core.postRequest(data.requests[0]);
+      const requestId = await deriveRequestId(data.requests[0]);
+
+      // Fast forward past timeout period
+      await ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS]);
+      await ethers.provider.send('evm_mine', []);
+
+      // Withdraw should succeed but not emit fee distribution event
+      await expect(core.withdrawTimedOutRequest(requestId)).to.not.emit(core, 'FeeDistributed');
+
+      // Verify request was removed
+      const requests = await core.getPendingRequests(0, 10);
+      expect(requests.length).to.equal(0);
+    });
+
+    it('should handle withdrawal after timeout period update', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const fee = ethers.parseEther('1.0');
+
+      // Post request with fee
+      await core.postRequest(data.requests[0], fee, 0, 0, { value: fee });
+      const requestId = await deriveRequestId(data.requests[0]);
+
+      // Update timeout period to be shorter
+      const newTimeoutPeriod = ONE_DAY_IN_SECONDS / 2;
+      await expect(core.setTimeoutPeriod(newTimeoutPeriod))
+        .to.emit(core, 'TimeoutPeriodUpdated')
+        .withArgs(newTimeoutPeriod);
+
+      // Fast forward past new timeout period
+      await ethers.provider.send('evm_increaseTime', [newTimeoutPeriod]);
+      await ethers.provider.send('evm_mine', []);
+
+      // Withdrawal should succeed with new timeout period
+      await expect(core.withdrawTimedOutRequest(requestId))
+        .to.emit(core, 'FeeDistributed')
+        .withArgs(requestId, await core.owner(), fee, 4); // FeeType.WITHDRAW = 4
+    });
+
+    it('should prevent withdrawal of non-existent request', async () => {
+      const { core } = await loadFixture(deployCoreFixture);
+      const nonExistentRequestId = ethers.randomBytes(32);
+
+      await expect(core.withdrawTimedOutRequest(nonExistentRequestId))
+        .to.be.revertedWithCustomError(core, 'RequestNotFound')
+        .withArgs(nonExistentRequestId);
+    });
+
+    it('should allow withdrawal even when paused', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const fee = ethers.parseEther('1.0');
+
+      // Post request with fee
+      await core.postRequest(data.requests[0], fee, 0, 0, { value: fee });
+      const requestId = await deriveRequestId(data.requests[0]);
+
+      // Fast forward past timeout period
+      await ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS]);
+      await ethers.provider.send('evm_mine', []);
+
+      // Pause contract
+      await core.pause();
+
+      // Verify withdrawal still works while paused
+      await expect(core.withdrawTimedOutRequest(requestId))
+        .to.emit(core, 'FeeDistributed')
+        .withArgs(requestId, await core.owner(), fee, 4); // FeeType.WITHDRAW = 4
+
+      // Verify request was removed
+      await expect(core.withdrawTimedOutRequest(requestId))
+        .to.be.revertedWithCustomError(core, 'RequestNotFound')
+        .withArgs(requestId);
     });
   });
 

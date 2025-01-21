@@ -1,6 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
+import { ONE_DAY_IN_SECONDS } from '../utils';
 
 describe('Proxy: SedaCore', () => {
   async function deployProxyFixture() {
@@ -21,7 +22,9 @@ describe('Proxy: SedaCore', () => {
 
     // Deploy V1 through proxy
     const CoreV1Factory = await ethers.getContractFactory('SedaCoreV1', owner);
-    const core = await upgrades.deployProxy(CoreV1Factory, [await prover.getAddress()], { initializer: 'initialize' });
+    const core = await upgrades.deployProxy(CoreV1Factory, [await prover.getAddress(), ONE_DAY_IN_SECONDS], {
+      initializer: 'initialize',
+    });
     await core.waitForDeployment();
 
     // Get V2 factory

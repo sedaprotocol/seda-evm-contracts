@@ -2,6 +2,7 @@ import { ethers } from 'hardhat';
 import type { CoreRequestTypes, CoreResultTypes, ProverDataTypes } from '../ts-types';
 
 export const SEDA_DATA_TYPES_VERSION = '0.0.1';
+export const ONE_DAY_IN_SECONDS = 24 * 60 * 60;
 
 const RESULT_DOMAIN_SEPARATOR = '0x00';
 const SECP256K1_DOMAIN_SEPARATOR = '0x01';
