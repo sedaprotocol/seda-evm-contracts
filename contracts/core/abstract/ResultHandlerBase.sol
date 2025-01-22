@@ -109,7 +109,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     ) internal returns (bytes32, address) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (_resultHandlerStorage().results[result.drId].drId != bytes32(0)) {
-            revert ResultAlreadyExists(resultId);
+            revert ResultAlreadyExists(result.drId);
         }
 
         (bool isValid, address batchSender) = _resultHandlerStorage().sedaProver.verifyResultProof(

@@ -103,7 +103,7 @@ contract SedaCoreV1 is
             revert InvalidFeeAmount();
         }
 
-        // Call parent contract's postResult base implementation
+        // Call parent contract's postRequest base implementation
         bytes32 requestId = RequestHandlerBase.postRequest(inputs);
 
         // Store pending request and request details
@@ -141,7 +141,7 @@ contract SedaCoreV1 is
         (bytes32 resultId, address batchSender) = super.postResultAndGetBatchSender(result, batchHeight, proof);
 
         // Clean up state
-        _removeRequest(result.drId);
+        _removePendingRequest(result.drId);
         delete _storageV1().requestDetails[result.drId];
 
         // Fee distribution: handles three types of fees (request, result, batch)
@@ -248,7 +248,7 @@ contract SedaCoreV1 is
         uint256 totalRefund = details.requestFee + details.resultFee + details.batchFee;
 
         // Clean up state before transfer to prevent reentrancy
-        _removeRequest(requestId);
+        _removePendingRequest(requestId);
         delete _storageV1().requestDetails[requestId];
 
         // Transfer total fees to caller
@@ -348,7 +348,7 @@ contract SedaCoreV1 is
     /// @dev This function is internal to ensure that only the contract's internal logic can remove requests,
     /// maintaining proper state transitions and preventing unauthorized removals.
     /// @param requestId The ID of the request to remove
-    function _removeRequest(bytes32 requestId) internal {
+    function _removePendingRequest(bytes32 requestId) internal {
         _storageV1().pendingRequests.remove(requestId);
     }
 

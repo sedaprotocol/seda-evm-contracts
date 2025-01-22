@@ -7,8 +7,8 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @notice Interface for the Request Handler contract.
 interface IRequestHandler {
     error InvalidReplicationFactor();
-    error RequestAlreadyExists(bytes32);
-    error RequestNotFound(bytes32);
+    error RequestAlreadyExists(bytes32 requestId);
+    error RequestNotFound(bytes32 requestId);
     error FeeTransferFailed();
 
     event RequestPosted(bytes32 indexed requestId);

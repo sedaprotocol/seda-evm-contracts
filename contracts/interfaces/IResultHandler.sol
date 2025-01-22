@@ -6,9 +6,9 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title IResultHandler
 /// @notice Interface for handling result posting and retrieval
 interface IResultHandler {
-    error InvalidResultProof(bytes32);
-    error ResultAlreadyExists(bytes32);
-    error ResultNotFound(bytes32);
+    error InvalidResultProof(bytes32 resultId);
+    error ResultAlreadyExists(bytes32 requestId);
+    error ResultNotFound(bytes32 requestId);
 
     event ResultPosted(bytes32 indexed resultId);
 
