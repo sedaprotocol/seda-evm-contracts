@@ -47,7 +47,7 @@ describe('ResultHandler', () => {
   }
 
   describe('deriveResultId', () => {
-    it('should generate consistent data result IDs', async () => {
+    it('generates consistent result IDs', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       const resultIdFromUtils = deriveDataResultId(data.results[0]);
@@ -56,7 +56,7 @@ describe('ResultHandler', () => {
       expect(resultId).to.equal(resultIdFromUtils);
     });
 
-    it('should generate different IDs for different results', async () => {
+    it('generates unique IDs for different results', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       const id1 = await core.deriveResultId.staticCall(data.results[0]);
@@ -67,7 +67,7 @@ describe('ResultHandler', () => {
   });
 
   describe('postResult', () => {
-    it('should successfully post a result and read it back', async () => {
+    it('posts result and retrieves it successfully', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       await core.postResult(data.results[0], 0, data.proofs[0]);
@@ -76,18 +76,17 @@ describe('ResultHandler', () => {
       compareResults(postedResult, data.results[0]);
     });
 
-    it('should fail to post a result that already exists', async () => {
+    it('reverts when posting duplicate result', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       await core.postResult(data.results[0], 0, data.proofs[0]);
 
-      const resultId = deriveDataResultId(data.results[0]);
       await expect(core.postResult(data.results[0], 0, data.proofs[0]))
         .to.be.revertedWithCustomError(core, 'ResultAlreadyExists')
-        .withArgs(resultId);
+        .withArgs(data.results[0].drId);
     });
 
-    it('should fail to post a result with invalid proof', async () => {
+    it('reverts when proof is invalid', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       const resultId = deriveDataResultId(data.results[1]);
@@ -96,7 +95,7 @@ describe('ResultHandler', () => {
         .withArgs(resultId);
     });
 
-    it('should emit a ResultPosted event', async () => {
+    it('emits ResultPosted event', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       await expect(core.postResult(data.results[0], 0, data.proofs[0]))
@@ -104,7 +103,7 @@ describe('ResultHandler', () => {
         .withArgs(deriveDataResultId(data.results[0]));
     });
 
-    it('should fail to post a result with empty proof', async () => {
+    it('reverts when proof is empty', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       const resultId = deriveDataResultId(data.results[0]);
@@ -113,7 +112,7 @@ describe('ResultHandler', () => {
         .withArgs(resultId);
     });
 
-    it('should fail to post a result with invalid drId', async () => {
+    it('reverts when drId is invalid', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       const invalidResult = { ...data.results[0], drId: ethers.ZeroHash };
@@ -125,7 +124,7 @@ describe('ResultHandler', () => {
   });
 
   describe('getResult', () => {
-    it('should revert with ResultNotFound for non-existent result id', async () => {
+    it('reverts for non-existent result', async () => {
       const { core } = await loadFixture(deployResultHandlerFixture);
 
       const nonExistentId = ethers.ZeroHash;
@@ -134,7 +133,7 @@ describe('ResultHandler', () => {
         .withArgs(nonExistentId);
     });
 
-    it('should return the correct result for an existing result id', async () => {
+    it('retrieves existing result correctly', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       await core.postResult(data.results[0], 0, data.proofs[0]);
@@ -143,7 +142,7 @@ describe('ResultHandler', () => {
       compareResults(retrievedResult, data.results[0]);
     });
 
-    it('should return the correct result for multiple posted results', async () => {
+    it('retrieves multiple results correctly', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       // Post two results
@@ -166,14 +165,14 @@ describe('ResultHandler', () => {
   });
 
   describe('verifyResult', () => {
-    it('should successfully verify a valid result', async () => {
+    it('verifies valid result successfully', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       const resultId = await core.verifyResult(data.results[0], 0, data.proofs[0]);
       expect(resultId).to.equal(deriveDataResultId(data.results[0]));
     });
 
-    it('should fail to verify a result with invalid proof', async () => {
+    it('reverts when proof is invalid', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       const resultId = deriveDataResultId(data.results[1]);

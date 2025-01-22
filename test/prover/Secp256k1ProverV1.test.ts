@@ -92,8 +92,8 @@ describe('Secp256k1ProverV1', () => {
     return { newBatchId, newBatch, signatures };
   }
 
-  describe('getCurrentBatch', () => {
-    it('should return the current batch', async () => {
+  describe('batch management', () => {
+    it('retrieves current batch', async () => {
       const {
         prover,
         data: { initialBatch },
@@ -101,10 +101,8 @@ describe('Secp256k1ProverV1', () => {
       const lastBatchHeight = await prover.getLastBatchHeight();
       expect(lastBatchHeight).to.equal(initialBatch.batchHeight);
     });
-  });
 
-  describe('postBatch', () => {
-    it('should update a batch with 1 validator (75% voting power)', async () => {
+    it('updates batch with single validator (75% power)', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
@@ -116,7 +114,7 @@ describe('Secp256k1ProverV1', () => {
       expect(lastValidatorsRoot).to.equal(newBatch.validatorsRoot);
     });
 
-    it('should update a batch with 3 validators (75% voting power)', async () => {
+    it('updates batch with three validators (75% power)', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [1, 2, 3]);
@@ -128,7 +126,7 @@ describe('Secp256k1ProverV1', () => {
       expect(lastValidatorsRoot).to.equal(newBatch.validatorsRoot);
     });
 
-    it('should emit a BatchUpdated event', async () => {
+    it('emits BatchUpdated event', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatch, signatures, newBatchId } = await generateAndSignBatch(wallets, data.initialBatch, [0]);
@@ -141,7 +139,7 @@ describe('Secp256k1ProverV1', () => {
         .withArgs(newBatch.batchHeight, newBatchId, batchSender.address);
     });
 
-    it('should fail to update a batch with 1 validator (25% voting power)', async () => {
+    it('rejects batch with insufficient voting power', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
@@ -156,7 +154,7 @@ describe('Secp256k1ProverV1', () => {
       expect(lastBatchHeight).to.equal(data.initialBatch.batchHeight);
     });
 
-    it('should fail to update a batch if mismatching signatures and proofs', async () => {
+    it('rejects batch with mismatched signatures and proofs', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
@@ -168,7 +166,7 @@ describe('Secp256k1ProverV1', () => {
       );
     });
 
-    it('should fail to update a batch if invalid merkle proof', async () => {
+    it('rejects batch with invalid merkle proof', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
@@ -186,7 +184,7 @@ describe('Secp256k1ProverV1', () => {
       );
     });
 
-    it('should fail to update a batch if invalid signature', async () => {
+    it('rejects batch with invalid signature', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
@@ -198,7 +196,7 @@ describe('Secp256k1ProverV1', () => {
       );
     });
 
-    it('should fail to update a batch with lower batch height', async () => {
+    it('rejects batch with lower batch height', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
@@ -211,7 +209,7 @@ describe('Secp256k1ProverV1', () => {
       );
     });
 
-    it('should update a batch with all validators (100% voting power)', async () => {
+    it('updates batch with full validator set', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
@@ -224,8 +222,8 @@ describe('Secp256k1ProverV1', () => {
     });
   });
 
-  describe('verifyResultProof', () => {
-    it('should verify a valid result proof', async () => {
+  describe('result verification', () => {
+    it('verifies valid result proof', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       // Generate a mock result and its proof
@@ -252,7 +250,7 @@ describe('Secp256k1ProverV1', () => {
       expect(sender).to.equal(batchSender.address);
     });
 
-    it('should reject an invalid result proof', async () => {
+    it('rejects invalid result proof', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       // Generate a mock result and its proof
@@ -278,8 +276,8 @@ describe('Secp256k1ProverV1', () => {
     });
   });
 
-  describe('verifyResultProofForBatch', () => {
-    it('should verify a valid result proof', async () => {
+  describe('batch verification', () => {
+    it('verifies valid batch proof', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       // Generate a mock result and its proof
@@ -303,7 +301,7 @@ describe('Secp256k1ProverV1', () => {
       expect(resultBatch).to.be.true;
     });
 
-    it('should reject an invalid result proof', async () => {
+    it('rejects invalid batch proof', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       // Generate a mock result and its proof
@@ -353,17 +351,17 @@ describe('Secp256k1ProverV1', () => {
       }
     }
 
-    it('67 validators', async () => {
+    it('processes 67 validators', async () => {
       await runGasAnalysis(67, 100);
     });
 
-    it('20 validators', async () => {
+    it('processes 20 validators', async () => {
       await runGasAnalysis(20, 100);
     });
   });
 
-  describe('batch id', () => {
-    it('should generate the correct batch id for test vectors', async () => {
+  describe('batch identification', () => {
+    it('generates correct batch id for test vectors', async () => {
       const testBatch: ProverDataTypes.BatchStruct = {
         batchHeight: 4,
         blockHeight: 134,
@@ -384,7 +382,7 @@ describe('Secp256k1ProverV1', () => {
   });
 
   describe('pause functionality', () => {
-    it('should allow owner to pause and unpause', async () => {
+    it('allows owner to pause and unpause', async () => {
       const { prover } = await loadFixture(deployProverFixture);
       const [owner] = await ethers.getSigners();
 
@@ -403,7 +401,7 @@ describe('Secp256k1ProverV1', () => {
       expect(await prover.paused()).to.be.false;
     });
 
-    it('should prevent non-owner from pausing/unpausing', async () => {
+    it('prevents non-owner from pausing/unpausing', async () => {
       const { prover } = await loadFixture(deployProverFixture);
       const [, nonOwner] = await ethers.getSigners();
 
@@ -418,7 +416,7 @@ describe('Secp256k1ProverV1', () => {
       );
     });
 
-    it('should prevent postBatch while paused', async () => {
+    it('prevents postBatch while paused', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
       const [owner] = await ethers.getSigners();
 
@@ -433,7 +431,7 @@ describe('Secp256k1ProverV1', () => {
       );
     });
 
-    it('should resume operations after unpausing', async () => {
+    it('resumes operations after unpausing', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
       const [owner] = await ethers.getSigners();
 

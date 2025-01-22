@@ -27,8 +27,8 @@ describe('Proxy: Secp256k1Prover', () => {
     return { proxy, ProverV2Factory, ProverResettableFactory, owner, nonOwner, initialBatch };
   }
 
-  describe('V1 to V2 upgrade', () => {
-    it('should maintain state and ownership after upgrade', async () => {
+  describe('upgrade V1 to V2', () => {
+    it('maintains state and ownership after upgrade', async () => {
       const { proxy, ProverV2Factory, owner, initialBatch } = await loadFixture(deployProxyFixture);
 
       // Check initial state
@@ -43,7 +43,7 @@ describe('Proxy: Secp256k1Prover', () => {
       expect(await proxyV2.owner()).to.equal(owner.address);
     });
 
-    it('should add new functionality after upgrade', async () => {
+    it('adds new functionality after upgrade', async () => {
       const { proxy, ProverV2Factory } = await loadFixture(deployProxyFixture);
 
       // Verify V1 doesn't have getVersion()
@@ -57,7 +57,7 @@ describe('Proxy: Secp256k1Prover', () => {
       expect(await proxyV2.getVersion()).to.equal('2.0.0');
     });
 
-    it('should prevent non-owner initialization', async () => {
+    it('prevents non-owner initialization', async () => {
       const { proxy, ProverV2Factory, nonOwner } = await loadFixture(deployProxyFixture);
 
       const proxyV2 = (await upgrades.upgradeProxy(
@@ -71,7 +71,7 @@ describe('Proxy: Secp256k1Prover', () => {
       );
     });
 
-    it('should prevent double initialization', async () => {
+    it('prevents double initialization', async () => {
       const { proxy, ProverV2Factory } = await loadFixture(deployProxyFixture);
 
       const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), ProverV2Factory);
@@ -81,8 +81,8 @@ describe('Proxy: Secp256k1Prover', () => {
     });
   });
 
-  describe('Resettable variant', () => {
-    it('should allow owner to reset state with valid batch', async () => {
+  describe('resettable variant', () => {
+    it('allows owner to reset state with valid batch', async () => {
       const { proxy, ProverResettableFactory, initialBatch } = await loadFixture(deployProxyFixture);
       const proxyV2Resettable = await upgrades.upgradeProxy(await proxy.getAddress(), ProverResettableFactory);
 
@@ -102,7 +102,7 @@ describe('Proxy: Secp256k1Prover', () => {
       await expect(tx).to.emit(proxyV2Resettable, 'BatchPosted');
     });
 
-    it('should prevent non-owner from resetting state', async () => {
+    it('prevents non-owner from resetting state', async () => {
       const { proxy, ProverResettableFactory, nonOwner, initialBatch } = await loadFixture(deployProxyFixture);
       const proxyV2Resettable = (await upgrades.upgradeProxy(
         await proxy.getAddress(),

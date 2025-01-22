@@ -2,6 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
+import type { RequestHandlerBase } from '../../typechain-types';
 import { compareRequests } from '../helpers';
 import { deriveRequestId, generateDataFixtures } from '../utils';
 
@@ -11,13 +12,13 @@ describe('RequestHandler', () => {
 
     // Deploy the RequestHandler contract
     const RequestHandlerFactory = await ethers.getContractFactory('SedaCoreV1');
-    const handler = await RequestHandlerFactory.deploy();
+    const handler = (await RequestHandlerFactory.deploy()) as unknown as RequestHandlerBase;
 
     return { handler, requests };
   }
 
   describe('deriveRequestId', () => {
-    it('should generate consistent data request IDs', async () => {
+    it('generates consistent request IDs', async () => {
       const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestIdFromUtils = deriveRequestId(requests[0]);
@@ -26,7 +27,7 @@ describe('RequestHandler', () => {
       expect(requestId).to.equal(requestIdFromUtils);
     });
 
-    it('should generate different IDs for different requests', async () => {
+    it('generates unique IDs for different requests', async () => {
       const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const id1 = await handler.deriveRequestId.staticCall(requests[0]);
@@ -37,7 +38,7 @@ describe('RequestHandler', () => {
   });
 
   describe('postRequest', () => {
-    it('should successfully post a request and read it back', async () => {
+    it('posts request and retrieves it successfully', async () => {
       const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestId = await handler.postRequest.staticCall(requests[0]);
@@ -47,7 +48,7 @@ describe('RequestHandler', () => {
       compareRequests(postedRequest, requests[0]);
     });
 
-    it('should fail to post a request that already exists', async () => {
+    it('reverts when posting duplicate request', async () => {
       const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestId = await handler.deriveRequestId.staticCall(requests[0]);
@@ -58,7 +59,7 @@ describe('RequestHandler', () => {
         .withArgs(requestId);
     });
 
-    it('should emit a RequestPosted event', async () => {
+    it('emits RequestPosted event', async () => {
       const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestId = await handler.deriveRequestId.staticCall(requests[0]);
@@ -66,7 +67,7 @@ describe('RequestHandler', () => {
       await expect(handler.postRequest(requests[0])).to.emit(handler, 'RequestPosted').withArgs(requestId);
     });
 
-    it('should revert when replicationFactor is 0', async () => {
+    it('reverts when replication factor is zero', async () => {
       const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const invalidRequest = { ...requests[0], replicationFactor: 0 };
@@ -79,7 +80,7 @@ describe('RequestHandler', () => {
   });
 
   describe('getRequest', () => {
-    it('should revert with RequestNotFound for non-existent request id', async () => {
+    it('reverts for non-existent request', async () => {
       const { handler } = await loadFixture(deployRequestHandlerFixture);
 
       const nonExistentRequestId = ethers.ZeroHash;
@@ -89,7 +90,7 @@ describe('RequestHandler', () => {
         .withArgs(nonExistentRequestId);
     });
 
-    it('should return the correct request for an existing request id', async () => {
+    it('retrieves existing request correctly', async () => {
       const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
 
       const requestId = await handler.postRequest.staticCall(requests[0]);

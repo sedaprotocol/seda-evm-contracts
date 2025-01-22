@@ -100,7 +100,7 @@ describe('SedaCoreV1', () => {
   }
 
   describe('getPendingRequests', () => {
-    it('should return correct requests with pagination', async () => {
+    it('returns correct requests with pagination', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
@@ -116,7 +116,7 @@ describe('SedaCoreV1', () => {
       expect(requests1[1]).to.not.equal(requests2[1]);
     });
 
-    it('should return zero requests if offset > length', async () => {
+    it('returns zero requests if offset exceeds length', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
@@ -129,7 +129,7 @@ describe('SedaCoreV1', () => {
   });
 
   describe('postResult', () => {
-    it('should allow posting a result without a prior request', async () => {
+    it('allows posting result without prior request', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Attempt to post a result without a corresponding request
@@ -144,7 +144,7 @@ describe('SedaCoreV1', () => {
       expect(requests.length).to.equal(0);
     });
 
-    it('should post a request and then post its result', async () => {
+    it('posts request and its result', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       await core.postRequest(data.requests[0]);
@@ -160,7 +160,7 @@ describe('SedaCoreV1', () => {
       compareResults(postedResult, data.results[0]);
     });
 
-    it('should handle multiple requests and results correctly', async () => {
+    it('handles multiple requests and results correctly', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
@@ -183,7 +183,7 @@ describe('SedaCoreV1', () => {
       }
     });
 
-    it('should reject results with invalid timestamps', async () => {
+    it('rejects results with invalid timestamps', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       const requestIndex = data.results.length - 1;
@@ -194,10 +194,25 @@ describe('SedaCoreV1', () => {
         core.postResult(data.results[requestIndex], 0, data.proofs[requestIndex]),
       ).to.be.revertedWithCustomError(core, 'InvalidResultTimestamp');
     });
+
+    it('rejects duplicate results', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+
+      // Post initial request
+      await core.postRequest(data.requests[0]);
+
+      // Post first result - should succeed
+      await core.postResult(data.results[0], 0, data.proofs[0]);
+
+      // Attempt to post the same result again - should fail
+      await expect(core.postResult(data.results[0], 0, data.proofs[0]))
+        .to.be.revertedWithCustomError(core, 'ResultAlreadyExists')
+        .withArgs(data.results[0].drId);
+    });
   });
 
   describe('request management', () => {
-    it('should maintain correct order of requests (no removals)', async () => {
+    it('maintains request order without removals', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
@@ -210,23 +225,23 @@ describe('SedaCoreV1', () => {
       }
     });
 
-    it('should handle edge cases in getPendingRequests', async () => {
+    it('handles pagination edge cases', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
-      for (const request of data.requests.slice(0, 5)) {
+      for (const request of data.requests) {
         await core.postRequest(request);
       }
 
-      const requests1 = await core.getPendingRequests(0, 10);
-      const requests2 = await core.getPendingRequests(4, 2);
-      const requests3 = await core.getPendingRequests(5, 1);
+      const requests1 = await core.getPendingRequests(0, 20);
+      const requests2 = await core.getPendingRequests(9, 2);
+      const requests3 = await core.getPendingRequests(20, 1);
 
-      expect(requests1.length).to.equal(5);
+      expect(requests1.length).to.equal(10);
       expect(requests2.length).to.equal(1);
       expect(requests3.length).to.equal(0);
     });
 
-    it('should not add duplicate requests', async () => {
+    it('prevents duplicate request submissions', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       let requests = await core.getPendingRequests(0, 10);
@@ -244,7 +259,24 @@ describe('SedaCoreV1', () => {
       expect(requests.length).to.equal(1);
     });
 
-    it('should efficiently remove requests from the middle', async () => {
+    it('prevents reposting a request after its result is posted', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+
+      // Post initial request
+      await core.postRequest(data.requests[0]);
+
+      // Post result for the request
+      await core.postResult(data.results[0], 0, data.proofs[0]);
+
+      // Attempt to repost the same request
+      await expect(core.postRequest(data.requests[0])).to.be.revertedWithCustomError(core, 'RequestAlreadyExists');
+
+      // Verify no requests are pending
+      const requests = await core.getPendingRequests(0, 10);
+      expect(requests.length).to.equal(0);
+    });
+
+    it('efficiently removes requests from the middle', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests.slice(0, 5)) {
@@ -257,7 +289,7 @@ describe('SedaCoreV1', () => {
       expect(gasUsed).to.be.lessThan(500000);
     });
 
-    it('should maintain pending requests (with removals)', async () => {
+    it('maintains pending requests (with removals)', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Post 5 requests
@@ -299,7 +331,7 @@ describe('SedaCoreV1', () => {
       expect(pending).to.deep.include.members(finalPending);
     });
 
-    it('should correctly handle removing the last request', async () => {
+    it('correctly handles removing the last request', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Post several requests
@@ -326,8 +358,8 @@ describe('SedaCoreV1', () => {
   });
 
   describe('fee management', () => {
-    describe('basic fee scenarios', () => {
-      it('should enforce exact fee payment', async () => {
+    describe('basic scenarios', () => {
+      it('enforces exact fee payment', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         const fees = {
           request: ethers.parseEther('1.0'),
@@ -346,7 +378,7 @@ describe('SedaCoreV1', () => {
           .not.be.reverted;
       });
 
-      it('should distribute request fees based on gas used', async () => {
+      it('distributes request fees based on gas usage', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         const requestFee = ethers.parseEther('10');
         const [requestor] = await ethers.getSigners();
@@ -409,7 +441,7 @@ describe('SedaCoreV1', () => {
     });
 
     describe('edge cases', () => {
-      it('should handle invalid payback addresses', async () => {
+      it('handles invalid payback addresses', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         const requestFee = ethers.parseEther('1.0');
         const [requestor] = await ethers.getSigners();
@@ -421,7 +453,7 @@ describe('SedaCoreV1', () => {
           .withArgs(data.results[0].drId, requestor.address, requestFee, 3);
       });
 
-      it('should handle zero fees gracefully', async () => {
+      it('processes zero fees correctly', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         await core.postRequest(data.requests[0], 0, 0, 0, { value: 0 });
         await expect(core.postResult(data.results[0], 0, data.proofs[0])).to.not.be.reverted;
@@ -500,7 +532,7 @@ describe('SedaCoreV1', () => {
     });
 
     describe('payback address handling', () => {
-      it('should handle non-standard payback address lengths', async () => {
+      it('handles non-standard payback address lengths', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         const requestFee = ethers.parseEther('1.0');
         const [requestor] = await ethers.getSigners();
@@ -520,7 +552,7 @@ describe('SedaCoreV1', () => {
     });
 
     describe('gas usage edge cases', () => {
-      it('should handle zero gas usage', async () => {
+      it('handles zero gas usage', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         const requestFee = ethers.parseEther('1.0');
         const [requestor] = await ethers.getSigners();
@@ -531,7 +563,7 @@ describe('SedaCoreV1', () => {
           .withArgs(data.results[4].drId, requestor.address, requestFee, 3);
       });
 
-      it('should handle gas usage equal to limit', async () => {
+      it('handles gas usage equal to limit', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         const [, resultSolver] = await ethers.getSigners();
         const requestFee = ethers.parseEther('1.0');
@@ -547,7 +579,7 @@ describe('SedaCoreV1', () => {
     });
 
     describe('fee increase', () => {
-      it('should allow increasing fees for pending requests', async () => {
+      it('allows increasing fees for pending requests', async () => {
         const { prover, core, data } = await loadFixture(deployCoreFixture);
         const fees = {
           request: ethers.parseEther('1.0'),
@@ -599,7 +631,7 @@ describe('SedaCoreV1', () => {
           .withArgs(data.results[1].drId, requestor.address, expectedRefund, 3); // Remaining request fee refund
       });
 
-      it('should reject fee increase for non-existent request', async () => {
+      it('rejects fee increase for non-existent request', async () => {
         const { core } = await loadFixture(deployCoreFixture);
         const nonExistentRequestId = ethers.randomBytes(32);
 
@@ -614,7 +646,7 @@ describe('SedaCoreV1', () => {
         ).to.be.revertedWithCustomError(core, 'RequestNotFound');
       });
 
-      it('should reject fee increase with incorrect payment amount', async () => {
+      it('rejects fee increase with incorrect payment amount', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
 
         // First post a request
@@ -636,7 +668,7 @@ describe('SedaCoreV1', () => {
   });
 
   describe('request withdrawal', () => {
-    it('should allow withdrawing timed out requests', async () => {
+    it('allows withdrawing timed out requests', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
       const fees = {
         request: ethers.parseEther('1.0'),
@@ -683,7 +715,7 @@ describe('SedaCoreV1', () => {
         .withArgs(requestId);
     });
 
-    it('should handle withdrawal of request with zero fees', async () => {
+    it('handles withdrawal of request with zero fees', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Post request without fees
@@ -702,7 +734,7 @@ describe('SedaCoreV1', () => {
       expect(requests.length).to.equal(0);
     });
 
-    it('should handle withdrawal after timeout period update', async () => {
+    it('handles withdrawal after timeout period update', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
       const fee = ethers.parseEther('1.0');
 
@@ -726,7 +758,7 @@ describe('SedaCoreV1', () => {
         .withArgs(requestId, await core.owner(), fee, 4); // FeeType.WITHDRAW = 4
     });
 
-    it('should prevent withdrawal of non-existent request', async () => {
+    it('prevents withdrawal of non-existent request', async () => {
       const { core } = await loadFixture(deployCoreFixture);
       const nonExistentRequestId = ethers.randomBytes(32);
 
@@ -735,7 +767,7 @@ describe('SedaCoreV1', () => {
         .withArgs(nonExistentRequestId);
     });
 
-    it('should allow withdrawal even when paused', async () => {
+    it('allows withdrawal even when paused', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
       const fee = ethers.parseEther('1.0');
 
@@ -763,7 +795,7 @@ describe('SedaCoreV1', () => {
   });
 
   describe('pause functionality', () => {
-    it('should allow owner to pause and unpause', async () => {
+    it('allows owner to pause and unpause', async () => {
       const { core } = await loadFixture(deployCoreFixture);
       const [owner] = await ethers.getSigners();
 
@@ -782,7 +814,7 @@ describe('SedaCoreV1', () => {
       expect(await core.paused()).to.be.false;
     });
 
-    it('should prevent non-owner from pausing/unpausing', async () => {
+    it('prevents non-owner from pausing/unpausing', async () => {
       const { core } = await loadFixture(deployCoreFixture);
       const [, nonOwner] = await ethers.getSigners();
 
@@ -797,7 +829,22 @@ describe('SedaCoreV1', () => {
       );
     });
 
-    it('should prevent operations while paused', async () => {
+    it('reverts getPendingRequests while paused', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+
+      // Add some pending requests
+      for (const request of data.requests) {
+        await core.postRequest(request);
+      }
+
+      // Pause the contract
+      await core.pause();
+
+      // Verify getPendingRequests reverts while paused
+      await expect(core.getPendingRequests(0, 10)).to.be.revertedWithCustomError(core, 'EnforcedPause');
+    });
+
+    it('prevents operations while paused', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
       const [owner] = await ethers.getSigners();
 
@@ -824,31 +871,7 @@ describe('SedaCoreV1', () => {
       ).to.be.revertedWithCustomError(core, 'EnforcedPause');
     });
 
-    it('should revert getPendingRequests while paused', async () => {
-      const { core, data } = await loadFixture(deployCoreFixture);
-      const [owner] = await ethers.getSigners();
-
-      // Post some requests
-      await core.postRequest(data.requests[0]);
-      await core.postRequest(data.requests[1]);
-
-      // Verify requests are visible
-      let requests = await core.getPendingRequests(0, 10);
-      expect(requests.length).to.equal(2);
-
-      // Pause the contract
-      await (core.connect(owner) as SedaCoreV1).pause();
-
-      // Verify getPendingRequests reverts while paused
-      await expect(core.getPendingRequests(0, 10)).to.be.revertedWithCustomError(core, 'EnforcedPause');
-
-      // Unpause and verify requests are visible again
-      await (core.connect(owner) as SedaCoreV1).unpause();
-      requests = await core.getPendingRequests(0, 10);
-      expect(requests.length).to.equal(2);
-    });
-
-    it('should resume operations after unpausing', async () => {
+    it('resumes operations after unpausing', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
       const [owner] = await ethers.getSigners();
 

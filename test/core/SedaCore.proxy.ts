@@ -34,7 +34,7 @@ describe('Proxy: SedaCore', () => {
   }
 
   describe('upgrade', () => {
-    it('should maintain state after upgrade', async () => {
+    it('maintains state after upgrade', async () => {
       const { prover, core, CoreV2Factory } = await loadFixture(deployProxyFixture);
 
       // Check initial state (using a relevant state variable from your SedaCore)
@@ -49,7 +49,7 @@ describe('Proxy: SedaCore', () => {
       expect(stateAfterUpgrade).to.equal(stateBeforeUpgrade);
     });
 
-    it('should maintain owner after upgrade', async () => {
+    it('maintains owner after upgrade', async () => {
       const { core: proxy, CoreV2Factory } = await loadFixture(deployProxyFixture);
       const [owner] = await ethers.getSigners();
 
@@ -65,7 +65,7 @@ describe('Proxy: SedaCore', () => {
       expect(ownerAfterUpgrade).to.equal(owner.address);
     });
 
-    it('should have new functionality after upgrade', async () => {
+    it('adds new functionality after upgrade', async () => {
       const { core: proxy, CoreV2Factory } = await loadFixture(deployProxyFixture);
 
       // Verify V1 doesn't have getVersion()

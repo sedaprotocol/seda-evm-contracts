@@ -21,7 +21,7 @@ describe('SedaPermissioned', () => {
     return { core, signers };
   }
 
-  it('should allow anyone to post a data request', async () => {
+  it('allows anyone to post a data request', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests } = generateDataFixtures(1);
     const inputs = requests[0];
@@ -44,7 +44,7 @@ describe('SedaPermissioned', () => {
     compareRequests(storedRequest, inputs);
   });
 
-  it('should allow relayer to post a data result', async () => {
+  it('allows relayer to post a data result', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(1);
 
@@ -64,7 +64,7 @@ describe('SedaPermissioned', () => {
     expect(pendingRequests).to.be.empty;
   });
 
-  it('should handle pagination for pending requests', async () => {
+  it('handles pagination for pending requests', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests } = generateDataFixtures(5);
 
@@ -88,7 +88,7 @@ describe('SedaPermissioned', () => {
     expect(requests1[1]).to.not.equal(requests2[1]);
   });
 
-  it('should maintain pending requests after posting results', async () => {
+  it('maintains pending requests after posting results', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(5);
 
@@ -117,7 +117,7 @@ describe('SedaPermissioned', () => {
     expect(pending).to.deep.include.members([requests[1], requests[3]]);
   });
 
-  it('should only allow relayer to post data result', async () => {
+  it('only allows relayer to post data result', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(1);
 
@@ -134,7 +134,7 @@ describe('SedaPermissioned', () => {
     await expect(core.connect(signers.relayer).postResult(results[0], 0, [])).to.not.be.reverted;
   });
 
-  it('should manage relayers correctly', async () => {
+  it('manages relayers correctly', async () => {
     const { core, signers } = await loadFixture(deployFixture);
 
     await expect(core.connect(signers.anyone).addRelayer(signers.anyone.address)).to.be.revertedWithCustomError(
@@ -154,7 +154,7 @@ describe('SedaPermissioned', () => {
     expect(await core.hasRole(await core.RELAYER_ROLE(), signers.anyone.address)).to.be.false;
   });
 
-  it('should get request and result data correctly', async () => {
+  it('gets request and result data correctly', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(1);
 
@@ -174,7 +174,7 @@ describe('SedaPermissioned', () => {
     await expect(core.getResult(nonExistentId)).to.be.revertedWithCustomError(core, 'ResultNotFound');
   });
 
-  it('should generate correct request and result IDs', async () => {
+  it('generates correct request and result IDs', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(1);
     const request = requests[0];
@@ -187,7 +187,7 @@ describe('SedaPermissioned', () => {
     expect(resultId).to.equal(deriveDataResultId(result));
   });
 
-  it('should enforce replication factor constraints', async () => {
+  it('enforces replication factor constraints', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests } = generateDataFixtures(1);
 
@@ -206,7 +206,7 @@ describe('SedaPermissioned', () => {
     );
   });
 
-  it('should allow admin to set max replication factor', async () => {
+  it('allows admin to set max replication factor', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const newMaxReplicationFactor = 5;
 
@@ -219,7 +219,7 @@ describe('SedaPermissioned', () => {
     expect(await core.maxReplicationFactor()).to.equal(newMaxReplicationFactor);
   });
 
-  it('should allow admin to pause and unpause the contract', async () => {
+  it('allows admin to pause and unpause the contract', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests } = generateDataFixtures(1);
 
@@ -245,7 +245,7 @@ describe('SedaPermissioned', () => {
     await expect(core.connect(signers.anyone).postRequest(requests[0])).to.not.be.reverted;
   });
 
-  it('should handle getPendingRequests with various offsets and limits', async () => {
+  it('handles getPendingRequests with various offsets and limits', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests } = generateDataFixtures(10);
 
@@ -268,7 +268,7 @@ describe('SedaPermissioned', () => {
     expect(partialPage).to.have.lengthOf(2);
   });
 
-  it('should correctly remove pending requests when posting results in different orders', async () => {
+  it('correctly removes pending requests when posting results in different orders', async () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(5);
 
