@@ -13,10 +13,13 @@ import { HexString } from '../../common/params';
 import { getNetworkKey } from '../../common/utils';
 import { sedaScope } from '../../index';
 
+const DEFAULT_TIMEOUT_PERIOD = 24 * 60 * 60; // 1 day in seconds
+
 sedaScope
   .task('deploy:core', 'Deploys the SedaCoreV1 contract')
   .addOptionalParam('params', 'The parameters file to use', undefined, types.string)
   .addOptionalParam('proverAddress', 'Direct SedaProver contract address', undefined, types.string)
+  .addOptionalParam('timeoutPeriod', 'The withdraw timeout period in seconds', undefined, types.int)
   .addFlag('reset', 'Replace existing deployment files')
   .addFlag('verify', 'Verify the contract on etherscan')
   .setAction(async (taskArgs, hre) => {
@@ -25,6 +28,7 @@ sedaScope
 
 const SedaCoreV1Schema = v.object({
   sedaProverAddress: HexString,
+  timeoutPeriod: v.number(),
 });
 
 export async function deploySedaCore(
@@ -32,22 +36,21 @@ export async function deploySedaCore(
   options: {
     params?: string;
     proverAddress?: string;
+    timeoutPeriod?: number;
     reset?: boolean;
     verify?: boolean;
   },
 ) {
   const contractName = 'SedaCoreV1';
 
-  // Constructor arguments
-  if (options.params && options.proverAddress) {
-    throw new Error('Both params file and proverAddress cannot be provided simultaneously.');
-  }
-  let constructorArgs: string;
+  let constructorArgs: { sedaProverAddress: string; timeoutPeriod: number } | undefined;
   if (options.params) {
-    constructorArgs = (await readAndValidateParams(options.params, contractName, SedaCoreV1Schema)).sedaProverAddress;
+    constructorArgs = await readAndValidateParams(options.params, contractName, SedaCoreV1Schema);
   } else if (options.proverAddress) {
-    constructorArgs = options.proverAddress;
-    logConstructorArgs('Using user-defined parameter', { sedaProverAddress: constructorArgs });
+    constructorArgs = {
+      sedaProverAddress: options.proverAddress,
+      timeoutPeriod: options.timeoutPeriod ?? DEFAULT_TIMEOUT_PERIOD,
+    };
   } else {
     throw new Error('Either params file or proverAddress must be provided');
   }
@@ -61,5 +64,11 @@ export async function deploySedaCore(
   await confirmDeployment(networkKey, options.reset);
 
   // Deploy and verify
-  return await deployAndVerifyContractWithProxy(hre, contractName, [constructorArgs], owner, options.verify);
+  return await deployAndVerifyContractWithProxy(
+    hre,
+    contractName,
+    [constructorArgs.sedaProverAddress, constructorArgs.timeoutPeriod],
+    owner,
+    options.verify,
+  );
 }

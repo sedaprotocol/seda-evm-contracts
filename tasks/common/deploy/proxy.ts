@@ -11,7 +11,7 @@ export type UupsContracts = {
     constructorArgs: [ProverDataTypes.BatchStruct];
   };
   SedaCoreV1: {
-    constructorArgs: [string];
+    constructorArgs: [string, number];
   };
 };
 
