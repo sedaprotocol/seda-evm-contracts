@@ -56,12 +56,14 @@ export async function deployWithSize(size: { requests?: number; resultLength?: n
   const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
   const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], {
     initializer: 'initialize',
+    kind: 'uups',
   });
   await prover.waitForDeployment();
 
   const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
   const core = await upgrades.deployProxy(CoreFactory, [await prover.getAddress(), ONE_DAY_IN_SECONDS], {
     initializer: 'initialize',
+    kind: 'uups',
   });
   await core.waitForDeployment();
 

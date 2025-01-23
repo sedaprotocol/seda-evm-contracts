@@ -8,7 +8,8 @@ on:
       - main
 
 jobs:
-  ci:
+  checks:
+    name: "🔍 Checks"
     runs-on: "ubuntu-latest"
     steps:
       - name: "Check out the repo 📥"
@@ -26,5 +27,24 @@ jobs:
       - name: "Compile the contracts 🛠️"
         run: "bun run compile"
 
-      - name: "Test the contracts 🧪"
-        run: "bun run test"
+      - name: "Run tests with coverage 🧪"
+        run: |
+          bun run test:coverage | tee coverage-report.txt
+          cat coverage-report.txt
+
+      - name: "Prepare coverage report markdown 📝"
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "## Test Coverage Report"
+            echo "\`\`\`"
+            awk '/^-.*\|/ || /^File/ || /^All files/ || /.*\|/' coverage-report.txt
+            echo "\`\`\`"
+          } > code-coverage-results.md
+
+      - name: "Add Coverage PR Comment 💬"
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: code-coverage-results.md

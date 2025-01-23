@@ -6,7 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  create-release:
+  release:
+    name: "🚀 Release"
     runs-on: ubuntu-latest
 
     steps:
