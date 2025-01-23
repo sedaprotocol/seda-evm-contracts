@@ -11,7 +11,7 @@
   },
   "scripts": {
     "check": "bun run lint && bun run format:sol",
-    "clean": "rimraf artifacts cache typechain-types",
+    "clean": "rimraf artifacts cache typechain-types coverage",
     "compile": "hardhat compile",
     "format:sol": "prettier --check \"**/*.sol\"",
     "format:sol:fix": "prettier --write \"**/*.sol\"",

@@ -29,7 +29,7 @@ jobs:
 
       - name: "Run tests with coverage 🧪"
         run: |
-          bun run test:coverage | tee coverage-report.txt
+          bun run test:coverage > coverage-report.txt
           cat coverage-report.txt
 
       - name: "Prepare coverage report markdown 📝"
@@ -38,7 +38,7 @@ jobs:
           {
             echo "## Test Coverage Report"
             echo "\`\`\`"
-            awk '/^-.*\|/ || /^File/ || /^All files/ || /.*\|/' coverage-report.txt
+            awk '/^-+\|/,/^-+\|$/' coverage-report.txt | head -n -1
             echo "\`\`\`"
           } > code-coverage-results.md
 
