@@ -229,7 +229,7 @@ contract SedaCoreV1 is
         emit FeesIncreased(requestId, additionalRequestFee, additionalResultFee, additionalBatchFee);
     }
 
-    /// @notice Allows anyone to withdraw fees for a timed out request to their address
+    /// @notice Allows anyone to withdraw fees for a timed out request to the requestor address
     /// @param requestId The ID of the request to withdraw
     function withdrawTimedOutRequest(bytes32 requestId) external {
         RequestDetails memory details = _storageV1().requestDetails[requestId];
@@ -251,10 +251,10 @@ contract SedaCoreV1 is
         _removePendingRequest(requestId);
         delete _storageV1().requestDetails[requestId];
 
-        // Transfer total fees to caller
+        // Transfer total fees to data request creator
         if (totalRefund > 0) {
-            _transferFee(msg.sender, totalRefund);
-            emit FeeDistributed(requestId, msg.sender, totalRefund, FeeType.WITHDRAW);
+            _transferFee(details.requestor, totalRefund);
+            emit FeeDistributed(requestId, details.requestor, totalRefund, FeeType.WITHDRAW);
         }
     }
 

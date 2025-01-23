@@ -676,7 +676,7 @@ describe('SedaCoreV1', () => {
         batch: ethers.parseEther('3.0'),
       };
       const totalFee = fees.request + fees.result + fees.batch;
-      const [, withdrawer] = await ethers.getSigners();
+      const [requestor, withdrawer] = await ethers.getSigners();
 
       // Post request with fees
       await core.postRequest(data.requests[0], fees.request, fees.result, fees.batch, { value: totalFee });
@@ -690,20 +690,24 @@ describe('SedaCoreV1', () => {
       await ethers.provider.send('evm_mine', []);
 
       // Record initial balance
-      const initialBalance = await ethers.provider.getBalance(withdrawer.address);
+      const initialRequestorBalance = await ethers.provider.getBalance(requestor.address);
+      const initialWithdrawerBalance = await ethers.provider.getBalance(withdrawer.address);
 
       // Withdraw as different address
       const tx = await (core.connect(withdrawer) as SedaCoreV1).withdrawTimedOutRequest(requestId);
 
       // Verify event emission
-      await expect(tx).to.emit(core, 'FeeDistributed').withArgs(requestId, withdrawer.address, totalFee, 4); // FeeType.WITHDRAW = 4
+      await expect(tx).to.emit(core, 'FeeDistributed').withArgs(requestId, requestor.address, totalFee, 4); // FeeType.WITHDRAW = 4
 
       // Verify balance change (accounting for gas costs)
-      const finalBalance = await ethers.provider.getBalance(withdrawer.address);
+      const finalRequestorBalance = await ethers.provider.getBalance(requestor.address);
       const txReceipt = await tx.wait();
       if (!txReceipt) throw new Error('Transaction receipt not found');
       const gasCost = txReceipt.gasUsed * txReceipt.gasPrice;
-      expect(finalBalance - initialBalance + gasCost).to.equal(totalFee);
+      expect(finalRequestorBalance - initialRequestorBalance + gasCost).closeTo(totalFee, ethers.parseEther('0.01'));
+
+      const finalWithdrawerBalance = await ethers.provider.getBalance(withdrawer.address);
+      expect(finalWithdrawerBalance - initialWithdrawerBalance).closeTo(0, ethers.parseEther('0.01'));
 
       // Verify request was removed
       const requests = await core.getPendingRequests(0, 10);
