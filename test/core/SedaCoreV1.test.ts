@@ -898,4 +898,35 @@ describe('SedaCoreV1', () => {
       expect(requests.length).to.equal(0);
     });
   });
+
+  describe('timeout period management', () => {
+    it('allows owner to get and set timeout period', async () => {
+      const { core } = await loadFixture(deployCoreFixture);
+
+      // Get initial timeout period
+      expect(await core.getTimeoutPeriod()).to.equal(ONE_DAY_IN_SECONDS);
+
+      // Set new timeout period
+      const newPeriod = ONE_DAY_IN_SECONDS * 2;
+      await expect(core.setTimeoutPeriod(newPeriod)).to.emit(core, 'TimeoutPeriodUpdated').withArgs(newPeriod);
+
+      // Verify new timeout period
+      expect(await core.getTimeoutPeriod()).to.equal(newPeriod);
+    });
+
+    it('prevents non-owner from setting timeout period', async () => {
+      const { core } = await loadFixture(deployCoreFixture);
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect(
+        (core.connect(nonOwner) as SedaCoreV1).setTimeoutPeriod(ONE_DAY_IN_SECONDS),
+      ).to.be.revertedWithCustomError(core, 'OwnableUnauthorizedAccount');
+    });
+
+    it('prevents setting zero timeout period', async () => {
+      const { core } = await loadFixture(deployCoreFixture);
+
+      await expect(core.setTimeoutPeriod(0)).to.be.revertedWithCustomError(core, 'InvalidTimeoutPeriod');
+    });
+  });
 });
