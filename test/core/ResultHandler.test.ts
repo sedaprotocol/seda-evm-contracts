@@ -4,45 +4,12 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 
 import { compareResults } from '../helpers';
-import { ONE_DAY_IN_SECONDS, computeResultLeafHash, deriveDataResultId, generateDataFixtures } from '../utils';
+import { ONE_DAY_IN_SECONDS, computeResultLeafHash, deriveResultId, generateDataFixtures } from '../utils';
+import { deployWithSize } from '../utils/deployWithSize';
 
 describe('ResultHandler', () => {
   async function deployResultHandlerFixture() {
-    const { requests, results } = generateDataFixtures(2);
-    const leaves = results.map(deriveDataResultId).map(computeResultLeafHash);
-
-    // Create merkle tree and proofs
-    const tree = SimpleMerkleTree.of(leaves, { sortLeaves: true });
-    const proofs = results.map((_, index) => {
-      return tree.getProof(index);
-    });
-
-    const data = {
-      requests,
-      results,
-      proofs,
-    };
-
-    // Create initial batch with data results
-    const initialBatch = {
-      batchHeight: 0,
-      blockHeight: 0,
-      validatorsRoot: ethers.ZeroHash,
-      resultsRoot: tree.root,
-      provingMetadata: ethers.ZeroHash,
-    };
-
-    // Deploy the contract
-    const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], { initializer: 'initialize' });
-    await prover.waitForDeployment();
-
-    const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
-    const core = await upgrades.deployProxy(CoreFactory, [await prover.getAddress(), ONE_DAY_IN_SECONDS], {
-      initializer: 'initialize',
-    });
-    await core.waitForDeployment();
-
+    const { core, data } = await deployWithSize({ requests: 2 });
     return { core, data };
   }
 
@@ -50,7 +17,7 @@ describe('ResultHandler', () => {
     it('generates consistent result IDs', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      const resultIdFromUtils = deriveDataResultId(data.results[0]);
+      const resultIdFromUtils = deriveResultId(data.results[0]);
       const resultId = await core.deriveResultId.staticCall(data.results[0]);
 
       expect(resultId).to.equal(resultIdFromUtils);
@@ -70,7 +37,7 @@ describe('ResultHandler', () => {
     it('posts result and retrieves it successfully', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      await core.postResult(data.results[0], 0, data.proofs[0]);
+      await core.postResult(data.results[0], 0, data.resultProofs[0]);
 
       const postedResult = await core.getResult(data.results[0].drId);
       compareResults(postedResult, data.results[0]);
@@ -79,9 +46,9 @@ describe('ResultHandler', () => {
     it('reverts when posting duplicate result', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      await core.postResult(data.results[0], 0, data.proofs[0]);
+      await core.postResult(data.results[0], 0, data.resultProofs[0]);
 
-      await expect(core.postResult(data.results[0], 0, data.proofs[0]))
+      await expect(core.postResult(data.results[0], 0, data.resultProofs[0]))
         .to.be.revertedWithCustomError(core, 'ResultAlreadyExists')
         .withArgs(data.results[0].drId);
     });
@@ -89,8 +56,8 @@ describe('ResultHandler', () => {
     it('reverts when proof is invalid', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      const resultId = deriveDataResultId(data.results[1]);
-      await expect(core.postResult(data.results[1], 0, data.proofs[0]))
+      const resultId = deriveResultId(data.results[1]);
+      await expect(core.postResult(data.results[1], 0, data.resultProofs[0]))
         .to.be.revertedWithCustomError(core, 'InvalidResultProof')
         .withArgs(resultId);
     });
@@ -98,15 +65,15 @@ describe('ResultHandler', () => {
     it('emits ResultPosted event', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      await expect(core.postResult(data.results[0], 0, data.proofs[0]))
+      await expect(core.postResult(data.results[0], 0, data.resultProofs[0]))
         .to.emit(core, 'ResultPosted')
-        .withArgs(deriveDataResultId(data.results[0]));
+        .withArgs(deriveResultId(data.results[0]));
     });
 
     it('reverts when proof is empty', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      const resultId = deriveDataResultId(data.results[0]);
+      const resultId = deriveResultId(data.results[0]);
       await expect(core.postResult(data.results[0], 0, []))
         .to.be.revertedWithCustomError(core, 'InvalidResultProof')
         .withArgs(resultId);
@@ -116,8 +83,8 @@ describe('ResultHandler', () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       const invalidResult = { ...data.results[0], drId: ethers.ZeroHash };
-      const resultId = deriveDataResultId(invalidResult);
-      await expect(core.postResult(invalidResult, 0, data.proofs[0]))
+      const resultId = deriveResultId(invalidResult);
+      await expect(core.postResult(invalidResult, 0, data.resultProofs[0]))
         .to.be.revertedWithCustomError(core, 'InvalidResultProof')
         .withArgs(resultId);
     });
@@ -136,7 +103,7 @@ describe('ResultHandler', () => {
     it('retrieves existing result correctly', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      await core.postResult(data.results[0], 0, data.proofs[0]);
+      await core.postResult(data.results[0], 0, data.resultProofs[0]);
       const retrievedResult = await core.getResult(data.results[0].drId);
 
       compareResults(retrievedResult, data.results[0]);
@@ -146,8 +113,8 @@ describe('ResultHandler', () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
       // Post two results
-      await core.postResult(data.results[0], 0, data.proofs[0]);
-      await core.postResult(data.results[1], 0, data.proofs[1]);
+      await core.postResult(data.results[0], 0, data.resultProofs[0]);
+      await core.postResult(data.results[1], 0, data.resultProofs[1]);
 
       // Retrieve and verify both results
       const retrievedResult1 = await core.getResult(data.results[0].drId);
@@ -168,15 +135,15 @@ describe('ResultHandler', () => {
     it('verifies valid result successfully', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      const resultId = await core.verifyResult(data.results[0], 0, data.proofs[0]);
-      expect(resultId).to.equal(deriveDataResultId(data.results[0]));
+      const resultId = await core.verifyResult(data.results[0], 0, data.resultProofs[0]);
+      expect(resultId).to.equal(deriveResultId(data.results[0]));
     });
 
     it('reverts when proof is invalid', async () => {
       const { core, data } = await loadFixture(deployResultHandlerFixture);
 
-      const resultId = deriveDataResultId(data.results[1]);
-      await expect(core.verifyResult(data.results[1], 0, data.proofs[0]))
+      const resultId = deriveResultId(data.results[1]);
+      await expect(core.verifyResult(data.results[1], 0, data.resultProofs[0]))
         .to.be.revertedWithCustomError(core, 'InvalidResultProof')
         .withArgs(resultId);
     });

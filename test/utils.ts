@@ -7,6 +7,8 @@ export const ONE_DAY_IN_SECONDS = 24 * 60 * 60;
 const RESULT_DOMAIN_SEPARATOR = '0x00';
 const SECP256K1_DOMAIN_SEPARATOR = '0x01';
 
+const NON_ZERO_HASH = ethers.keccak256(ethers.toUtf8Bytes('0x'));
+
 function padBigIntToBytes(value: bigint, byteLength: number): string {
   return ethers.zeroPadValue(ethers.toBeArray(value), byteLength);
 }
@@ -52,7 +54,7 @@ export function deriveRequestId(request: CoreRequestTypes.RequestInputsStruct): 
   );
 }
 
-export function deriveDataResultId(dataResult: CoreResultTypes.ResultStruct): string {
+export function deriveResultId(dataResult: CoreResultTypes.ResultStruct): string {
   return ethers.keccak256(
     ethers.concat([
       ethers.keccak256(ethers.toUtf8Bytes(SEDA_DATA_TYPES_VERSION)),
@@ -80,36 +82,47 @@ export function computeValidatorLeafHash(validator: string, votingPower: number)
   );
 }
 
-export function generateDataFixtures(length: number): {
+export function generateDataFixtures(
+  length: number,
+  resultLength?: number,
+): {
   requests: CoreRequestTypes.RequestInputsStruct[];
   results: CoreResultTypes.ResultStruct[];
 } {
   const requests = Array.from({ length }, (_, i) => ({
-    execProgramId: ethers.ZeroHash,
-    execInputs: '0x',
+    execProgramId: NON_ZERO_HASH,
+    execInputs: NON_ZERO_HASH,
     execGasLimit: 1000000n,
-    tallyProgramId: ethers.ZeroHash,
-    tallyInputs: '0x',
+    tallyProgramId: NON_ZERO_HASH,
+    tallyInputs: NON_ZERO_HASH,
     tallyGasLimit: 1000000n,
     replicationFactor: 1,
-    consensusFilter: '0x00',
-    gasPrice: 0n,
-    memo: `0x${i.toString(16).padStart(2, '0')}`,
+    consensusFilter: '0x01',
+    gasPrice: 10000000000n,
+    memo: ethers.hexlify(ethers.toUtf8Bytes(`request-${i + 1}`)),
   }));
 
   const results = requests.map((request) => {
     const drId = deriveRequestId(request);
+    const result = resultLength
+      ? `0x${Array.from({ length: resultLength }, () =>
+          Math.floor(Math.random() * 256)
+            .toString(16)
+            .padStart(2, '0'),
+        ).join('')}`
+      : ethers.keccak256(ethers.toUtf8Bytes('SUCCESS'));
+
     return {
       version: SEDA_DATA_TYPES_VERSION,
       drId,
       consensus: true,
       exitCode: 0,
-      result: ethers.keccak256(ethers.toUtf8Bytes('SUCCESS')),
-      blockHeight: 0,
+      result,
+      blockHeight: 1,
       blockTimestamp: Math.floor(Date.now() / 1000) + 3600,
       gasUsed: 1000000n,
-      paybackAddress: ethers.ZeroAddress,
-      sedaPayload: ethers.ZeroHash,
+      paybackAddress: NON_ZERO_HASH,
+      sedaPayload: NON_ZERO_HASH,
     };
   });
 

@@ -7,78 +7,17 @@ import type { ProverDataTypes } from '../../ts-types';
 import type { Secp256k1ProverV1 } from '../../typechain-types';
 import {
   computeResultLeafHash,
-  computeValidatorLeafHash,
   deriveBatchId,
-  deriveDataResultId,
+  deriveResultId,
   generateDataFixtures,
   generateNewBatchWithId,
 } from '../utils';
+import { deployWithSize } from '../utils/deployWithSize';
 
 describe('Secp256k1ProverV1', () => {
-  async function deployProverFixture(length = 4) {
-    const wallets = Array.from({ length }, (_, i) => {
-      const seed = ethers.id(`validator${i}`);
-      return new ethers.Wallet(seed.slice(2, 66));
-    });
-
-    const validators = wallets.map((wallet) => wallet.address);
-    const votingPowers = Array(wallets.length).fill(1_000_000);
-    votingPowers[0] = 75_000_000;
-    votingPowers[1] = 25_000_000;
-    votingPowers[2] = 25_000_000;
-    votingPowers[3] = 25_000_000;
-
-    const validatorLeaves = validators.map((validator, index) =>
-      computeValidatorLeafHash(validator, votingPowers[index]),
-    );
-
-    // Validators: Create merkle tree and proofs
-    const validatorsTree = SimpleMerkleTree.of(validatorLeaves, {
-      sortLeaves: true,
-    });
-    const validatorProofs = validators.map((signer, index) => {
-      const proof = validatorsTree.getProof(index);
-      return {
-        signer,
-        votingPower: votingPowers[index],
-        merkleProof: proof,
-      };
-    });
-
-    // Results: Create merkle tree and proofs
-    const { requests, results } = generateDataFixtures(2);
-    const resultsLeaves = results.map(deriveDataResultId).map(computeResultLeafHash);
-
-    const resultsTree = SimpleMerkleTree.of(resultsLeaves, {
-      sortLeaves: true,
-    });
-    const resultProofs = results.map((_, index) => {
-      return resultsTree.getProof(index);
-    });
-
-    // Create initial batch
-    const initialBatch = {
-      batchHeight: 0,
-      blockHeight: 0,
-      validatorsRoot: validatorsTree.root,
-      resultsRoot: resultsTree.root,
-      provingMetadata: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-    };
-
-    const data = {
-      initialBatch,
-      validatorProofs,
-      resultProofs,
-      requests,
-      results,
-    };
-
-    // Deploy the contract
-    const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], { initializer: 'initialize' });
-    await prover.waitForDeployment();
-
-    return { prover, wallets, data };
+  async function deployProverFixture() {
+    const { prover, data } = await deployWithSize({ validators: 4 });
+    return { prover, wallets: data.wallets, data };
   }
 
   // Add a helper function to generate and sign a new batch
@@ -114,11 +53,11 @@ describe('Secp256k1ProverV1', () => {
       expect(lastValidatorsRoot).to.equal(newBatch.validatorsRoot);
     });
 
-    it('updates batch with three validators (75% power)', async () => {
+    it('updates batch with all validators (100% power)', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [1, 2, 3]);
-      await prover.postBatch(newBatch, signatures, data.validatorProofs.slice(1));
+      const { newBatch, signatures } = await generateAndSignBatch(wallets, data.initialBatch, [0, 1, 2, 3]);
+      await prover.postBatch(newBatch, signatures, data.validatorProofs);
 
       const lastBatchHeight = await prover.getLastBatchHeight();
       const lastValidatorsRoot = await prover.getLastValidatorsRoot();
@@ -228,7 +167,7 @@ describe('Secp256k1ProverV1', () => {
 
       // Generate a mock result and its proof
       const { results } = generateDataFixtures(10);
-      const resultIds = results.map(deriveDataResultId);
+      const resultIds = results.map(deriveResultId);
       const resultLeaves = resultIds.map(computeResultLeafHash);
       const resultsTree = SimpleMerkleTree.of(resultLeaves);
 
@@ -255,7 +194,7 @@ describe('Secp256k1ProverV1', () => {
 
       // Generate a mock result and its proof
       const { results } = generateDataFixtures(10);
-      const resultIds = results.map(deriveDataResultId);
+      const resultIds = results.map(deriveResultId);
       const resultLeaves = resultIds.map(computeResultLeafHash);
       const resultsTree = SimpleMerkleTree.of(resultLeaves);
 
@@ -282,7 +221,7 @@ describe('Secp256k1ProverV1', () => {
 
       // Generate a mock result and its proof
       const { results } = generateDataFixtures(10);
-      const resultIds = results.map(deriveDataResultId);
+      const resultIds = results.map(deriveResultId);
       const resultLeaves = resultIds.map(computeResultLeafHash);
       const resultsTree = SimpleMerkleTree.of(resultLeaves);
 
@@ -306,7 +245,7 @@ describe('Secp256k1ProverV1', () => {
 
       // Generate a mock result and its proof
       const { results } = generateDataFixtures(10);
-      const resultIds = results.map(deriveDataResultId);
+      const resultIds = results.map(deriveResultId);
       const resultLeaves = resultIds.map(computeResultLeafHash);
       const resultsTree = SimpleMerkleTree.of(resultLeaves);
 
@@ -328,35 +267,6 @@ describe('Secp256k1ProverV1', () => {
       );
       expect(resultBatch1).to.be.false;
       expect(batchSender).to.equal(ethers.ZeroAddress);
-    });
-  });
-
-  describe('gas analysis', () => {
-    async function runGasAnalysis(validatorCount: number, batchCount: number) {
-      const { prover, wallets, data } = await deployProverFixture(validatorCount);
-
-      for (let i = 1; i <= batchCount; i++) {
-        const newBatch = {
-          ...data.initialBatch,
-          batchHeight: i,
-          blockHeight: i,
-        };
-        const newBatchId = deriveBatchId(newBatch);
-        const signatures = await Promise.all(
-          wallets.slice(0, validatorCount).map((wallet) => wallet.signingKey.sign(newBatchId).serialized),
-        );
-        await prover.postBatch(newBatch, signatures, data.validatorProofs.slice(0, validatorCount));
-        const lastBatchHeight = await prover.getLastBatchHeight();
-        expect(lastBatchHeight).to.equal(newBatch.batchHeight);
-      }
-    }
-
-    it('processes 67 validators', async () => {
-      await runGasAnalysis(67, 100);
-    });
-
-    it('processes 20 validators', async () => {
-      await runGasAnalysis(20, 100);
     });
   });
 

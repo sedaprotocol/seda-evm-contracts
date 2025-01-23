@@ -9,7 +9,8 @@ const gasReporterConfig = {
   currency: 'USD',
   gasPrice: 20,
   token: 'ETH',
-  ethPrice: 2600,
+  ethPrice: 3200,
+  reportPureAndViewMethods: true,
 };
 
 const config: HardhatUserConfig = {

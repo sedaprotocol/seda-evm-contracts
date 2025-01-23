@@ -3,28 +3,30 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import type { MockSecp256k1ProverV2, Secp256k1ProverResettable } from '../../typechain-types';
 import { generateNewBatchWithId } from '../utils';
+import { deployWithSize } from '../utils/deployWithSize';
 
 describe('Proxy: Secp256k1Prover', () => {
   async function deployProxyFixture() {
     const [owner, nonOwner] = await ethers.getSigners();
-    const initialBatch = {
-      batchHeight: 1,
-      blockHeight: 1,
-      validatorsRoot: ethers.ZeroHash,
-      resultsRoot: ethers.ZeroHash,
-      provingMetadata: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-    };
 
-    // Deploy V1 through proxy
-    const ProverV1Factory = await ethers.getContractFactory('Secp256k1ProverV1', owner);
-    const proxy = await upgrades.deployProxy(ProverV1Factory, [initialBatch], { initializer: 'initialize' });
-    await proxy.waitForDeployment();
+    // Use deployWithSize instead of manual initialization
+    const { prover: proxy, data } = await deployWithSize({
+      requests: 5, // Smaller test set is fine for proxy tests
+      validators: 4,
+    });
 
     // Get V2 factories
     const ProverV2Factory = await ethers.getContractFactory('MockSecp256k1ProverV2', owner);
     const ProverResettableFactory = await ethers.getContractFactory('Secp256k1ProverResettable', owner);
 
-    return { proxy, ProverV2Factory, ProverResettableFactory, owner, nonOwner, initialBatch };
+    return {
+      proxy,
+      ProverV2Factory,
+      ProverResettableFactory,
+      owner,
+      nonOwner,
+      initialBatch: data.initialBatch,
+    };
   }
 
   describe('upgrade V1 to V2', () => {

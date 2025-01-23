@@ -4,17 +4,13 @@ import { ethers } from 'hardhat';
 
 import type { RequestHandlerBase } from '../../typechain-types';
 import { compareRequests } from '../helpers';
-import { deriveRequestId, generateDataFixtures } from '../utils';
+import { deriveRequestId } from '../utils';
+import { deployWithSize } from '../utils/deployWithSize';
 
 describe('RequestHandler', () => {
   async function deployRequestHandlerFixture() {
-    const { requests } = generateDataFixtures(4);
-
-    // Deploy the RequestHandler contract
-    const RequestHandlerFactory = await ethers.getContractFactory('SedaCoreV1');
-    const handler = (await RequestHandlerFactory.deploy()) as unknown as RequestHandlerBase;
-
-    return { handler, requests };
+    const { core: handler, data } = await deployWithSize({ requests: 4 });
+    return { handler, requests: data.requests };
   }
 
   describe('deriveRequestId', () => {

@@ -10,8 +10,8 @@ import {
   computeResultLeafHash,
   computeValidatorLeafHash,
   deriveBatchId,
-  deriveDataResultId,
   deriveRequestId,
+  deriveResultId,
   generateDataFixtures,
 } from '../utils';
 
@@ -41,7 +41,7 @@ describe('SedaCoreV1', () => {
     results[5].paybackAddress = '0x0123456789012345678901234567890123456789';
     results[5].gasUsed = BigInt(requests[5].execGasLimit) + BigInt(requests[5].tallyGasLimit);
 
-    const leaves = results.map(deriveDataResultId).map(computeResultLeafHash);
+    const leaves = results.map(deriveResultId).map(computeResultLeafHash);
 
     // Create merkle tree and proofs
     const resultsTree = SimpleMerkleTree.of(leaves, { sortLeaves: true });

@@ -2,7 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { compareRequests, compareResults, convertPendingToRequestInputs } from '../helpers';
-import { deriveDataResultId, deriveRequestId, generateDataFixtures } from '../utils';
+import { deriveRequestId, deriveResultId, generateDataFixtures } from '../utils';
 
 describe('SedaPermissioned', () => {
   const MAX_REPLICATION_FACTOR = 1;
@@ -55,7 +55,7 @@ describe('SedaPermissioned', () => {
 
     await expect(core.connect(signers.relayer).postResult(results[0], 0, []))
       .to.emit(core, 'ResultPosted')
-      .withArgs(deriveDataResultId(results[0]));
+      .withArgs(deriveResultId(results[0]));
 
     const result = await core.getResult(requestId);
     compareResults(result, results[0]);
@@ -184,7 +184,7 @@ describe('SedaPermissioned', () => {
     const resultId = await core.connect(signers.relayer).postResult.staticCall(result, 0, []);
 
     expect(requestId).to.equal(deriveRequestId(request));
-    expect(resultId).to.equal(deriveDataResultId(result));
+    expect(resultId).to.equal(deriveResultId(result));
   });
 
   it('enforces replication factor constraints', async () => {

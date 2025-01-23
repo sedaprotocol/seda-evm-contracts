@@ -5,8 +5,8 @@ import { ethers } from 'hardhat';
 import {
   computeResultLeafHash,
   computeValidatorLeafHash,
-  deriveDataResultId,
   deriveRequestId,
+  deriveResultId,
   generateDataFixtures,
 } from '../test/utils';
 
@@ -27,7 +27,7 @@ const { requests, results } = generateDataFixtures(10);
 const requestIds = requests.map(deriveRequestId);
 
 // Derive result IDs
-const resultIds = results.map(deriveDataResultId);
+const resultIds = results.map(deriveResultId);
 
 // Create result leaves for the Merkle tree
 const resultLeaves = resultIds.map(computeResultLeafHash);

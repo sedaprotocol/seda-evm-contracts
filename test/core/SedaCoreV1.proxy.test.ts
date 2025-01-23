@@ -2,30 +2,12 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { ONE_DAY_IN_SECONDS } from '../utils';
+import { deployWithSize } from '../utils/deployWithSize';
 
 describe('Proxy: SedaCore', () => {
   async function deployProxyFixture() {
     const [owner] = await ethers.getSigners();
-
-    const initialBatch = {
-      batchHeight: 0,
-      blockHeight: 0,
-      validatorsRoot: ethers.ZeroHash,
-      resultsRoot: ethers.ZeroHash,
-      provingMetadata: ethers.ZeroHash,
-    };
-
-    // Deploy prover
-    const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], { initializer: 'initialize' });
-    await prover.waitForDeployment();
-
-    // Deploy V1 through proxy
-    const CoreV1Factory = await ethers.getContractFactory('SedaCoreV1', owner);
-    const core = await upgrades.deployProxy(CoreV1Factory, [await prover.getAddress(), ONE_DAY_IN_SECONDS], {
-      initializer: 'initialize',
-    });
-    await core.waitForDeployment();
+    const { core, prover } = await deployWithSize({ requests: 1 });
 
     // Get V2 factory
     const CoreV2Factory = await ethers.getContractFactory('MockSedaCoreV2', owner);
