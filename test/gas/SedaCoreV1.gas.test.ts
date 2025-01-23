@@ -1,7 +1,8 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { ethers } from 'hardhat';
-import { ONE_DAY_IN_SECONDS, deriveRequestId, deriveResultId } from '../utils';
-import { deployWithSize } from '../utils/deployWithSize';
+import { deployWithSize } from '../helpers/fixtures';
+import { ONE_DAY_IN_SECONDS } from '../utils/constants';
+import { deriveRequestId, deriveResultId } from '../utils/crypto';
 
 describe('SedaCoreV1 Gas Analysis', () => {
   // Test vectors for different sizes

@@ -1,8 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { ONE_DAY_IN_SECONDS } from '../utils';
-import { deployWithSize } from '../utils/deployWithSize';
+import { deployWithSize } from '../helpers/fixtures';
 
 describe('Proxy: SedaCore', () => {
   async function deployProxyFixture() {

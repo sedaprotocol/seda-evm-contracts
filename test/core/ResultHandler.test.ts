@@ -1,11 +1,10 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
-import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { expect } from 'chai';
-import { ethers, upgrades } from 'hardhat';
+import { ethers } from 'hardhat';
 
-import { compareResults } from '../helpers';
-import { ONE_DAY_IN_SECONDS, computeResultLeafHash, deriveResultId, generateDataFixtures } from '../utils';
-import { deployWithSize } from '../utils/deployWithSize';
+import { compareResults } from '../helpers/assertions';
+import { deployWithSize } from '../helpers/fixtures';
+import { deriveResultId } from '../utils/crypto';
 
 describe('ResultHandler', () => {
   async function deployResultHandlerFixture() {

@@ -2,8 +2,8 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import type { MockSecp256k1ProverV2, Secp256k1ProverResettable } from '../../typechain-types';
-import { generateNewBatchWithId } from '../utils';
-import { deployWithSize } from '../utils/deployWithSize';
+import { deployWithSize } from '../helpers/fixtures';
+import { generateNewBatchWithId } from '../utils/crypto';
 
 describe('Proxy: Secp256k1Prover', () => {
   async function deployProxyFixture() {

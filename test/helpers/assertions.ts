@@ -1,36 +1,6 @@
 import { expect } from 'chai';
-import type { CoreRequestTypes, CoreResultTypes, ProverDataTypes } from '../ts-types';
+import type { CoreRequestTypes, CoreResultTypes } from '../../ts-types';
 
-// Function to convert an unformatted tuple result to a formatted struct.
-// The unformated pending request is a tuple of the following format:
-// ```
-// [
-//   [version, execProgramId, execInputs, execGasLimit, tallyProgramId, tallyInputs, tallyGasLimit, replicationFactor, consensusFilter, gasPrice, memo]
-//   [requestor, timestamp, requestFee, resultFee, batchFee]
-// ]
-// ```
-// @param pending - The unformatted tuple result to convert
-// @returns The formatted struct
-export function convertPendingToRequestInputs(
-  // biome-ignore lint/suspicious/noExplicitAny: Explicit any type is necessary to handle the unformatted tuple result
-  pending: any,
-): CoreRequestTypes.RequestInputsStruct {
-  return {
-    //version: unformatted[0][0],
-    execProgramId: pending[0][1],
-    execInputs: pending[0][2],
-    execGasLimit: pending[0][3],
-    tallyProgramId: pending[0][4],
-    tallyInputs: pending[0][5].toString(),
-    tallyGasLimit: pending[0][6],
-    replicationFactor: Number(pending[0][7]),
-    consensusFilter: pending[0][8].toString(),
-    gasPrice: pending[0][9],
-    memo: pending[0][10],
-  };
-}
-
-// Helper function to compare two requests
 export const compareRequests = (
   actual: CoreRequestTypes.RequestInputsStruct,
   expected: CoreRequestTypes.RequestInputsStruct,
@@ -47,7 +17,6 @@ export const compareRequests = (
   expect(actual.memo).to.equal(expected.memo);
 };
 
-// Helper function to compare two results
 export const compareResults = (actual: CoreResultTypes.ResultStruct, expected: CoreResultTypes.ResultStruct) => {
   expect(actual.version).to.equal(expected.version);
   expect(actual.drId).to.equal(expected.drId);

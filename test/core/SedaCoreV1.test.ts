@@ -4,16 +4,17 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 
 import type { Secp256k1ProverV1, SedaCoreV1 } from '../../typechain-types';
-import { compareRequests, compareResults, convertPendingToRequestInputs } from '../helpers';
+import { compareRequests, compareResults } from '../helpers/assertions';
+import { convertPendingToRequestInputs } from '../helpers/conversions';
+import { ONE_DAY_IN_SECONDS } from '../utils/constants';
 import {
-  ONE_DAY_IN_SECONDS,
   computeResultLeafHash,
   computeValidatorLeafHash,
   deriveBatchId,
   deriveRequestId,
   deriveResultId,
   generateDataFixtures,
-} from '../utils';
+} from '../utils/crypto';
 
 describe('SedaCoreV1', () => {
   async function deployCoreFixture() {

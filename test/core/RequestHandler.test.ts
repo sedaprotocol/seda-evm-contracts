@@ -2,10 +2,9 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-import type { RequestHandlerBase } from '../../typechain-types';
-import { compareRequests } from '../helpers';
-import { deriveRequestId } from '../utils';
-import { deployWithSize } from '../utils/deployWithSize';
+import { compareRequests } from '../helpers/assertions';
+import { deployWithSize } from '../helpers/fixtures';
+import { deriveRequestId } from '../utils/crypto';
 
 describe('RequestHandler', () => {
   async function deployRequestHandlerFixture() {

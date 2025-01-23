@@ -1,6 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
-import { deriveBatchId } from '../utils';
-import { deployWithSize } from '../utils/deployWithSize';
+import { deployWithSize } from '../helpers/fixtures';
+import { deriveBatchId } from '../utils/crypto';
 
 describe('Secp256k1ProverV1 Gas Analysis', () => {
   // Test vectors for different validator set sizes

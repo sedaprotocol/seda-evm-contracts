@@ -1,12 +1,7 @@
 import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { ethers, upgrades } from 'hardhat';
-import {
-  ONE_DAY_IN_SECONDS,
-  computeResultLeafHash,
-  computeValidatorLeafHash,
-  deriveResultId,
-  generateDataFixtures,
-} from '../utils';
+import { ONE_DAY_IN_SECONDS } from '../utils/constants';
+import { computeResultLeafHash, computeValidatorLeafHash, deriveResultId, generateDataFixtures } from '../utils/crypto';
 
 export async function deployWithSize(size: { requests?: number; resultLength?: number; validators?: number }) {
   const { requests, results } = generateDataFixtures(size.requests ?? 10, size.resultLength);
