@@ -211,7 +211,7 @@ contract SedaCoreV1 is
         uint256 additionalRequestFee,
         uint256 additionalResultFee,
         uint256 additionalBatchFee
-    ) public payable override whenNotPaused {
+    ) external payable override(ISedaCore) whenNotPaused {
         // Validate ETH payment matches fee sum to prevent over/underpayment
         if (msg.value != additionalRequestFee + additionalResultFee + additionalBatchFee) {
             revert InvalidFeeAmount();
@@ -293,7 +293,7 @@ contract SedaCoreV1 is
     function getPendingRequests(
         uint256 offset,
         uint256 limit
-    ) public view whenNotPaused returns (PendingRequest[] memory) {
+    ) external view whenNotPaused returns (PendingRequest[] memory) {
         uint256 totalRequests = _storageV1().pendingRequests.length();
         if (offset >= totalRequests) {
             return new PendingRequest[](0);
