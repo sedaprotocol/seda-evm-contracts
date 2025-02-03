@@ -28,7 +28,7 @@ describe('ResultHandler', () => {
       const id1 = await core.deriveResultId.staticCall(data.results[0]);
       const id2 = await core.deriveResultId.staticCall(data.results[1]);
 
-      expect(id1).to.not.equal(id2);
+      expect(id1).to.not.deep.equal(id2);
     });
   });
 

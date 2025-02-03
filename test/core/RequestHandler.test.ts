@@ -28,7 +28,7 @@ describe('RequestHandler', () => {
       const id1 = await handler.deriveRequestId.staticCall(requests[0]);
       const id2 = await handler.deriveRequestId.staticCall(requests[1]);
 
-      expect(id1).to.not.equal(id2);
+      expect(id1).to.not.deep.equal(id2);
     });
   });
 

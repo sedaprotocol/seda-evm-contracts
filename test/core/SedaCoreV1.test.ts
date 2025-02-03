@@ -113,8 +113,8 @@ describe('SedaCoreV1', () => {
 
       expect(requests1.length).to.equal(2);
       expect(requests2.length).to.equal(2);
-      expect(requests1[0]).to.not.equal(requests2[0]);
-      expect(requests1[1]).to.not.equal(requests2[1]);
+      expect(requests1[0]).to.not.deep.equal(requests2[0]);
+      expect(requests1[1]).to.not.deep.equal(requests2[1]);
     });
 
     it('returns zero requests if offset exceeds length', async () => {

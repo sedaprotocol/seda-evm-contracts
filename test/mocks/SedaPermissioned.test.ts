@@ -85,8 +85,8 @@ describe('SedaPermissioned', () => {
     expect(requests4).to.have.lengthOf(1);
     expect(requests5).to.be.empty;
 
-    expect(requests1[0]).to.not.equal(requests2[0]);
-    expect(requests1[1]).to.not.equal(requests2[1]);
+    expect(requests1[0]).to.not.deep.equal(requests2[0]);
+    expect(requests1[1]).to.not.deep.equal(requests2[1]);
   });
 
   it('maintains pending requests after posting results', async () => {
