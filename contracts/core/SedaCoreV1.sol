@@ -303,6 +303,7 @@ contract SedaCoreV1 is
             RequestDetails memory details = _storageV1().requestDetails[requestId];
 
             queriedPendingRequests[i] = PendingRequest({
+                id: requestId,
                 request: getRequest(requestId),
                 requestor: details.requestor,
                 timestamp: details.timestamp,

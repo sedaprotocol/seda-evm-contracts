@@ -153,6 +153,7 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
             bytes32 requestId = pendingRequests.at(offset + i);
 
             queriedPendingRequests[i] = PendingRequest({
+                id: requestId,
                 request: getRequest(requestId),
                 requestor: address(0),
                 timestamp: 0,

@@ -5,15 +5,15 @@ export function convertPendingToRequestInputs(
   pending: any,
 ): CoreRequestTypes.RequestInputsStruct {
   return {
-    execProgramId: pending[0][1],
-    execInputs: pending[0][2],
-    execGasLimit: pending[0][3],
-    tallyProgramId: pending[0][4],
-    tallyInputs: pending[0][5].toString(),
-    tallyGasLimit: pending[0][6],
-    replicationFactor: Number(pending[0][7]),
-    consensusFilter: pending[0][8].toString(),
-    gasPrice: pending[0][9],
-    memo: pending[0][10],
+    execProgramId: pending[1][1],
+    execInputs: pending[1][2],
+    execGasLimit: pending[1][3],
+    tallyProgramId: pending[1][4],
+    tallyInputs: pending[1][5].toString(),
+    tallyGasLimit: pending[1][6],
+    replicationFactor: Number(pending[1][7]),
+    consensusFilter: pending[1][8].toString(),
+    gasPrice: pending[1][9],
+    memo: pending[1][10],
   };
 }

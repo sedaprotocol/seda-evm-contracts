@@ -25,6 +25,7 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @notice Aggregates request data and fees to help solvers evaluate pending requests
     /// @dev Used as return type for getPendingRequests() view function, not for storage
     struct PendingRequest {
+        bytes32 id;
         SedaDataTypes.Request request;
         address requestor;
         uint256 timestamp;
