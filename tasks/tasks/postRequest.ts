@@ -5,7 +5,7 @@ import { sedaScope } from '../index';
 sedaScope
   .task('post-request', 'Post a data request to a ISedaCore contract with attached funds')
   .addParam('core', 'The address of the SedaCore contract')
-  .addOptionalParam('requestFee', 'The fee for executing the request in gwei', '10000')
+  .addOptionalParam('requestFee', 'The fee for executing the request in gwei', '25000')
   .addOptionalParam('resultFee', 'The fee for posting the result in gwei', '10000')
   .addOptionalParam('batchFee', 'The fee for posting the batch in gwei', '10000')
   .setAction(async (taskArgs, hre) => {
@@ -16,15 +16,15 @@ sedaScope
 
     const timestamp = Math.floor(Date.now() / 1000).toString(16);
     const request = {
-      execProgramId: '0x57ce7bf6a9fdf1782dbc1e709418bd22603797b202453f0c49186bbb60f4b5e4',
-      execInputs: '0x6574682d75736463',
+      execProgramId: '0x577cd378ec40de8f3a3fa3d19c49bd1f1dbd97d59934440b38fa8c162852537d',
+      execInputs: '0x6574682d75736474',
       execGasLimit: 300000000000000n,
-      tallyProgramId: '0x57ce7bf6a9fdf1782dbc1e709418bd22603797b202453f0c49186bbb60f4b5e4',
-      tallyInputs: '0x',
-      tallyGasLimit: 300000000000000n,
-      replicationFactor: 1,
+      tallyProgramId: '0x577cd378ec40de8f3a3fa3d19c49bd1f1dbd97d59934440b38fa8c162852537d',
+      tallyInputs: '0x6574682d75736474',
+      tallyGasLimit: 150000000000000n,
+      replicationFactor: 10,
       consensusFilter: '0x00',
-      gasPrice: 1n,
+      gasPrice: 5000n,
       memo: `0x${timestamp}`,
     };
 

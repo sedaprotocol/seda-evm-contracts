@@ -92,7 +92,6 @@ interface ISedaCore is IResultHandler, IRequestHandler {
         uint256 additionalBatchFee
     ) external payable;
 
-
     /// @notice Retrieves a paginated list of pending requests
     /// @param offset The starting position in the list
     /// @param limit The maximum number of requests to return
