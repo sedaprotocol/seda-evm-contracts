@@ -7,18 +7,17 @@ import {Secp256k1ProverV1} from "../../provers/Secp256k1ProverV1.sol";
 /// @notice Mock version of Secp256k1Prover for testing purposes
 /// @dev This contract is a mock and should not be used in production
 contract MockSecp256k1ProverV2 is Secp256k1ProverV1 {
-    // ============ Constants ============
+    // ============ Types & State ============
     bytes32 private constant PROVER_V2_STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("secp256k1prover.storage.v2")) - 1)) & ~bytes32(uint256(0xff));
 
-    // ============ Errors ============
-    error ContractNotUpgradeable();
-
-    // ============ Storage ============
     /// @custom:storage-location secp256k1prover.storage.v2
     struct V2Storage {
         string version;
     }
+
+    // ============ Errors ============
+    error ContractNotUpgradeable();
 
     // ============ Constructor & Initializer ============
     /// @custom:oz-upgrades-unsafe-allow constructor

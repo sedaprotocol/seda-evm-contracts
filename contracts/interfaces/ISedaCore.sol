@@ -8,17 +8,6 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title ISedaCoreV1
 /// @notice Interface for the main Seda protocol contract that handles both requests and results
 interface ISedaCore is IResultHandler, IRequestHandler {
-    /// @notice Aggregates request data and fees to help solvers evaluate pending requests
-    /// @dev Used as return type for getPendingRequests() view function, not for storage
-    struct PendingRequest {
-        SedaDataTypes.Request request;
-        address requestor;
-        uint256 timestamp;
-        uint256 requestFee;
-        uint256 resultFee;
-        uint256 batchFee;
-    }
-
     /// @notice Enum representing different types of fee distributions
     /// @dev Used to identify fee types in events and fee distribution logic
     /// @param REQUEST Fee paid to solver submitting the data request to SEDA network
@@ -33,25 +22,30 @@ interface ISedaCore is IResultHandler, IRequestHandler {
         WITHDRAW
     }
 
-    /// @notice Error thrown when the fee amount is not equal to the sum of the request, result, and batch fees
-    error InvalidFeeAmount();
-
-    error RequestNotTimedOut(bytes32 requestId, uint256 currentTime, uint256 timeoutTime);
-    error InvalidTimeoutPeriod();
+    /// @notice Aggregates request data and fees to help solvers evaluate pending requests
+    /// @dev Used as return type for getPendingRequests() view function, not for storage
+    struct PendingRequest {
+        SedaDataTypes.Request request;
+        address requestor;
+        uint256 timestamp;
+        uint256 requestFee;
+        uint256 resultFee;
+        uint256 batchFee;
+    }
 
     /// @notice Emitted when fees are distributed for a data request and result
-    /// @param drId The unique identifier for the data request
+    /// @param requestId The unique identifier for the data request
     /// @param recipient The address receiving the fee distribution
     /// @param amount The amount of fees distributed to the recipient
-    event FeeDistributed(bytes32 indexed drId, address indexed recipient, uint256 amount, FeeType indexed feeType);
+    event FeeDistributed(bytes32 indexed requestId, address indexed recipient, uint256 amount, FeeType indexed feeType);
 
     /// @notice Emitted when fees are increased for a data request
-    /// @param drId The unique identifier for the data request
+    /// @param requestId The unique identifier for the data request
     /// @param additionalRequestFee The additional request fee
     /// @param additionalResultFee The additional result fee
     /// @param additionalBatchFee The additional batch fee
     event FeesIncreased(
-        bytes32 indexed drId,
+        bytes32 indexed requestId,
         uint256 additionalRequestFee,
         uint256 additionalResultFee,
         uint256 additionalBatchFee
@@ -61,11 +55,17 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @param newTimeoutPeriod The new timeout period in seconds
     event TimeoutPeriodUpdated(uint256 newTimeoutPeriod);
 
-    /// @notice Retrieves a paginated list of pending requests
-    /// @param offset The starting position in the list
-    /// @param limit The maximum number of requests to return
-    /// @return An array of PendingRequest structs
-    function getPendingRequests(uint256 offset, uint256 limit) external view returns (PendingRequest[] memory);
+    /// @notice Error thrown when the fee amount is not equal to the sum of the request, result, and batch fees
+    error InvalidFeeAmount();
+
+    /// @notice Error thrown when attempting to set the timeout period to zero
+    error InvalidTimeoutPeriod();
+
+    /// @notice Error thrown when a request has not reached its timeout period yet
+    /// @param requestId The ID of the request that was attempted to be withdrawn
+    /// @param currentTime The current block timestamp
+    /// @param timeoutTime The timestamp when the request will be eligible for withdrawal
+    error RequestNotTimedOut(bytes32 requestId, uint256 currentTime, uint256 timeoutTime);
 
     /// @notice Posts a request with associated fees
     /// @param inputs The input parameters for the data request
@@ -91,4 +91,11 @@ interface ISedaCore is IResultHandler, IRequestHandler {
         uint256 additionalResultFee,
         uint256 additionalBatchFee
     ) external payable;
+
+
+    /// @notice Retrieves a paginated list of pending requests
+    /// @param offset The starting position in the list
+    /// @param limit The maximum number of requests to return
+    /// @return An array of PendingRequest structs
+    function getPendingRequests(uint256 offset, uint256 limit) external view returns (PendingRequest[] memory);
 }

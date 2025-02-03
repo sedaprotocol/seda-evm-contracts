@@ -116,27 +116,6 @@ library SedaDataTypes {
             );
     }
 
-    /// @notice Derives a unique result ID from a Result struct
-    /// @param result The Result struct to derive the ID from
-    /// @return The derived result ID
-    function deriveResultId(Result memory result) internal pure returns (bytes32) {
-        return
-            keccak256(
-                bytes.concat(
-                    keccak256(bytes(SedaDataTypes.VERSION)),
-                    result.drId,
-                    result.consensus ? bytes1(0x01) : bytes1(0x00),
-                    bytes1(result.exitCode),
-                    keccak256(result.result),
-                    bytes8(result.blockHeight),
-                    bytes8(result.blockTimestamp),
-                    bytes16(result.gasUsed),
-                    keccak256(result.paybackAddress),
-                    keccak256(result.sedaPayload)
-                )
-            );
-    }
-
     /// @notice Derives a unique request ID from RequestInputs
     /// @param inputs The RequestInputs struct to derive the ID from
     /// @return The derived request ID
@@ -155,6 +134,27 @@ library SedaDataTypes {
                     keccak256(inputs.consensusFilter),
                     bytes16(inputs.gasPrice),
                     keccak256(inputs.memo)
+                )
+            );
+    }
+
+    /// @notice Derives a unique result ID from a Result struct
+    /// @param result The Result struct to derive the ID from
+    /// @return The derived result ID
+    function deriveResultId(Result memory result) internal pure returns (bytes32) {
+        return
+            keccak256(
+                bytes.concat(
+                    keccak256(bytes(SedaDataTypes.VERSION)),
+                    result.drId,
+                    result.consensus ? bytes1(0x01) : bytes1(0x00),
+                    bytes1(result.exitCode),
+                    keccak256(result.result),
+                    bytes8(result.blockHeight),
+                    bytes8(result.blockTimestamp),
+                    bytes16(result.gasUsed),
+                    keccak256(result.paybackAddress),
+                    keccak256(result.sedaPayload)
                 )
             );
     }

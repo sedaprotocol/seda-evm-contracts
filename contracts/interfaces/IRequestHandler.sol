@@ -6,12 +6,23 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title IRequestHandler
 /// @notice Interface for the Request Handler contract.
 interface IRequestHandler {
-    error InvalidReplicationFactor();
-    error RequestAlreadyExists(bytes32 requestId);
-    error RequestNotFound(bytes32 requestId);
-    error FeeTransferFailed();
-
+    /// @notice Emitted when a new request is successfully posted
+    /// @param requestId The unique identifier of the posted request
     event RequestPosted(bytes32 indexed requestId);
+
+    /// @notice Error thrown when the replication factor is set to zero or exceeds limits
+    error InvalidReplicationFactor();
+
+    /// @notice Error thrown when attempting to post a request with an ID that already exists
+    /// @param requestId The ID that was already used for a previous request
+    error RequestAlreadyExists(bytes32 requestId);
+
+    /// @notice Error thrown when trying to access a request that doesn't exist
+    /// @param requestId The ID of the non-existent request
+    error RequestNotFound(bytes32 requestId);
+
+    /// @notice Error thrown when the transfer of fees fails
+    error FeeTransferFailed();
 
     /// @notice Retrieves a stored data request by its unique identifier.
     /// @param id The unique identifier of the request to retrieve.

@@ -19,7 +19,7 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 ///      - Valid validator proofs and signatures
 ///      - Sufficient voting power to meet the consensus threshold
 contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
-    // ============ Constants ============
+    // ============ Types & State ============
 
     // The percentage of voting power required for consensus (66.666666%, represented as parts per 100,000,000)
     uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
@@ -30,12 +30,6 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     // Constant storage slot for the state following the ERC-7201 standard
     bytes32 private constant PROVER_V1_STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("secp256k1prover.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
-
-    // ============ Errors ============
-
-    error ConsensusNotReached();
-
-    // ============ Storage ============
 
     struct BatchData {
         bytes32 resultsRoot;
@@ -51,6 +45,11 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         // Mapping of batch heights to batch data, including results root and sender address
         mapping(uint64 => BatchData) batches;
     }
+
+    // ============ Errors ============
+
+    /// @notice Thrown when the total voting power of valid signatures is below the required consensus threshold
+    error ConsensusNotReached();
 
     // ============ Constructor & Initializer ============
 

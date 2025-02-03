@@ -24,7 +24,12 @@ contract SedaCoreV1 is
     OwnableUpgradeable,
     PausableUpgradeable
 {
-    // ============ Types & Constants============
+    // ============ Types & State ============
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
+    // Constant storage slot for the state following the ERC-7201 standard
+    bytes32 private constant CORE_V1_STORAGE_SLOT =
+        keccak256(abi.encode(uint256(keccak256("sedacore.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
 
     struct RequestDetails {
         address requestor;
@@ -34,19 +39,6 @@ contract SedaCoreV1 is
         uint256 batchFee;
         uint256 gasLimit;
     }
-
-    using EnumerableSet for EnumerableSet.Bytes32Set;
-
-    // Constant storage slot for the state following the ERC-7201 standard
-    bytes32 private constant CORE_V1_STORAGE_SLOT =
-        keccak256(abi.encode(uint256(keccak256("sedacore.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
-
-    // ============ Errors ============
-
-    // Error thrown when a result is posted with a timestamp before the corresponding request
-    error InvalidResultTimestamp(bytes32 drId, uint256 resultTimestamp, uint256 requestTimestamp);
-
-    // ============ Storage ============
 
     /// @custom:storage-location erc7201:sedacore.storage.v1
     struct SedaCoreStorage {
@@ -59,6 +51,11 @@ contract SedaCoreV1 is
         // timestamp validation during result submission
         mapping(bytes32 => RequestDetails) requestDetails;
     }
+
+    // ============ Errors ============
+
+    // Error thrown when a result is posted with a timestamp before the corresponding request
+    error InvalidResultTimestamp(bytes32 drId, uint256 resultTimestamp, uint256 requestTimestamp);
 
     // ============ Constructor & Initializer ============
 

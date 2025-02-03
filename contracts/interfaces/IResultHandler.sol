@@ -6,11 +6,21 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title IResultHandler
 /// @notice Interface for handling result posting and retrieval
 interface IResultHandler {
-    error InvalidResultProof(bytes32 resultId);
-    error ResultAlreadyExists(bytes32 requestId);
-    error ResultNotFound(bytes32 requestId);
-
+    /// @notice Emitted when a new result is successfully posted
+    /// @param resultId The unique identifier of the posted result
     event ResultPosted(bytes32 indexed resultId);
+
+    /// @notice Error thrown when the provided result proof fails verification
+    /// @param resultId The ID of the result with invalid proof
+    error InvalidResultProof(bytes32 resultId);
+
+    /// @notice Error thrown when attempting to post a result that already exists
+    /// @param requestId The ID of the request that already has a result
+    error ResultAlreadyExists(bytes32 requestId);
+
+    /// @notice Error thrown when trying to access a result that doesn't exist
+    /// @param requestId The ID of the request with no associated result
+    error ResultNotFound(bytes32 requestId);
 
     /// @notice Retrieves a result by its ID
     /// @param requestId The unique identifier of the request

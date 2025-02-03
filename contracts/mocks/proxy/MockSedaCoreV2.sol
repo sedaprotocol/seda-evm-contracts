@@ -7,18 +7,17 @@ import {SedaCoreV1} from "../../core/SedaCoreV1.sol";
 /// @notice Mock version of SedaCore for testing purposes
 /// @dev This contract is a mock and should not be used in production
 contract MockSedaCoreV2 is SedaCoreV1 {
-    // ============ Constants ============
+    // ============ Types & State ============
     bytes32 private constant CORE_V2_STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("sedacore.storage.v2")) - 1)) & ~bytes32(uint256(0xff));
 
-    // ============ Errors ============
-    error ContractNotUpgradeable();
-
-    // ============ Storage ============
     /// @custom:storage-location sedacore.storage.v2
     struct V2Storage {
         string version;
     }
+
+    // ============ Errors ============
+    error ContractNotUpgradeable();
 
     // ============ Constructor & Initializer ============
     /// @custom:oz-upgrades-unsafe-allow constructor

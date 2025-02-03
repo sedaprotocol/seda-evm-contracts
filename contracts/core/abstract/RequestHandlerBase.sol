@@ -7,13 +7,11 @@ import {IRequestHandler} from "../../interfaces/IRequestHandler.sol";
 /// @title RequestHandler
 /// @notice Implements the RequestHandlerBase for managing Seda protocol requests
 abstract contract RequestHandlerBase is IRequestHandler {
-    // ============ Constants ============
+    // ============ Types & State ============
 
     // Define a unique storage slot for RequestHandlerBase
     bytes32 private constant REQUEST_HANDLER_STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("seda.requesthandler.storage")) - 1)) & ~bytes32(uint256(0xff));
-
-    // ============ Storage ============
 
     /// @custom:storage-location erc7201:seda.requesthandler.storage
     struct RequestHandlerStorage {

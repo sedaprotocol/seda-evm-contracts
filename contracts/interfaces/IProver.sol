@@ -6,6 +6,10 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @title IProver Interface
 /// @notice Interface for the Prover contract in the Seda protocol
 interface IProver {
+    /// @notice Emitted when a new batch of results is successfully posted
+    /// @param batchHeight The sequential number of the batch
+    /// @param batchHash The hash of the batch data
+    /// @param sender The address that posted the batch
     event BatchPosted(uint256 indexed batchHeight, bytes32 indexed batchHash, address indexed sender);
 
     /// @notice Gets the height of the most recently posted batch

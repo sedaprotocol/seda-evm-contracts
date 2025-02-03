@@ -20,20 +20,18 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    // ============ Constants ============
+    // ============ Types & State ============
 
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    // ============ Errors ============
-
-    error FeesNotImplemented();
-
-    // ============ State Variables ============
-
     uint16 public maxReplicationFactor;
     mapping(bytes32 => SedaDataTypes.Result) public results;
     EnumerableSet.Bytes32Set private pendingRequests;
+
+    // ============ Errors ============
+
+    error FeesNotImplemented();
 
     // ============ Constructor ============
 

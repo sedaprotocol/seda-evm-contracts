@@ -15,9 +15,16 @@ abstract contract ProverBase is IProver {
 
     // ============ Errors ============
 
+    /// @notice Error thrown when batch height <= lastBatchHeight, enforcing sequential processing
     error InvalidBatchHeight();
+
+    /// @notice Error thrown when signature verification fails for a validator's signed batch
     error InvalidSignature();
+
+    /// @notice Error thrown when validator's Merkle proof fails verification against current validator set
     error InvalidValidatorProof();
+
+    /// @notice Error thrown when signatures.length != validatorProofs.length in batch submission
     error MismatchedSignaturesAndProofs();
 
     // ============ External Functions ============

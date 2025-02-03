@@ -9,14 +9,14 @@ import {IResultHandler} from "../../interfaces/IResultHandler.sol";
 
 /// @title ResultHandler
 /// @notice Implements the ResultHandlerBase for managing Seda protocol results
+/// @dev Inherits Initializable to set the sedaProver address (normally done in constructor)
+///      in a way that's compatible with upgradeability while maintaining consistent storage layout.
 abstract contract ResultHandlerBase is IResultHandler, Initializable {
-    // ============ Constants ============
+    // ============ Types & State ============
 
     // Define a unique storage slot for ResultHandlerBase
     bytes32 private constant RESULT_HANDLER_STORAGE_SLOT =
         keccak256(abi.encode(uint256(keccak256("seda.resulthandler.storage")) - 1)) & ~bytes32(uint256(0xff));
-
-    // ============ Storage ============
 
     /// @custom:storage-location erc7201:seda.resulthandler.storage
     struct ResultHandlerStorage {
@@ -33,7 +33,9 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     }
 
     /// @notice Initializes the ResultHandler contract
-    /// @dev Sets up the contract with the provided Seda prover address
+    /// @dev Sets up the contract with the provided Seda prover address. Uses initializer pattern
+    ///      instead of a constructor to maintain upgradeability while ensuring the prover is set
+    ///      exactly once.
     /// @param sedaProverAddress The address of the Seda prover contract
     // solhint-disable-next-line func-name-mixedcase
     function __ResultHandler_init(address sedaProverAddress) internal onlyInitializing {
@@ -85,6 +87,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     ) public payable virtual override(IResultHandler) returns (bytes32);
 
     /// @inheritdoc IResultHandler
+    /// @dev Reverts with ResultNotFound if the result doesn't exist
     function getResult(bytes32 requestId) public view override(IResultHandler) returns (SedaDataTypes.Result memory) {
         SedaDataTypes.Result memory result = _resultHandlerStorage().results[requestId];
         if (bytes(result.version).length == 0) {
