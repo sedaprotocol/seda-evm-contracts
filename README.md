@@ -31,6 +31,8 @@ This repository contains smart contracts that enable interaction between Ethereu
 
 These contracts provide the necessary infrastructure for developers to integrate SEDA's functionality into their EVM-based applications, facilitating cross-chain data processing and computation.
 
+**[Read more about the architecture](docs/ARCHITECTURE.md)**
+
 ## Architecture
 
 The SEDA EVM Contracts enable interaction with the SEDA network through two main components:
@@ -50,6 +52,23 @@ The SEDA EVM Contracts enable interaction with the SEDA network through two main
 1. **ISedaCore**
    ```solidity
    interface ISedaCore is IResultHandler, IRequestHandler {
+       // Posts a new request with specified fees.
+       function postRequest(
+           SedaDataTypes.RequestInputs calldata inputs,
+           uint256 requestFee,
+           uint256 resultFee,
+           uint256 batchFee
+       ) external payable returns (bytes32);
+
+       // Increases fees for an existing request.
+       function increaseFees(
+           bytes32 requestId,
+           uint256 additionalRequestFee,
+           uint256 additionalResultFee,
+           uint256 additionalBatchFee
+       ) external payable;
+
+       // Retrieves pending requests with pagination.
        function getPendingRequests(uint256 offset, uint256 limit) 
            external view returns (Request[] memory);
    }
@@ -58,8 +77,21 @@ The SEDA EVM Contracts enable interaction with the SEDA network through two main
 2. **IProver**
    ```solidity
    interface IProver {
-       function postBatch(Batch calldata, bytes[] calldata, ValidatorProof[] calldata) external;
-       function verifyResultProof(bytes32, uint64, bytes32[] calldata) external view returns (bool);
+       // Posts a new batch with signatures and proofs.
+       function postBatch(
+           SedaDataTypes.Batch calldata newBatch,
+           bytes[] calldata signatures,
+           SedaDataTypes.ValidatorProof[] calldata validatorProofs
+       ) external;
+
+       // Verifies a result proof with a Merkle proof.
+       function verifyResultProof(
+           bytes32 resultId,
+           uint64 batchHeight,
+           bytes32[] calldata merkleProof
+       ) external view returns (bool, address);
+
+       // Gets the height of the last batch.
        function getLastBatchHeight() external view returns (uint64);
    }
    ```
@@ -70,15 +102,18 @@ The SEDA EVM Contracts enable interaction with the SEDA network through two main
    - Users submit requests through `SedaCore.postRequest()`
    - Requests are stored and tracked in pending state
    - Each request includes execution and tally parameters
+   - **Incentives**: Users attach a `requestFee` which is used to forward requests to the SEDA network.
 
 2. **Result Flow**
    - Results are submitted with Merkle proofs through `SedaCore.postResult()`
    - `Secp256k1Prover` validates the proof against the latest batch
    - Valid results are stored and linked to their original requests
+   - **Incentives**: Solvers receive a `resultFee` for successfully verifying and submitting a valid result.
 
 3. **Batch Management**
    - Validator set updates and results are organized in batches
    - Batches are sequential and maintain a verifiable chain of state updates
+   - **Incentives**: Solvers receive `batchFee`s for maintaining the integrity and order of batches, enabling result verification, and ensuring continuous service availability.
 
 ## Getting Started
 
