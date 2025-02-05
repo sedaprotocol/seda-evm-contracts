@@ -22,7 +22,7 @@ sedaScope
       tallyProgramId: '0x577cd378ec40de8f3a3fa3d19c49bd1f1dbd97d59934440b38fa8c162852537d',
       tallyInputs: '0x6574682d75736474',
       tallyGasLimit: 150000000000000n,
-      replicationFactor: 10,
+      replicationFactor: 1,
       consensusFilter: '0x00',
       gasPrice: 5000n,
       memo: `0x${timestamp}`,

@@ -34,14 +34,14 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@openzeppelin/hardhat-upgrades": "^3.7.0",
+    "@openzeppelin/hardhat-upgrades": "^3.9.0",
     "@openzeppelin/merkle-tree": "^1.0.7",
     "dotenv": "^16.4.7",
-    "hardhat": "^2.22.17",
+    "hardhat": "^2.22.18",
     "prettier": "^3.4.2",
-    "prettier-plugin-solidity": "^1.4.1",
+    "prettier-plugin-solidity": "^1.4.2",
     "rimraf": "^6.0.1",
-    "solhint": "^5.0.4",
+    "solhint": "^5.0.5",
     "valibot": "^0.42.1"
   },
   "files": [
