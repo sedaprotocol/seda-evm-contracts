@@ -81,12 +81,13 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @dev Validates a new batch by checking:
     ///   1. Higher batch height than the current batch
     ///   2. Matching number of signatures and validator proofs
-    ///   3. Valid validator proofs (verified against the batch's validator root)
-    ///   4. Valid signatures (signed by the corresponding validators)
-    ///   5. Sufficient voting power to meet or exceed the consensus threshold
+    ///   3. Validator signers must be provided in strictly increasing order
+    ///   4. Valid validator proofs (verified against the batch's validator root)
+    ///   5. Valid signatures (signed by the corresponding validators)
+    ///   6. Sufficient voting power to meet or exceed the consensus threshold
     /// @param newBatch The new batch data to be validated and set as current
     /// @param signatures Array of signatures from validators approving the new batch
-    /// @param validatorProofs Array of validator proofs corresponding to the signatures
+    /// @param validatorProofs Array of validator proofs corresponding to the signatures, must be sorted by signer address in ascending order
     function postBatch(
         SedaDataTypes.Batch calldata newBatch,
         bytes[] calldata signatures,
@@ -107,15 +108,19 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         // Accumulate voting power from valid validators to ensure sufficient consensus
         // Each validator must prove membership and provide a valid signature
         uint64 votingPower = 0;
+        // Check for duplicate validators
+        address previousSigner = address(0);
         for (uint256 i = 0; i < validatorProofs.length; i++) {
+            address signer = validatorProofs[i].signer;
+
+            // Enforce strictly increasing addresses (sorted input requirement)
+            if (signer <= previousSigner) revert InvalidValidatorOrder();
             // Verify validator is part of the current validator set using Merkle proof
-            if (!_verifyValidatorProof(validatorProofs[i], s.lastValidatorsRoot)) {
-                revert InvalidValidatorProof();
-            }
+            if (!_verifyValidatorProof(validatorProofs[i], s.lastValidatorsRoot)) revert InvalidValidatorProof();
             // Verify signature is valid and signed by the validator
-            if (!_verifySignature(batchId, signatures[i], validatorProofs[i].signer)) {
-                revert InvalidSignature();
-            }
+            if (!_verifySignature(batchId, signatures[i], signer)) revert InvalidSignature();
+
+            previousSigner = signer;
             votingPower += validatorProofs[i].votingPower;
         }
 

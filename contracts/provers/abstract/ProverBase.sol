@@ -18,6 +18,9 @@ abstract contract ProverBase is IProver {
     /// @notice Error thrown when batch height <= lastBatchHeight, enforcing sequential processing
     error InvalidBatchHeight();
 
+    /// @notice Error thrown when validator's address is not strictly increasing
+    error InvalidValidatorOrder();
+
     /// @notice Error thrown when signature verification fails for a validator's signed batch
     error InvalidSignature();
 
