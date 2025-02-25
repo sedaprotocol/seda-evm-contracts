@@ -159,6 +159,21 @@ describe('Secp256k1ProverV1', () => {
       const lastBatchHeight = await prover.getLastBatchHeight();
       expect(lastBatchHeight).to.equal(newBatch.batchHeight);
     });
+
+    it('rejects batch with duplicate signatures (2 times 40% power)', async () => {
+      const { prover, data } = await deployWithSize({ validators: 4, firstValidatorPower: 40_000_000 });
+
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
+      // Generate signature from first validator and duplicate it
+      const signature = await data.wallets[0].signingKey.sign(newBatchId).serialized;
+      const signatures = [signature, signature];
+
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0], data.validatorProofs[0]])).to.be
+        .reverted;
+
+      const lastBatchHeight = await prover.getLastBatchHeight();
+      expect(lastBatchHeight).to.equal(data.initialBatch.batchHeight);
+    });
   });
 
   describe('result verification', () => {
