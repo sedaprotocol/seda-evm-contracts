@@ -3,7 +3,12 @@ import { ethers, upgrades } from 'hardhat';
 import { ONE_DAY_IN_SECONDS } from '../utils/constants';
 import { computeResultLeafHash, computeValidatorLeafHash, deriveResultId, generateDataFixtures } from '../utils/crypto';
 
-export async function deployWithSize(size: { requests?: number; resultLength?: number; validators?: number }) {
+export async function deployWithSize(size: {
+  requests?: number;
+  resultLength?: number;
+  validators?: number;
+  firstValidatorPower?: number;
+}) {
   const { requests, results } = generateDataFixtures(size.requests ?? 10, size.resultLength);
 
   const leaves = results.map(deriveResultId).map(computeResultLeafHash);
@@ -18,9 +23,13 @@ export async function deployWithSize(size: { requests?: number; resultLength?: n
     return new ethers.Wallet(seed.slice(2, 66));
   });
 
+  // Sort validators by address (required by the prover contract)
+  wallets.sort((a, b) => a.address.toLowerCase().localeCompare(b.address.toLowerCase()));
+
   const validators = wallets.map((wallet) => wallet.address);
+
   const totalVotingPower = 100_000_000; // Total voting power (100%)
-  const firstValidatorPower = 75_000_000; // 75% for first validator
+  const firstValidatorPower = size.firstValidatorPower ?? 75_000_000; // by default 75% for first validator
   const remainingPower = totalVotingPower - firstValidatorPower; // 25% to distribute
 
   // Distribute remaining 25% evenly among other validators
