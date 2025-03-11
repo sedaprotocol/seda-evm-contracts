@@ -379,4 +379,113 @@ describe('Secp256k1ProverV1', () => {
         .withArgs(newBatch.batchHeight, deriveBatchId(newBatch), owner.address);
     });
   });
+
+  describe('fee management', () => {
+    it('allows adding fees to a recipient', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [, recipient] = await ethers.getSigners();
+      const amount = ethers.parseEther('1.0');
+
+      await expect(prover.addPendingFees(recipient.address, { value: amount }))
+        .to.emit(prover, 'FeesAdded')
+        .withArgs(recipient.address, amount);
+
+      expect(await prover.getPendingFees(recipient.address)).to.equal(amount);
+    });
+
+    it('allows accumulating fees for a recipient', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [, recipient] = await ethers.getSigners();
+      const amount1 = ethers.parseEther('0.5');
+      const amount2 = ethers.parseEther('0.7');
+
+      await prover.addPendingFees(recipient.address, { value: amount1 });
+      await prover.addPendingFees(recipient.address, { value: amount2 });
+
+      expect(await prover.getPendingFees(recipient.address)).to.equal(amount1 + amount2);
+    });
+
+    it('allows recipients to withdraw their fees', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [, recipient] = await ethers.getSigners();
+      const amount = ethers.parseEther('1.0');
+
+      await prover.addPendingFees(recipient.address, { value: amount });
+
+      // Check event emission
+      await expect(prover.connect(recipient).withdrawFees())
+        .to.emit(prover, 'FeesWithdrawn')
+        .withArgs(recipient.address, amount);
+
+      // Check balance was correctly updated
+      expect(await prover.getPendingFees(recipient.address)).to.equal(0);
+    });
+
+    it('correctly transfers ether when withdrawing fees', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [, recipient] = await ethers.getSigners();
+      const amount = ethers.parseEther('1.0');
+
+      await prover.addPendingFees(recipient.address, { value: amount });
+
+      // Check balance change separately
+      await expect(() => prover.connect(recipient).withdrawFees()).to.changeEtherBalance(recipient, amount);
+    });
+
+    it('reverts when withdrawing with zero balance', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [, recipient] = await ethers.getSigners();
+
+      await expect(prover.connect(recipient).withdrawFees()).to.be.revertedWithCustomError(prover, 'NoFeesToWithdraw');
+    });
+
+    it('allows adding zero fees without emitting event', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [, recipient] = await ethers.getSigners();
+
+      await expect(prover.addPendingFees(recipient.address, { value: 0 })).to.not.emit(prover, 'FeesAdded');
+
+      expect(await prover.getPendingFees(recipient.address)).to.equal(0);
+    });
+
+    it('manages fees for multiple recipients correctly', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const [, recipient1, recipient2] = await ethers.getSigners();
+      const amount1 = ethers.parseEther('1.0');
+      const amount2 = ethers.parseEther('2.0');
+
+      await prover.addPendingFees(recipient1.address, { value: amount1 });
+      await prover.addPendingFees(recipient2.address, { value: amount2 });
+
+      expect(await prover.getPendingFees(recipient1.address)).to.equal(amount1);
+      expect(await prover.getPendingFees(recipient2.address)).to.equal(amount2);
+
+      await expect(prover.connect(recipient1).withdrawFees()).to.changeEtherBalance(recipient1, amount1);
+
+      expect(await prover.getPendingFees(recipient1.address)).to.equal(0);
+      expect(await prover.getPendingFees(recipient2.address)).to.equal(amount2);
+    });
+
+    it('handles transfer failures correctly by reverting and restoring balance', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+
+      // Deploy a malicious contract that rejects ETH transfers
+      const MaliciousRecipientFactory = await ethers.getContractFactory('MaliciousRecipient');
+      const maliciousRecipient = await MaliciousRecipientFactory.deploy();
+      await maliciousRecipient.waitForDeployment();
+
+      // Add fees for the malicious contract
+      const amount = ethers.parseEther('1.0');
+      await prover.addPendingFees(await maliciousRecipient.getAddress(), { value: amount });
+
+      // Attempt withdrawal which should fail
+      await expect(maliciousRecipient.withdrawFeesFrom(await prover.getAddress())).to.be.revertedWithCustomError(
+        prover,
+        'FeeTransferFailed',
+      );
+
+      // Check that the balance was restored after failed transfer
+      expect(await prover.getPendingFees(await maliciousRecipient.getAddress())).to.equal(amount);
+    });
+  });
 });
