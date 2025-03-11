@@ -38,18 +38,38 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
     /// @custom:storage-location secp256k1prover.storage.v1
     struct Secp256k1ProverStorage {
-        // Hight of the most recently processed batch to ensure strictly increasing batch order
+        // Height of the last batch that was successfully posted (strictly increasing batch order)
         uint64 lastBatchHeight;
         // Merkle root of the current validator set, used to verify validator proofs in subsequent batches
         bytes32 lastValidatorsRoot;
         // Mapping of batch heights to batch data, including results root and sender address
         mapping(uint64 => BatchData) batches;
+        // Mapping to track pending fees for each address
+        mapping(address => uint256) pendingFees;
     }
+
+    // ============ Events ============
+
+    /// @notice Emitted when fees are added to a recipient's balance
+    /// @param recipient The address receiving the fee
+    /// @param amount The amount of fees added
+    event FeesAdded(address indexed recipient, uint256 amount);
+
+    /// @notice Emitted when fees are withdrawn by a recipient
+    /// @param recipient The address that withdrew fees
+    /// @param amount The amount of fees withdrawn
+    event FeesWithdrawn(address indexed recipient, uint256 amount);
 
     // ============ Errors ============
 
     /// @notice Thrown when the total voting power of valid signatures is below the required consensus threshold
     error ConsensusNotReached();
+
+    /// @notice Thrown when attempting to withdraw zero fees
+    error NoFeesToWithdraw();
+
+    /// @notice Thrown when the fee transfer fails
+    error FeeTransferFailed();
 
     // ============ Constructor & Initializer ============
 
@@ -149,6 +169,47 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @dev Restores normal contract functionality after being paused
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /// @notice Allows users to withdraw their accumulated fees
+    function withdrawFees() external {
+        Secp256k1ProverStorage storage s = _storageV1();
+        uint256 amount = s.pendingFees[msg.sender];
+
+        if (amount == 0) {
+            revert NoFeesToWithdraw();
+        }
+
+        // Clear balance before transfer to prevent reentrancy
+        s.pendingFees[msg.sender] = 0;
+
+        // Transfer the fees to the recipient
+        (bool success, ) = msg.sender.call{value: amount}("");
+        if (!success) {
+            revert FeeTransferFailed();
+        }
+
+        emit FeesWithdrawn(msg.sender, amount);
+    }
+
+    /// @notice Returns the amount of pending fees for an address
+    /// @param account The address to check
+    /// @return The amount of pending fees
+    function getPendingFees(address account) external view returns (uint256) {
+        return _storageV1().pendingFees[account];
+    }
+
+    /// @notice Adds fees to an address's pending balance
+    /// @param recipient The address to add fees for
+    function addPendingFees(address recipient) external payable {
+        // Just return if no value is being transferred
+        if (msg.value == 0) {
+            return;
+        }
+
+        // Update pending fees balance
+        _storageV1().pendingFees[recipient] += msg.value;
+        emit FeesAdded(recipient, msg.value);
     }
 
     // ============ External View Functions ============
