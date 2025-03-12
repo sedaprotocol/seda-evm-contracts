@@ -3,12 +3,14 @@ import { ethers, upgrades } from 'hardhat';
 import { ONE_DAY_IN_SECONDS } from '../utils/constants';
 import { computeResultLeafHash, computeValidatorLeafHash, deriveResultId, generateDataFixtures } from '../utils/crypto';
 
-export async function deployWithSize(size: {
+interface DeployWithSizeOptions {
   requests?: number;
   resultLength?: number;
   validators?: number;
   firstValidatorPower?: number;
-}) {
+}
+
+export async function deployWithSize(size: DeployWithSizeOptions, feeManagerAddress = ethers.ZeroAddress) {
   const { requests, results } = generateDataFixtures(size.requests ?? 10, size.resultLength);
 
   const leaves = results.map(deriveResultId).map(computeResultLeafHash);
@@ -63,7 +65,7 @@ export async function deployWithSize(size: {
   };
 
   const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-  const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], {
+  const prover = await upgrades.deployProxy(ProverFactory, [initialBatch, feeManagerAddress], {
     initializer: 'initialize',
     kind: 'uups',
   });

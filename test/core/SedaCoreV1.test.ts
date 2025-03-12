@@ -83,8 +83,13 @@ describe('SedaCoreV1', () => {
       provingMetadata: ethers.ZeroHash,
     };
 
+    const FeeManagerFactory = await ethers.getContractFactory('SedaFeeManager');
+    const feeManager = await FeeManagerFactory.deploy();
+    await feeManager.waitForDeployment();
+    const feeManagerAddress = await feeManager.getAddress();
+
     const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch], {
+    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch, feeManagerAddress], {
       initializer: 'initialize',
     });
     await prover.waitForDeployment();
@@ -423,9 +428,24 @@ describe('SedaCoreV1', () => {
           data.validatorProofs[0],
         ]);
 
+        // Verify the batch fee distribution event
         await expect(core.postResult(data.results[0], 1, data.proofs[0]))
           .to.emit(core, 'FeeDistributed')
           .withArgs(data.results[0].drId, batchSender.address, batchFee, 2);
+
+        // Get the fee manager contract
+        const proverFeeManager = await prover.getFeeManager();
+        const feeManagerContract = await ethers.getContractAt('SedaFeeManager', proverFeeManager);
+
+        // Get initial balance
+        const initialBalance = await ethers.provider.getBalance(batchSender.address);
+
+        // Withdraw fees and verify balance change
+        await feeManagerContract.connect(batchSender).withdrawFees();
+
+        // Verify balance increased by batch fee (accounting for gas costs)
+        const finalBalance = await ethers.provider.getBalance(batchSender.address);
+        expect(finalBalance - initialBalance).to.be.closeTo(batchFee, ethers.parseEther('0.01'));
       });
 
       it('should refund batch fee if no batch is used', async () => {
@@ -507,6 +527,11 @@ describe('SedaCoreV1', () => {
           .withArgs(data.results[1].drId, batchSubmitter.address, fees.batch, 2) // Batch fee to batch submitter
           .to.emit(core, 'FeeDistributed')
           .withArgs(data.results[1].drId, requestor.address, expectedRefund, 3); // Remaining request fee refund
+
+        // Get fee manager and withdraw batch fees
+        const proverFeeManager = await prover.getFeeManager();
+        const feeManagerContract = await ethers.getContractAt('SedaFeeManager', proverFeeManager);
+        await feeManagerContract.connect(batchSubmitter).withdrawFees();
 
         // Verify final balances (accounting for gas costs with approximate checks)
         const finalBalances = {
