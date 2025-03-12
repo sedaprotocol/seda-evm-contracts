@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "../../contracts/provers/Secp256k1ProverV1.sol";
+import "../../contracts/interfaces/IFeeManager.sol";
 
 contract MaliciousRecipient {
     // This contract will reject any ETH transfers
@@ -9,7 +9,7 @@ contract MaliciousRecipient {
         revert("I reject all ETH transfers");
     }
 
-    function withdrawFeesFrom(address proverAddress) external {
-        Secp256k1ProverV1(proverAddress).withdrawFees();
+    function withdrawFeesFrom(address feeManager) external {
+        IFeeManager(feeManager).withdrawFees();
     }
 }

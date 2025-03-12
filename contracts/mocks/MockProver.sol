@@ -64,4 +64,8 @@ contract MockProver is ProverBase {
     function getLastBatchHeight() external view override returns (uint64) {
         return _lastBatchHeight;
     }
+
+    function getFeeManager() external pure override returns (address) {
+        return address(0);
+    }
 }

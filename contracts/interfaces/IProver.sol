@@ -16,6 +16,10 @@ interface IProver {
     /// @return uint64 The height of the last batch, 0 if no batches exist
     function getLastBatchHeight() external view returns (uint64);
 
+    /// @notice Returns the address of the fee manager contract
+    /// @return The address of the fee manager
+    function getFeeManager() external view returns (address);
+
     /// @notice Posts a new batch with new data and validator proofs
     /// @param newBatch The new batch data to be posted
     /// @param signatures Array of signatures validating the new batch

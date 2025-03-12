@@ -8,6 +8,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+import {IFeeManager} from "../interfaces/IFeeManager.sol";
 import {ProverBase} from "./abstract/ProverBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
@@ -44,32 +45,14 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         bytes32 lastValidatorsRoot;
         // Mapping of batch heights to batch data, including results root and sender address
         mapping(uint64 => BatchData) batches;
-        // Mapping to track pending fees for each address
-        mapping(address => uint256) pendingFees;
+        // Interface for managing and processing verification fees
+        IFeeManager feeManager;
     }
-
-    // ============ Events ============
-
-    /// @notice Emitted when fees are added to a recipient's balance
-    /// @param recipient The address receiving the fee
-    /// @param amount The amount of fees added
-    event FeesAdded(address indexed recipient, uint256 amount);
-
-    /// @notice Emitted when fees are withdrawn by a recipient
-    /// @param recipient The address that withdrew fees
-    /// @param amount The amount of fees withdrawn
-    event FeesWithdrawn(address indexed recipient, uint256 amount);
 
     // ============ Errors ============
 
     /// @notice Thrown when the total voting power of valid signatures is below the required consensus threshold
     error ConsensusNotReached();
-
-    /// @notice Thrown when attempting to withdraw zero fees
-    error NoFeesToWithdraw();
-
-    /// @notice Thrown when the fee transfer fails
-    error FeeTransferFailed();
 
     // ============ Constructor & Initializer ============
 
@@ -81,16 +64,19 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @notice Initializes the contract with initial batch data
     /// @dev Sets up the contract's initial state and initializes inherited contracts
     /// @param initialBatch The initial batch data containing height, validators root, and results root
-    function initialize(SedaDataTypes.Batch memory initialBatch) external initializer {
+    function initialize(SedaDataTypes.Batch memory initialBatch, address feeManager) external initializer {
         // Initialize inherited contracts
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         __Pausable_init();
-        // Existing initialization code
+
+        // Initialize storage
         Secp256k1ProverStorage storage s = _storageV1();
         s.batches[initialBatch.batchHeight] = BatchData({resultsRoot: initialBatch.resultsRoot, sender: address(0)});
         s.lastBatchHeight = initialBatch.batchHeight;
         s.lastValidatorsRoot = initialBatch.validatorsRoot;
+        s.feeManager = IFeeManager(feeManager);
+
         emit BatchPosted(initialBatch.batchHeight, SedaDataTypes.deriveBatchId(initialBatch), address(0));
     }
 
@@ -171,47 +157,6 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         _unpause();
     }
 
-    /// @notice Allows users to withdraw their accumulated fees
-    function withdrawFees() external {
-        Secp256k1ProverStorage storage s = _storageV1();
-        uint256 amount = s.pendingFees[msg.sender];
-
-        if (amount == 0) {
-            revert NoFeesToWithdraw();
-        }
-
-        // Clear balance before transfer to prevent reentrancy
-        s.pendingFees[msg.sender] = 0;
-
-        // Transfer the fees to the recipient
-        (bool success, ) = msg.sender.call{value: amount}("");
-        if (!success) {
-            revert FeeTransferFailed();
-        }
-
-        emit FeesWithdrawn(msg.sender, amount);
-    }
-
-    /// @notice Returns the amount of pending fees for an address
-    /// @param account The address to check
-    /// @return The amount of pending fees
-    function getPendingFees(address account) external view returns (uint256) {
-        return _storageV1().pendingFees[account];
-    }
-
-    /// @notice Adds fees to an address's pending balance
-    /// @param recipient The address to add fees for
-    function addPendingFees(address recipient) external payable {
-        // Just return if no value is being transferred
-        if (msg.value == 0) {
-            return;
-        }
-
-        // Update pending fees balance
-        _storageV1().pendingFees[recipient] += msg.value;
-        emit FeesAdded(recipient, msg.value);
-    }
-
     // ============ External View Functions ============
 
     /// @notice Verifies a result proof against a batch's results root
@@ -227,6 +172,12 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         BatchData memory batch = _storageV1().batches[batchHeight];
         bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
         return MerkleProof.verify(merkleProof, batch.resultsRoot, leaf) ? (true, batch.sender) : (false, address(0));
+    }
+
+    /// @notice Returns the address of the fee manager contract
+    /// @return The address of the fee manager
+    function getFeeManager() external view override returns (address) {
+        return address(_storageV1().feeManager);
     }
 
     /// @notice Returns the last processed batch height

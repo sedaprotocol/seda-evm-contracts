@@ -6,6 +6,8 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+import {IFeeManager} from "../interfaces/IFeeManager.sol";
+import {IProver} from "../interfaces/IProver.sol";
 import {IRequestHandler} from "../interfaces/IRequestHandler.sol";
 import {IResultHandler} from "../interfaces/IResultHandler.sol";
 import {ISedaCore} from "../interfaces/ISedaCore.sol";
@@ -175,17 +177,20 @@ contract SedaCoreV1 is
             emit FeeDistributed(result.drId, msg.sender, requestDetails.resultFee, ISedaCore.FeeType.RESULT);
         }
 
-        // Batch fee distribution:
-        // - if no batch sender, send all batch fee to requestor
-        // - if valid batch sender, send batch fee to batch sender
+        // Batch fee distribution logic:
+        // - If batch sender is valid (non-zero) AND fee manager is configured:
+        //   Add the batch fee to the sender's pending balance via fee manager
+        // - Otherwise: Include batch fee in refund amount to the requestor
         if (requestDetails.batchFee > 0) {
-            if (batchSender == address(0)) {
-                // If no batch sender, send all batch fee to requestor
-                refundAmount += requestDetails.batchFee;
-            } else {
-                // Send batch fee to batch sender
-                _transferFee(batchSender, requestDetails.batchFee);
+            if (batchSender != address(0) && IProver(this.getSedaProver()).getFeeManager() != address(0)) {
+                // Forward the batch fee to the fee manager, which will add it to the batch sender's account
+                IFeeManager(IProver(this.getSedaProver()).getFeeManager()).addPendingFees{
+                    value: requestDetails.batchFee
+                }(batchSender);
                 emit FeeDistributed(result.drId, batchSender, requestDetails.batchFee, ISedaCore.FeeType.BATCH);
+            } else {
+                // If either batch sender or fee manager is not set, include batch fee in refund to requestor
+                refundAmount += requestDetails.batchFee;
             }
         }
 
