@@ -1,6 +1,6 @@
 import type { Signer } from 'ethers';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
-import type * as v from 'valibot';
+import * as v from 'valibot';
 
 import { CONFIG } from '../config';
 import { pathExists, prompt } from '../io';
@@ -16,14 +16,23 @@ import { updateAddressesFile, updateDeployment } from './reports';
  * before deployment.
  */
 export async function readAndValidateParams<TInput, TOutput>(
-  paramsFilePath: string,
+  paramsFileOrObject: string,
   contractKey: string,
   schema: v.BaseSchema<TInput, TOutput, v.BaseIssue<unknown>>,
 ): Promise<TOutput> {
-  // Contract Parameters
-  logger.section('Contract Parameters', 'params');
-  logger.info(`Using parameters file: ${paramsFilePath}`);
-  const deployParams = await readParams(paramsFilePath, contractKey, schema);
+  let deployParams: TOutput;
+
+  if (typeof paramsFileOrObject === 'string') {
+    // Contract Parameters from file
+    logger.section('Contract Parameters', 'params');
+    logger.info(`Using parameters file: ${paramsFileOrObject}`);
+    deployParams = await readParams(paramsFileOrObject, contractKey, schema);
+  } else {
+    // Direct object parameters
+    logger.section('Contract Parameters', 'params');
+    logger.info('Using direct parameter object');
+    deployParams = v.parse(schema, paramsFileOrObject);
+  }
 
   logger.info(`Deployment Params: \n  ${JSON.stringify(deployParams, null, 2).replace(/\n/g, '\n  ')}`);
 
