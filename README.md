@@ -42,10 +42,18 @@ The SEDA EVM Contracts enable interaction with the SEDA network through two main
 1. **SedaCore (SedaCoreV1)**
    - Manages the lifecycle of data requests and results
    - Inherits from `RequestHandlerBase` and `ResultHandlerBase` for request and result management
+   - Uses the FeeManager from the Prover contract for fee distribution
 
 2. **Secp256k1Prover (Secp256k1ProverV1)**
    - Proves results by cryptographically verifying batches from the SEDA network
    - Requires 66.67% validator consensus
+   - Maintains reference to the FeeManager used by core contracts
+
+3. **SedaFeeManager**
+   - Implements pull-based withdrawal system for fees
+   - Manages request fees, result fees, and batch fees
+   - Provides secure withdrawal mechanism for recipients
+   - Shared between Core and Prover contracts for consistent fee management
 
 ### Key Interfaces
 
@@ -96,24 +104,51 @@ The SEDA EVM Contracts enable interaction with the SEDA network through two main
    }
    ```
 
+3. **IFeeManager**
+   ```solidity
+   interface IFeeManager {
+       // Adds fees to recipient's pending balance
+       function addPendingFees(address recipient) external payable;
+       
+       // Adds fees for multiple recipients
+       function addPendingFeesMultiple(
+           address[] calldata recipients, 
+           uint256[] calldata amounts
+       ) external payable;
+       
+       // Withdraws accumulated fees
+       function withdrawFees() external;
+       
+       // Gets pending fee balance
+       function getPendingFees(address account) external view returns (uint256);
+   }
+   ```
+
 ### Data Flow
 
 1. **Request Flow**
-   - Users submit requests through `SedaCore.postRequest()`
+   - Users submit requests through `SedaCore.postRequest()` with associated fees
    - Requests are stored and tracked in pending state
    - Each request includes execution and tally parameters
-   - **Incentives**: Users attach a `requestFee` which is used to forward requests to the SEDA network.
+   - **Incentives**: Users attach fees which are initially held by the Core contract:
+     - `requestFee`: For forwarding requests to the SEDA network
+     - `resultFee`: For result submission
+     - `batchFee`: For batch processing
 
 2. **Result Flow**
    - Results are submitted with Merkle proofs through `SedaCore.postResult()`
    - `Secp256k1Prover` validates the proof against the latest batch
-   - Valid results are stored and linked to their original requests
-   - **Incentives**: Solvers receive a `resultFee` for successfully verifying and submitting a valid result.
+   - Valid results trigger fee distribution from Core to the FeeManager
+   - **Incentives**: Upon result validation:
+     - Result submitters' fees are transferred to FeeManager
+     - Batch maintainers' fees are transferred to FeeManager
+     - Unused fees are returned to the original requestor
 
-3. **Batch Management**
-   - Validator set updates and results are organized in batches
-   - Batches are sequential and maintain a verifiable chain of state updates
-   - **Incentives**: Solvers receive `batchFee`s for maintaining the integrity and order of batches, enabling result verification, and ensuring continuous service availability.
+3. **Fee Management**
+   - FeeManager accumulates fees for recipients as they're transferred from Core
+   - Recipients must explicitly call `withdrawFees()` to claim their accumulated fees
+   - Pull-based payment system ensures secure fee distribution
+   - For timed-out requests, original requestors can reclaim their unspent fees
 
 ## Getting Started
 
