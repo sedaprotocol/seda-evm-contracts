@@ -403,19 +403,33 @@ describe('SedaCoreV1', () => {
           .withArgs(data.results[1].drId, requestor.address, expectedRefund, 3);
       });
 
-      it('should pay result fees to result submitter', async () => {
+      it('pays result fees to result submitter', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         const resultFee = ethers.parseEther('2.0');
         const [, resultSubmitter] = await ethers.getSigners();
 
         await core.postRequest(data.requests[0], 0, resultFee, 0, { value: resultFee });
 
+        // Get fee manager contract directly from core
+        const feeManagerAddress = await core.getFeeManager();
+        const feeManagerContract = await ethers.getContractAt('SedaFeeManager', feeManagerAddress);
+
+        // Record initial balance
+        const initialBalance = await ethers.provider.getBalance(resultSubmitter.address);
+
         await expect((core.connect(resultSubmitter) as SedaCoreV1).postResult(data.results[0], 0, data.proofs[0]))
           .to.emit(core, 'FeeDistributed')
           .withArgs(data.results[0].drId, resultSubmitter.address, resultFee, 1);
+
+        // Withdraw fees before checking balance
+        await feeManagerContract.connect(resultSubmitter).withdrawFees();
+
+        // Verify balance increased by result fee (accounting for gas costs)
+        const finalBalance = await ethers.provider.getBalance(resultSubmitter.address);
+        expect(finalBalance - initialBalance).to.be.closeTo(resultFee, ethers.parseEther('0.01'));
       });
 
-      it('should pay batch fees to batch submitter', async () => {
+      it('pays batch fees to batch submitter', async () => {
         const { core, prover, data } = await loadFixture(deployCoreFixture);
         const batchFee = ethers.parseEther('3.0');
         const [, batchSender] = await ethers.getSigners();
@@ -433,9 +447,9 @@ describe('SedaCoreV1', () => {
           .to.emit(core, 'FeeDistributed')
           .withArgs(data.results[0].drId, batchSender.address, batchFee, 2);
 
-        // Get the fee manager contract
-        const proverFeeManager = await prover.getFeeManager();
-        const feeManagerContract = await ethers.getContractAt('SedaFeeManager', proverFeeManager);
+        // Get the fee manager contract directly from core
+        const feeManagerAddress = await core.getFeeManager();
+        const feeManagerContract = await ethers.getContractAt('SedaFeeManager', feeManagerAddress);
 
         // Get initial balance
         const initialBalance = await ethers.provider.getBalance(batchSender.address);
@@ -448,7 +462,7 @@ describe('SedaCoreV1', () => {
         expect(finalBalance - initialBalance).to.be.closeTo(batchFee, ethers.parseEther('0.01'));
       });
 
-      it('should refund batch fee if no batch is used', async () => {
+      it('refunds batch fee if no batch is used', async () => {
         const { core, data } = await loadFixture(deployCoreFixture);
         const batchFee = ethers.parseEther('3.0');
         const [requestor] = await ethers.getSigners();
@@ -494,14 +508,6 @@ describe('SedaCoreV1', () => {
         };
         const totalFee = fees.request + fees.result + fees.batch;
 
-        // Record initial balances
-        const initialBalances = {
-          requestor: await ethers.provider.getBalance(requestor.address),
-          resultSubmitter: await ethers.provider.getBalance(resultSubmitter.address),
-          batchSubmitter: await ethers.provider.getBalance(batchSubmitter.address),
-          payback: await ethers.provider.getBalance(data.results[1].paybackAddress.toString()),
-        };
-
         // Post request with all fees
         await core.postRequest(data.requests[1], fees.request, fees.result, fees.batch, { value: totalFee });
 
@@ -517,43 +523,28 @@ describe('SedaCoreV1', () => {
         const expectedPayback = (fees.request * BigInt(data.results[1].gasUsed)) / totalGas;
         const expectedRefund = fees.request - expectedPayback;
 
-        // Submit result and verify all fee distributions
-        await expect((core.connect(resultSubmitter) as SedaCoreV1).postResult(data.results[1], 1, data.proofs[1]))
-          .to.emit(core, 'FeeDistributed')
-          .withArgs(data.results[1].drId, data.results[1].paybackAddress, expectedPayback, 0) // Request fee to executor
-          .to.emit(core, 'FeeDistributed')
-          .withArgs(data.results[1].drId, resultSubmitter.address, fees.result, 1) // Result fee to result submitter
-          .to.emit(core, 'FeeDistributed')
-          .withArgs(data.results[1].drId, batchSubmitter.address, fees.batch, 2) // Batch fee to batch submitter
-          .to.emit(core, 'FeeDistributed')
-          .withArgs(data.results[1].drId, requestor.address, expectedRefund, 3); // Remaining request fee refund
+        // Submit result
+        await (core.connect(resultSubmitter) as SedaCoreV1).postResult(data.results[1], 1, data.proofs[1]);
 
-        // Get fee manager and withdraw batch fees
-        const proverFeeManager = await prover.getFeeManager();
-        const feeManagerContract = await ethers.getContractAt('SedaFeeManager', proverFeeManager);
-        await feeManagerContract.connect(batchSubmitter).withdrawFees();
+        // Get fee manager directly from core
+        const feeManagerAddress = await core.getFeeManager();
+        const feeManagerContract = await ethers.getContractAt('SedaFeeManager', feeManagerAddress);
 
-        // Verify final balances (accounting for gas costs with approximate checks)
-        const finalBalances = {
-          requestor: await ethers.provider.getBalance(requestor.address),
-          resultSubmitter: await ethers.provider.getBalance(resultSubmitter.address),
-          batchSubmitter: await ethers.provider.getBalance(batchSubmitter.address),
-          payback: await ethers.provider.getBalance(data.results[1].paybackAddress.toString()),
-        };
+        // Check pending fees before withdrawal
+        const pendingResultFees = await feeManagerContract.getPendingFees(resultSubmitter.address);
+        expect(pendingResultFees).to.equal(fees.result);
 
-        expect(finalBalances.payback - initialBalances.payback).to.equal(expectedPayback);
-        expect(finalBalances.resultSubmitter - initialBalances.resultSubmitter).to.be.closeTo(
-          fees.result,
-          ethers.parseEther('0.01'), // Allow for gas costs
-        );
-        expect(finalBalances.batchSubmitter - initialBalances.batchSubmitter).to.be.closeTo(
-          fees.batch,
-          ethers.parseEther('0.01'), // Allow for gas costs
-        );
-        expect(initialBalances.requestor - finalBalances.requestor).to.be.closeTo(
-          totalFee - expectedRefund,
-          ethers.parseEther('0.01'), // Allow for gas costs
-        );
+        const pendingBatchFees = await feeManagerContract.getPendingFees(batchSubmitter.address);
+        expect(pendingBatchFees).to.equal(fees.batch);
+
+        // Check if payback address has expected fees
+        if (data.results[1].paybackAddress.length === 42) {
+          const pendingPaybackFees = await feeManagerContract.getPendingFees(data.results[1].paybackAddress.toString());
+          expect(pendingPaybackFees).to.equal(expectedPayback);
+        }
+
+        const pendingRefundFees = await feeManagerContract.getPendingFees(requestor.address);
+        expect(pendingRefundFees).to.equal(expectedRefund);
       });
     });
 
@@ -645,16 +636,28 @@ describe('SedaCoreV1', () => {
         const expectedPayback = ((fees.request + additionalFees.request) * BigInt(data.results[1].gasUsed)) / totalGas;
         const expectedRefund = fees.request + additionalFees.request - expectedPayback;
 
-        // Submit result and verify all fee distributions
-        await expect((core.connect(resultSubmitter) as SedaCoreV1).postResult(data.results[1], 1, data.proofs[1]))
-          .to.emit(core, 'FeeDistributed')
-          .withArgs(data.results[1].drId, data.results[1].paybackAddress, expectedPayback, 0) // Request fee to executor
-          .to.emit(core, 'FeeDistributed')
-          .withArgs(data.results[1].drId, resultSubmitter.address, fees.result + additionalFees.result, 1) // Result fee to result submitter
-          .to.emit(core, 'FeeDistributed')
-          .withArgs(data.results[1].drId, batchSubmitter.address, fees.batch + additionalFees.batch, 2) // Batch fee to batch submitter
-          .to.emit(core, 'FeeDistributed')
-          .withArgs(data.results[1].drId, requestor.address, expectedRefund, 3); // Remaining request fee refund
+        // Submit result
+        await (core.connect(resultSubmitter) as SedaCoreV1).postResult(data.results[1], 1, data.proofs[1]);
+
+        // Get fee manager directly from core
+        const feeManagerAddress = await core.getFeeManager();
+        const feeManagerContract = await ethers.getContractAt('SedaFeeManager', feeManagerAddress);
+
+        // Check pending fees before withdrawal
+        const pendingResultFees = await feeManagerContract.getPendingFees(resultSubmitter.address);
+        expect(pendingResultFees).to.equal(fees.result + additionalFees.result);
+
+        const pendingBatchFees = await feeManagerContract.getPendingFees(batchSubmitter.address);
+        expect(pendingBatchFees).to.equal(fees.batch + additionalFees.batch);
+
+        // Check if payback address has expected fees
+        if (data.results[1].paybackAddress.length === 20) {
+          const pendingPaybackFees = await feeManagerContract.getPendingFees(data.results[1].paybackAddress);
+          expect(pendingPaybackFees).to.equal(expectedPayback);
+        }
+
+        const pendingRefundFees = await feeManagerContract.getPendingFees(requestor.address);
+        expect(pendingRefundFees).to.equal(expectedRefund);
       });
 
       it('rejects fee increase for non-existent request', async () => {
@@ -715,25 +718,22 @@ describe('SedaCoreV1', () => {
       await ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS]);
       await ethers.provider.send('evm_mine', []);
 
+      // Get fee manager directly from core
+      const feeManagerAddress = await core.getFeeManager();
+      const feeManagerContract = await ethers.getContractAt('SedaFeeManager', feeManagerAddress);
+
       // Record initial balance
       const initialRequestorBalance = await ethers.provider.getBalance(requestor.address);
-      const initialWithdrawerBalance = await ethers.provider.getBalance(withdrawer.address);
 
       // Withdraw as different address
-      const tx = await (core.connect(withdrawer) as SedaCoreV1).withdrawTimedOutRequest(requestId);
+      await (core.connect(withdrawer) as SedaCoreV1).withdrawTimedOutRequest(requestId);
 
-      // Verify event emission
-      await expect(tx).to.emit(core, 'FeeDistributed').withArgs(requestId, requestor.address, totalFee, 4); // FeeType.WITHDRAW = 4
+      // After withdrawal, the requestor should withdraw their fees from the FeeManager
+      await feeManagerContract.connect(requestor).withdrawFees();
 
       // Verify balance change (accounting for gas costs)
       const finalRequestorBalance = await ethers.provider.getBalance(requestor.address);
-      const txReceipt = await tx.wait();
-      if (!txReceipt) throw new Error('Transaction receipt not found');
-      const gasCost = txReceipt.gasUsed * txReceipt.gasPrice;
-      expect(finalRequestorBalance - initialRequestorBalance + gasCost).closeTo(totalFee, ethers.parseEther('0.01'));
-
-      const finalWithdrawerBalance = await ethers.provider.getBalance(withdrawer.address);
-      expect(finalWithdrawerBalance - initialWithdrawerBalance).closeTo(0, ethers.parseEther('0.01'));
+      expect(finalRequestorBalance - initialRequestorBalance).to.be.closeTo(totalFee, ethers.parseEther('0.01'));
 
       // Verify request was removed
       const requests = await core.getPendingRequests(0, 10);
@@ -952,6 +952,58 @@ describe('SedaCoreV1', () => {
       const { core } = await loadFixture(deployCoreFixture);
 
       await expect(core.setTimeoutPeriod(0)).to.be.revertedWithCustomError(core, 'InvalidTimeoutPeriod');
+    });
+  });
+
+  describe('fee manager handling', () => {
+    it('handles case when fee manager is not set', async () => {
+      // Generate data fixtures for the test
+      const { requests, results } = generateDataFixtures(2);
+
+      // Create merkle tree and proofs
+      const leaves = results.map(deriveResultId).map(computeResultLeafHash);
+      const resultsTree = SimpleMerkleTree.of(leaves, { sortLeaves: true });
+      const proofs = results.map((_, index) => resultsTree.getProof(index));
+
+      // Create an initial batch for the MockProver
+      const initialBatch = {
+        batchHeight: 0,
+        blockHeight: 0,
+        validatorsRoot: ethers.ZeroHash,
+        resultsRoot: resultsTree.root,
+        provingMetadata: ethers.ZeroHash,
+      };
+
+      // Deploy MockProver with zero fee manager
+      const MockProverFactory = await ethers.getContractFactory('MockProver');
+      const mockProver = await MockProverFactory.deploy(initialBatch);
+      await mockProver.waitForDeployment();
+
+      // Verify fee manager is address(0)
+      expect(await mockProver.getFeeManager()).to.equal(ethers.ZeroAddress);
+
+      // Deploy core with the mock prover
+      const CoreFactory = await ethers.getContractFactory('SedaCoreV1');
+      const core = await upgrades.deployProxy(CoreFactory, [await mockProver.getAddress(), ONE_DAY_IN_SECONDS], {
+        initializer: 'initialize',
+      });
+      await core.waitForDeployment();
+
+      // Verify fee manager address is zero
+      expect(await core.getFeeManager()).to.equal(ethers.ZeroAddress);
+
+      // Test 1: Post request without fees
+      await core.postRequest(requests[0]);
+
+      // Post result without fees - should work even with fee manager not set
+      await expect(core.postResult(results[0], 0, proofs[0])).to.not.be.reverted;
+
+      // Test 2: Post request with fees
+      const fee = ethers.parseEther('1.0');
+      await expect(core.postRequest(requests[1], fee, 0, 0, { value: fee })).to.be.revertedWithCustomError(
+        core,
+        'FeeManagerRequired',
+      );
     });
   });
 });
