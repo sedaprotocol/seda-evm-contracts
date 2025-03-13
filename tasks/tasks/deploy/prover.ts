@@ -15,6 +15,7 @@ import { sedaScope } from '../../index';
 sedaScope
   .task('deploy:prover', 'Deploys the Secp256k1ProverV1 contract')
   .addParam('params', 'The parameters file to use', undefined, types.string)
+  .addOptionalParam('feeManagerAddress', 'The address of the FeeManager contract', undefined, types.string)
   .addFlag('reset', 'Replace existing deployment files')
   .addFlag('verify', 'Verify the contract on etherscan')
   .setAction(async (taskArgs, hre) => {
@@ -29,12 +30,14 @@ const Secp256k1ProverV1Schema = v.object({
     resultsRoot: HexString,
     provingMetadata: HexString,
   }),
+  feeManagerAddress: v.optional(HexString),
 });
 
 export async function deploySecp256k1Prover(
   hre: HardhatRuntimeEnvironment,
   options: {
     params: string;
+    feeManagerAddress?: string;
     reset?: boolean;
     verify?: boolean;
   },
@@ -42,8 +45,15 @@ export async function deploySecp256k1Prover(
   const contractName = 'Secp256k1ProverV1';
 
   // Contract Parameters
-  const constructorArgs = (await readAndValidateParams(options.params, contractName, Secp256k1ProverV1Schema))
-    .initialBatch;
+  const params = await readAndValidateParams(options.params, contractName, Secp256k1ProverV1Schema);
+  const constructorArgs = {
+    initialBatch: { ...params.initialBatch },
+    feeManagerAddress: options.feeManagerAddress || params.feeManagerAddress,
+  };
+
+  if (!constructorArgs.feeManagerAddress) {
+    throw new Error('feeManagerAddress must be provided either in the params file or as a command-line argument');
+  }
 
   // Configuration
   const [owner] = await hre.ethers.getSigners();
@@ -54,5 +64,11 @@ export async function deploySecp256k1Prover(
   await confirmDeployment(networkKey, options.reset);
 
   // Deploy and verify
-  return await deployAndVerifyContractWithProxy(hre, contractName, [constructorArgs], owner, options.verify);
+  return await deployAndVerifyContractWithProxy(
+    hre,
+    contractName,
+    [constructorArgs.initialBatch, constructorArgs.feeManagerAddress],
+    owner,
+    options.verify,
+  );
 }

@@ -27,8 +27,8 @@ sedaScope
   });
 
 const SedaCoreV1Schema = v.object({
-  sedaProverAddress: HexString,
-  timeoutPeriod: v.number(),
+  sedaProverAddress: v.optional(HexString),
+  timeoutPeriod: v.optional(v.number()),
 });
 
 export async function deploySedaCore(
@@ -43,16 +43,33 @@ export async function deploySedaCore(
 ) {
   const contractName = 'SedaCoreV1';
 
-  let constructorArgs: { sedaProverAddress: string; timeoutPeriod: number } | undefined;
+  // Read params file if provided
+  let paramsFromFile: { sedaProverAddress?: string; timeoutPeriod?: number } = {};
   if (options.params) {
-    constructorArgs = await readAndValidateParams(options.params, contractName, SedaCoreV1Schema);
-  } else if (options.proverAddress) {
-    constructorArgs = {
-      sedaProverAddress: options.proverAddress,
-      timeoutPeriod: options.timeoutPeriod ?? DEFAULT_TIMEOUT_PERIOD,
-    };
-  } else {
-    throw new Error('Either params file or proverAddress must be provided');
+    paramsFromFile = await readAndValidateParams(options.params, contractName, SedaCoreV1Schema);
+  }
+
+  // Prioritize command-line options, then params file values
+  const sedaProverAddress = options.proverAddress || paramsFromFile.sedaProverAddress;
+  if (!sedaProverAddress) {
+    throw new Error('Either sedaProverAddress in params file or proverAddress option must be provided');
+  }
+
+  const timeoutPeriod = options.timeoutPeriod ?? paramsFromFile.timeoutPeriod ?? DEFAULT_TIMEOUT_PERIOD;
+
+  const constructorArgs = {
+    sedaProverAddress,
+    timeoutPeriod,
+  };
+
+  // Validate prover address
+  try {
+    const provertContract = await hre.ethers.getContractAt('IProver', sedaProverAddress);
+    // Verify the prover contract has getFeeManager function
+    await provertContract.getFeeManager();
+  } catch (_error) {
+    console.error(`Error validating prover contract at ${sedaProverAddress}:`);
+    throw new Error('The provided prover address appears to be invalid or does not implement the required interface');
   }
 
   // Configuration

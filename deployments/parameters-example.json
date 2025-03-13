@@ -9,7 +9,8 @@
       "validatorsRoot": "0x020ab7806acda6ab0a9e083b10f7e7baebc46f3bc90c47d6168b731340cefa32",
       "resultsRoot": "0x6ab79debdff3288b5c783c2260d9d8e9aaba272c4ab611724e720a352aad6383",
       "provingMetadata": "0x0000000000000000000000000000000000000000000000000000000000000000"
-    }
+    },
+    "feeManagerAddress": "0x0000000000000000000000000000000000000000"
   },
   "SedaPermissioned": {
     "maxReplicationFactor": 1
@@ -21,6 +22,7 @@
       "validatorsRoot": "0x020ab7806acda6ab0a9e083b10f7e7baebc46f3bc90c47d6168b731340cefa32",
       "resultsRoot": "0x6ab79debdff3288b5c783c2260d9d8e9aaba272c4ab611724e720a352aad6383",
       "provingMetadata": "0x0000000000000000000000000000000000000000000000000000000000000000"
-    }
+    },
+    "feeManagerAddress": "0x0000000000000000000000000000000000000000"
   }
 }

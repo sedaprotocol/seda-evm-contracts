@@ -4,6 +4,7 @@ import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { sedaScope } from '../../..';
 import { logger } from '../../../common/logger';
 import { deploySedaCore } from '../core';
+import { deployFeeManager } from '../feeManager';
 import { deployResettableProver } from './resettableProver';
 
 sedaScope
@@ -23,10 +24,18 @@ export async function deployAll(
     verify?: boolean;
   },
 ) {
+  // 1. Deploy FeeManager
+  logger.section('1. Deploy FeeManager contracts', 'meta');
+  const { contractAddress: feeManagerAddress } = await deployFeeManager(hre, {
+    verify: options.verify,
+    reset: options.reset,
+  });
+
   // 1. Deploy Secp256k1Prover
   logger.section('1. Deploy Secp256k1Prover contracts', 'meta');
-  const { contractAddress } = await deployResettableProver(hre, {
+  const { contractAddress: proverAddress } = await deployResettableProver(hre, {
     params: options.params,
+    feeManagerAddress: feeManagerAddress,
     verify: options.verify,
     reset: options.reset,
   });
@@ -34,7 +43,7 @@ export async function deployAll(
   // 2. Deploy SedaCore using the prover address
   logger.section('2. Deploy SedaCoreV1 contracts', 'meta');
   await deploySedaCore(hre, {
-    proverAddress: contractAddress,
+    proverAddress: proverAddress,
     verify: options.verify,
     reset: true,
   });

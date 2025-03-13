@@ -4,6 +4,7 @@ import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { sedaScope } from '../..';
 import { logger } from '../../common/logger';
 import { deploySedaCore } from './core';
+import { deployFeeManager } from './feeManager';
 import { deploySecp256k1Prover } from './prover';
 
 sedaScope
@@ -23,18 +24,26 @@ export async function deployAll(
     verify?: boolean;
   },
 ) {
-  // 1. Deploy Secp256k1Prover
-  logger.section('1. Deploy Secp256k1Prover contracts', 'meta');
-  const { contractAddress } = await deploySecp256k1Prover(hre, {
-    params: options.params,
+  // 1. Deploy FeeManager
+  logger.section('1. Deploy FeeManager contracts', 'meta');
+  const { contractAddress: feeManagerAddress } = await deployFeeManager(hre, {
     verify: options.verify,
     reset: options.reset,
   });
 
-  // 2. Deploy SedaCore using the prover address
-  logger.section('2. Deploy SedaCoreV1 contracts', 'meta');
+  // 2. Deploy Secp256k1Prover
+  logger.section('2. Deploy Secp256k1Prover contracts', 'meta');
+  const { contractAddress: proverAddress } = await deploySecp256k1Prover(hre, {
+    params: options.params,
+    feeManagerAddress: feeManagerAddress,
+    verify: options.verify,
+    reset: options.reset,
+  });
+
+  // 3. Deploy SedaCore using the prover address
+  logger.section('3. Deploy SedaCoreV1 contracts', 'meta');
   await deploySedaCore(hre, {
-    proverAddress: contractAddress,
+    proverAddress: proverAddress,
     verify: options.verify,
     reset: true,
   });
