@@ -1,6 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { ethers } from 'hardhat';
-import { deployWithSize } from '../helpers/fixtures';
+import { deployWithOptions } from '../helpers/fixtures';
 import { ONE_DAY_IN_SECONDS } from '../utils/constants';
 import { deriveRequestId, deriveResultId } from '../utils/crypto';
 
@@ -39,7 +39,7 @@ describe('SedaCoreV1 Gas Analysis', () => {
     for (const { name, config } of SCENARIOS_TO_TEST) {
       describe(`${name} Size Scenario (${config.requests} requests)`, () => {
         async function scenarioFixture() {
-          return deployWithSize(config);
+          return deployWithOptions({ ...config, feeManager: true });
         }
 
         it('measures gas for requests, results and verifications', async () => {
@@ -103,7 +103,7 @@ describe('SedaCoreV1 Gas Analysis', () => {
       describe(`${name} Result Length (${resultLength} bytes)`, () => {
         async function resultLengthFixture() {
           // Use MEDIUM scenario with 10 requests and specify resultLength
-          return deployWithSize({
+          return deployWithOptions({
             ...TEST_SCENARIOS.MEDIUM,
             resultLength,
           });
@@ -147,7 +147,7 @@ describe('SedaCoreV1 Gas Analysis', () => {
     const consoleIndentation = '      ';
 
     async function baseFixture() {
-      return deployWithSize(TEST_SCENARIOS.SMALL);
+      return deployWithOptions({ ...TEST_SCENARIOS.SMALL, feeManager: true });
     }
 
     it('measures gas for fee operations', async () => {

@@ -2,7 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import type { MockSecp256k1ProverV2, Secp256k1ProverResettable } from '../../typechain-types';
-import { deployWithSize } from '../helpers/fixtures';
+import { deployWithOptions } from '../helpers/fixtures';
 import { generateNewBatchWithId } from '../utils/crypto';
 
 describe('Proxy: Secp256k1Prover', () => {
@@ -10,7 +10,7 @@ describe('Proxy: Secp256k1Prover', () => {
     const [owner, nonOwner] = await ethers.getSigners();
 
     // Use deployWithSize instead of manual initialization
-    const { prover: proxy, data } = await deployWithSize({
+    const { prover: proxy, data } = await deployWithOptions({
       requests: 5, // Smaller test set is fine for proxy tests
       validators: 4,
     });

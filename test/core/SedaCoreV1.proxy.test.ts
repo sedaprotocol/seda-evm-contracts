@@ -1,12 +1,12 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { deployWithSize } from '../helpers/fixtures';
+import { deployWithOptions } from '../helpers/fixtures';
 
 describe('Proxy: SedaCore', () => {
   async function deployProxyFixture() {
     const [owner] = await ethers.getSigners();
-    const { core, prover } = await deployWithSize({ requests: 1 });
+    const { core, prover } = await deployWithOptions({ requests: 1 });
 
     // Get V2 factory
     const CoreV2Factory = await ethers.getContractFactory('MockSedaCoreV2', owner);

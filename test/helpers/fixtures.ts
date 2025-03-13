@@ -3,15 +3,16 @@ import { ethers, upgrades } from 'hardhat';
 import { ONE_DAY_IN_SECONDS } from '../utils/constants';
 import { computeResultLeafHash, computeValidatorLeafHash, deriveResultId, generateDataFixtures } from '../utils/crypto';
 
-interface DeployWithSizeOptions {
+interface DeployOptions {
   requests?: number;
   resultLength?: number;
   validators?: number;
   firstValidatorPower?: number;
+  feeManager?: boolean;
 }
 
-export async function deployWithSize(size: DeployWithSizeOptions, feeManagerAddress = ethers.ZeroAddress) {
-  const { requests, results } = generateDataFixtures(size.requests ?? 10, size.resultLength);
+export async function deployWithOptions(options: DeployOptions) {
+  const { requests, results } = generateDataFixtures(options.requests ?? 10, options.resultLength);
 
   const leaves = results.map(deriveResultId).map(computeResultLeafHash);
 
@@ -20,7 +21,7 @@ export async function deployWithSize(size: DeployWithSizeOptions, feeManagerAddr
   const resultProofs = results.map((_, index) => resultsTree.getProof(index));
 
   // Create validator wallets
-  const wallets = Array.from({ length: size.validators ?? 20 }, (_, i) => {
+  const wallets = Array.from({ length: options.validators ?? 20 }, (_, i) => {
     const seed = ethers.id(`validator${i}`);
     return new ethers.Wallet(seed.slice(2, 66));
   });
@@ -31,7 +32,7 @@ export async function deployWithSize(size: DeployWithSizeOptions, feeManagerAddr
   const validators = wallets.map((wallet) => wallet.address);
 
   const totalVotingPower = 100_000_000; // Total voting power (100%)
-  const firstValidatorPower = size.firstValidatorPower ?? 75_000_000; // by default 75% for first validator
+  const firstValidatorPower = options.firstValidatorPower ?? 75_000_000; // by default 75% for first validator
   const remainingPower = totalVotingPower - firstValidatorPower; // 25% to distribute
 
   // Distribute remaining 25% evenly among other validators
@@ -64,8 +65,18 @@ export async function deployWithSize(size: DeployWithSizeOptions, feeManagerAddr
     provingMetadata: ethers.ZeroHash,
   };
 
+  let feeManager: string;
+  if (options.feeManager) {
+    const FeeManagerFactory = await ethers.getContractFactory('SedaFeeManager');
+    const feeManagerContract = await FeeManagerFactory.deploy();
+    await feeManagerContract.waitForDeployment();
+    feeManager = await feeManagerContract.getAddress();
+  } else {
+    feeManager = ethers.ZeroAddress;
+  }
+
   const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-  const prover = await upgrades.deployProxy(ProverFactory, [initialBatch, feeManagerAddress], {
+  const prover = await upgrades.deployProxy(ProverFactory, [initialBatch, feeManager], {
     initializer: 'initialize',
     kind: 'uups',
   });
@@ -87,5 +98,5 @@ export async function deployWithSize(size: DeployWithSizeOptions, feeManagerAddr
     wallets,
   };
 
-  return { prover, core, data };
+  return { prover, core, feeManager, data };
 }

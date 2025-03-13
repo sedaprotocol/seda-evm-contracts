@@ -5,7 +5,7 @@ import type { Wallet } from 'ethers';
 import { ethers, upgrades } from 'hardhat';
 import type { ProverDataTypes } from '../../ts-types';
 import type { Secp256k1ProverV1 } from '../../typechain-types';
-import { deployWithSize } from '../helpers/fixtures';
+import { deployWithOptions } from '../helpers/fixtures';
 import {
   computeResultLeafHash,
   deriveBatchId,
@@ -16,7 +16,7 @@ import {
 
 describe('Secp256k1ProverV1', () => {
   async function deployProverFixture() {
-    const { prover, data } = await deployWithSize({ validators: 4 });
+    const { prover, data } = await deployWithOptions({ validators: 4 });
     return { prover, wallets: data.wallets, data };
   }
 
@@ -161,7 +161,7 @@ describe('Secp256k1ProverV1', () => {
     });
 
     it('rejects batch with duplicate signatures (2 times 40% power)', async () => {
-      const { prover, data } = await deployWithSize({ validators: 4, firstValidatorPower: 40_000_000 });
+      const { prover, data } = await deployWithOptions({ validators: 4, firstValidatorPower: 40_000_000 });
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
       // Generate signature from first validator and duplicate it
@@ -385,28 +385,20 @@ describe('Secp256k1ProverV1', () => {
   describe('fee manager', () => {
     it('returns zero address when fee manager is not set', async () => {
       // Use the deployWithSize helper which deploys with zero address fee manager
-      const { prover } = await deployWithSize({ validators: 4 });
+      const { prover } = await deployWithOptions({ validators: 4 });
       const feeManager = await prover.getFeeManager();
       expect(feeManager).to.equal(ethers.ZeroAddress);
     });
 
     it('returns fee manager address when set', async () => {
-      // Deploy a fee manager contract
-      const FeeManagerFactory = await ethers.getContractFactory('SedaFeeManager');
-      const feeManager = await FeeManagerFactory.deploy();
-      await feeManager.waitForDeployment();
-      const feeManagerAddress = await feeManager.getAddress();
-
       // Use deployWithSize helper with the fee manager address
-      const { prover } = await deployWithSize(
-        {
-          validators: 4,
-        },
-        feeManagerAddress,
-      );
+      const { prover, feeManager } = await deployWithOptions({
+        validators: 4,
+        feeManager: true,
+      });
 
       const queriedFeeManager = await prover.getFeeManager();
-      expect(queriedFeeManager).to.equal(feeManagerAddress);
+      expect(queriedFeeManager).to.equal(feeManager);
     });
   });
 });

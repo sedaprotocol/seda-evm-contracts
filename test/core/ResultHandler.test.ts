@@ -3,12 +3,12 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
 import { compareResults } from '../helpers/assertions';
-import { deployWithSize } from '../helpers/fixtures';
+import { deployWithOptions } from '../helpers/fixtures';
 import { deriveResultId } from '../utils/crypto';
 
 describe('ResultHandler', () => {
   async function deployResultHandlerFixture() {
-    const { core, data } = await deployWithSize({ requests: 2 });
+    const { core, data } = await deployWithOptions({ requests: 2 });
     return { core, data };
   }
 

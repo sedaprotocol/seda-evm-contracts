@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
-import { deployWithSize } from '../helpers/fixtures';
+import { deployWithOptions } from '../helpers/fixtures';
 import { deriveBatchId } from '../utils/crypto';
 
 describe('Secp256k1ProverV1 Gas Analysis', () => {
@@ -37,7 +37,7 @@ describe('Secp256k1ProverV1 Gas Analysis', () => {
     for (const { name, config } of SCENARIOS_TO_TEST) {
       describe(`${name} Size Scenario (${config.signers}/${config.validators} signers)`, () => {
         async function scenarioFixture() {
-          return deployWithSize(config);
+          return deployWithOptions(config);
         }
 
         it('measures gas for batch posting', async () => {
@@ -72,7 +72,7 @@ describe('Secp256k1ProverV1 Gas Analysis', () => {
     const consoleIndentation = '      ';
 
     async function baseFixture() {
-      return deployWithSize(TEST_SCENARIOS.SMALL);
+      return deployWithOptions(TEST_SCENARIOS.SMALL);
     }
 
     it('measures gas for admin operations', async () => {
