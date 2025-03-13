@@ -145,7 +145,7 @@ contract SedaCoreV1 is
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public payable override(ResultHandlerBase, IResultHandler) whenNotPaused returns (bytes32) {
+    ) public override(ResultHandlerBase, IResultHandler) whenNotPaused returns (bytes32) {
         RequestDetails memory requestDetails = _storageV1().requestDetails[result.drId];
 
         // Ensures results can't be submitted with timestamps from before the request was made,
@@ -164,7 +164,7 @@ contract SedaCoreV1 is
         delete _storageV1().requestDetails[result.drId];
 
         // If fee manager is not set, skip fee distribution
-        if (msg.value == 0 && _storageV1().feeManager == IFeeManager(address(0))) {
+        if (_storageV1().feeManager == IFeeManager(address(0))) {
             return resultId;
         }
 

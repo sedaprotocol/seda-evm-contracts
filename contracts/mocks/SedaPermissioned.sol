@@ -66,7 +66,7 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
         SedaDataTypes.Result calldata result,
         uint64,
         bytes32[] calldata
-    ) external payable override(IResultHandler) onlyRole(RELAYER_ROLE) whenNotPaused returns (bytes32) {
+    ) external override(IResultHandler) onlyRole(RELAYER_ROLE) whenNotPaused returns (bytes32) {
         bytes32 resultId = SedaDataTypes.deriveResultId(result);
         if (results[result.drId].drId != bytes32(0)) {
             revert ResultAlreadyExists(resultId);

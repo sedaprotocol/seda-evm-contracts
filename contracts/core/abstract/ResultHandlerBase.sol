@@ -84,7 +84,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] calldata proof
-    ) public payable virtual override(IResultHandler) returns (bytes32);
+    ) public virtual override(IResultHandler) returns (bytes32);
 
     /// @inheritdoc IResultHandler
     /// @dev Reverts with ResultNotFound if the result doesn't exist

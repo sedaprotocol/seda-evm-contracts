@@ -36,7 +36,7 @@ interface IResultHandler {
         SedaDataTypes.Result calldata result,
         uint64 batchHeight,
         bytes32[] memory proof
-    ) external payable returns (bytes32);
+    ) external returns (bytes32);
 
     /// @notice Returns the address of the Seda prover contract
     /// @return The address of the Seda prover contract
