@@ -52,9 +52,14 @@ contract SedaCoreV1 is
         // Associates request IDs with their metadata to enable fee distribution and
         // timestamp validation during result submission
         mapping(bytes32 => RequestDetails) requestDetails;
+        // Fee manager contract for handling fee distributions
+        IFeeManager feeManager;
     }
 
     // ============ Errors ============
+
+    // Error thrown when a fee manager is required but not set
+    error FeeManagerRequired();
 
     // Error thrown when a result is posted with a timestamp before the corresponding request
     error InvalidResultTimestamp(bytes32 drId, uint256 resultTimestamp, uint256 requestTimestamp);
@@ -68,6 +73,7 @@ contract SedaCoreV1 is
 
     /// @notice Initializes the SedaCoreV1 contract
     /// @param sedaProverAddress The address of the Seda prover contract
+    /// @param initialTimeoutPeriod The initial timeout period for requests
     /// @dev This function replaces the constructor for proxy compatibility and can only be called once
     function initialize(address sedaProverAddress, uint256 initialTimeoutPeriod) external initializer {
         // Initialize inherited contracts
@@ -78,6 +84,9 @@ contract SedaCoreV1 is
         // Initialize derived contracts
         __ResultHandler_init(sedaProverAddress);
         _storageV1().timeoutPeriod = initialTimeoutPeriod;
+
+        // Get the fee manager from the prover
+        _storageV1().feeManager = IFeeManager(IProver(sedaProverAddress).getFeeManager());
     }
 
     // ============ Public Functions ============
@@ -90,6 +99,12 @@ contract SedaCoreV1 is
         return postRequest(inputs, 0, 0, 0);
     }
 
+    /// @notice Posts a new request with custom fee allocations
+    /// @param inputs The request inputs data
+    /// @param requestFee Fee amount for request processing
+    /// @param resultFee Fee amount for result submission
+    /// @param batchFee Fee amount for batch processing
+    /// @return The unique ID of the created request
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs,
         uint256 requestFee,
@@ -100,6 +115,11 @@ contract SedaCoreV1 is
         // This prevents users from accidentally overpaying or underpaying fees
         if (msg.value != requestFee + resultFee + batchFee) {
             revert InvalidFeeAmount();
+        }
+
+        // Check if fee manager is required but not set
+        if (msg.value > 0 && address(_storageV1().feeManager) == address(0)) {
+            revert FeeManagerRequired();
         }
 
         // Call parent contract's postRequest base implementation
@@ -143,65 +163,13 @@ contract SedaCoreV1 is
         _removePendingRequest(result.drId);
         delete _storageV1().requestDetails[result.drId];
 
-        // Fee distribution: handles three types of fees (request, result, batch)
-        // and manages refunds back to the requestor when applicable
-
-        // Amount to refund to requestor
-        uint256 refundAmount;
-
-        // Request fee distribution:
-        // - if invalid payback address, send all request fee to requestor
-        // - if valid payback address, split request fee proportionally based on gas used vs gas limit
-        if (requestDetails.requestFee > 0) {
-            address payableAddress = result.paybackAddress.length == 20
-                ? address(bytes20(result.paybackAddress))
-                : address(0);
-
-            if (payableAddress == address(0)) {
-                refundAmount += requestDetails.requestFee;
-            } else {
-                // Split request fee proportionally based on gas used vs gas limit
-                uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
-                if (submitterFee > 0) {
-                    _transferFee(payableAddress, submitterFee);
-                    emit FeeDistributed(result.drId, payableAddress, submitterFee, ISedaCore.FeeType.REQUEST);
-                }
-                refundAmount += requestDetails.requestFee - submitterFee;
-            }
+        // If fee manager is not set, skip fee distribution
+        if (msg.value == 0 && _storageV1().feeManager == IFeeManager(address(0))) {
+            return resultId;
         }
 
-        // Result fee distribution:
-        // - send all result fee to `msg.sender` (result sender/solver)
-        if (requestDetails.resultFee > 0) {
-            _transferFee(msg.sender, requestDetails.resultFee);
-            emit FeeDistributed(result.drId, msg.sender, requestDetails.resultFee, ISedaCore.FeeType.RESULT);
-        }
-
-        // Batch fee distribution logic:
-        // - If batch sender is valid (non-zero) AND fee manager is configured:
-        //   Add the batch fee to the sender's pending balance via fee manager
-        // - Otherwise: Include batch fee in refund amount to the requestor
-        if (requestDetails.batchFee > 0) {
-            if (batchSender != address(0) && IProver(this.getSedaProver()).getFeeManager() != address(0)) {
-                // Forward the batch fee to the fee manager, which will add it to the batch sender's account
-                IFeeManager(IProver(this.getSedaProver()).getFeeManager()).addPendingFees{
-                    value: requestDetails.batchFee
-                }(batchSender);
-                emit FeeDistributed(result.drId, batchSender, requestDetails.batchFee, ISedaCore.FeeType.BATCH);
-            } else {
-                // If either batch sender or fee manager is not set, include batch fee in refund to requestor
-                refundAmount += requestDetails.batchFee;
-            }
-        }
-
-        // Aggregate refund to requestor containing:
-        // - unused request fees (when gas used < gas limit)
-        // - full request fee (when invalid payback address)
-        // - batch fee (when no batch sender)
-        if (refundAmount > 0) {
-            _transferFee(requestDetails.requestor, refundAmount);
-            emit FeeDistributed(result.drId, requestDetails.requestor, refundAmount, ISedaCore.FeeType.REFUND);
-        }
+        // Handle fee distribution using a separate function
+        _handleFeeDistribution(result, requestDetails, batchSender);
 
         return resultId;
     }
@@ -253,9 +221,9 @@ contract SedaCoreV1 is
         _removePendingRequest(requestId);
         delete _storageV1().requestDetails[requestId];
 
-        // Transfer total fees to data request creator
+        // Using fee manager for timed out requests
         if (totalRefund > 0) {
-            _transferFee(details.requestor, totalRefund);
+            _storageV1().feeManager.addPendingFees{value: totalRefund}(details.requestor);
             emit FeeDistributed(requestId, details.requestor, totalRefund, FeeType.WITHDRAW);
         }
     }
@@ -284,6 +252,12 @@ contract SedaCoreV1 is
     }
 
     // ============ Public View Functions ============
+
+    /// @notice Returns the address of the fee manager contract
+    /// @return The address of the fee manager
+    function getFeeManager() external view override returns (address) {
+        return address(_storageV1().feeManager);
+    }
 
     /// @notice Retrieves a list of active requests
     /// @dev This function is gas-intensive due to iteration over the pendingRequests array.
@@ -355,15 +329,6 @@ contract SedaCoreV1 is
         _storageV1().pendingRequests.remove(requestId);
     }
 
-    /// @dev Helper function to safely transfer fees
-    /// @param recipient Address to receive the fee
-    /// @param amount Amount to transfer
-    function _transferFee(address recipient, uint256 amount) internal {
-        // Using low-level call instead of transfer()
-        (bool success, ) = payable(recipient).call{value: amount}("");
-        if (!success) revert FeeTransferFailed();
-    }
-
     /// @dev Required override for UUPSUpgradeable. Ensures only the owner can upgrade the implementation.
     /// @inheritdoc UUPSUpgradeable
     /// @param newImplementation Address of the new implementation contract
@@ -375,4 +340,60 @@ contract SedaCoreV1 is
         override
         onlyOwner // solhint-disable-next-line no-empty-blocks
     {}
+
+    /// @dev Handles the distribution of fees to various participants
+    /// @param result The submitted result data
+    /// @param requestDetails The details of the original request
+    /// @param batchSender The address that submitted the batch containing this result
+    function _handleFeeDistribution(
+        SedaDataTypes.Result calldata result,
+        RequestDetails memory requestDetails,
+        address batchSender
+    ) private {
+        uint256 refundAmount;
+
+        // Process request fees
+        // Request fee distribution:
+        // - if invalid payback address, send all request fee to requestor
+        // - if valid payback address, split request fee proportionally based on gas used vs gas limit
+        if (requestDetails.requestFee > 0) {
+            address payableAddress = result.paybackAddress.length == 20
+                ? address(bytes20(result.paybackAddress))
+                : address(0);
+
+            if (payableAddress == address(0)) {
+                refundAmount += requestDetails.requestFee;
+            } else {
+                // Split request fee proportionally based on gas used vs gas limit
+                uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
+                if (submitterFee > 0) {
+                    _storageV1().feeManager.addPendingFees{value: submitterFee}(payableAddress);
+                    emit FeeDistributed(result.drId, payableAddress, submitterFee, FeeType.REQUEST);
+                }
+                refundAmount += requestDetails.requestFee - submitterFee;
+            }
+        }
+
+        // Process result fees
+        if (requestDetails.resultFee > 0) {
+            _storageV1().feeManager.addPendingFees{value: requestDetails.resultFee}(msg.sender);
+            emit FeeDistributed(result.drId, msg.sender, requestDetails.resultFee, FeeType.RESULT);
+        }
+
+        // Process batch fees
+        if (requestDetails.batchFee > 0) {
+            if (batchSender != address(0)) {
+                _storageV1().feeManager.addPendingFees{value: requestDetails.batchFee}(batchSender);
+                emit FeeDistributed(result.drId, batchSender, requestDetails.batchFee, FeeType.BATCH);
+            } else {
+                refundAmount += requestDetails.batchFee;
+            }
+        }
+
+        // Process refund if needed
+        if (refundAmount > 0) {
+            _storageV1().feeManager.addPendingFees{value: refundAmount}(requestDetails.requestor);
+            emit FeeDistributed(result.drId, requestDetails.requestor, refundAmount, FeeType.REFUND);
+        }
+    }
 }

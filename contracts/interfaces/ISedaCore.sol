@@ -98,4 +98,8 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @param limit The maximum number of requests to return
     /// @return An array of PendingRequest structs
     function getPendingRequests(uint256 offset, uint256 limit) external view returns (PendingRequest[] memory);
+
+    /// @notice Returns the address of the fee manager contract
+    /// @return The address of the fee manager
+    function getFeeManager() external view returns (address);
 }

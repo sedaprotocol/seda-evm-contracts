@@ -209,4 +209,8 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
     function _removePendingRequest(bytes32 requestId) internal {
         pendingRequests.remove(requestId);
     }
+
+    function getFeeManager() external pure override returns (address) {
+        revert FeesNotImplemented();
+    }
 }
