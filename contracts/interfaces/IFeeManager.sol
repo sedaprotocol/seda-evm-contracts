@@ -24,10 +24,22 @@ interface IFeeManager {
     /// @notice Error thrown when an invalid recipient address is provided
     error InvalidRecipient();
 
+    /// @notice Error thrown when the recipients and amounts arrays have different lengths
+    error ArrayLengthMismatch();
+
+    /// @notice Error thrown when the sum of amounts doesn't match the msg.value
+    error FeeAmountMismatch();
+
     /// @notice Adds fees to an address's pending balance
     /// @param recipient The address to add fees for
     /// @dev This function is payable to allow ETH to be sent with the function call
     function addPendingFees(address recipient) external payable;
+
+    /// @notice Adds pending fees for multiple recipients in a single transaction
+    /// @param recipients Array of addresses to receive fees
+    /// @param amounts Array of fee amounts corresponding to each recipient
+    /// @dev The sum of amounts must equal msg.value
+    function addPendingFeesMultiple(address[] calldata recipients, uint256[] calldata amounts) external payable;
 
     /// @notice Returns the amount of pending fees for an address
     /// @param account The address to check

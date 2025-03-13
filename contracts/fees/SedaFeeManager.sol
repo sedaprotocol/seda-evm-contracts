@@ -19,6 +19,31 @@ contract SedaFeeManager is IFeeManager {
         emit FeeAdded(recipient, msg.value);
     }
 
+    /// @notice Adds pending fees for multiple recipients in a single transaction
+    /// @param recipients Array of addresses to receive fees
+    /// @param amounts Array of fee amounts corresponding to each recipient
+    /// @dev The sum of amounts must equal msg.value
+    function addPendingFeesMultiple(address[] calldata recipients, uint256[] calldata amounts) external payable {
+        if (recipients.length != amounts.length) revert ArrayLengthMismatch();
+
+        uint256 totalAmount = 0;
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            address recipient = recipients[i];
+            uint256 amount = amounts[i];
+
+            if (recipient == address(0)) revert InvalidRecipient();
+
+            pendingFees[recipient] += amount;
+            totalAmount += amount;
+
+            emit FeeAdded(recipient, amount);
+        }
+
+        // Ensure the total amount equals the ETH sent with the transaction
+        if (totalAmount != msg.value) revert FeeAmountMismatch();
+    }
+
     /// @inheritdoc IFeeManager
     function withdrawFees() external override {
         uint256 amount = pendingFees[msg.sender];

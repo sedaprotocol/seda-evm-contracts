@@ -350,50 +350,82 @@ contract SedaCoreV1 is
         RequestDetails memory requestDetails,
         address batchSender
     ) private {
-        uint256 refundAmount;
+        // Maximum 4 possible recipients (requestor, result submitter, batch sender, and payback address)
+        // We use 4 to account for the case where all are different addresses
+        address[] memory recipients = new address[](4);
+        uint256[] memory amounts = new uint256[](4);
+        uint256 recipientCount = 0;
+        uint256 totalFeeAmount = 0;
+
+        // Track requestor payments for consolidated refund
+        uint256 requestorRefund = 0;
 
         // Process request fees
-        // Request fee distribution:
-        // - if invalid payback address, send all request fee to requestor
-        // - if valid payback address, split request fee proportionally based on gas used vs gas limit
         if (requestDetails.requestFee > 0) {
             address payableAddress = result.paybackAddress.length == 20
                 ? address(bytes20(result.paybackAddress))
                 : address(0);
 
             if (payableAddress == address(0)) {
-                refundAmount += requestDetails.requestFee;
+                requestorRefund += requestDetails.requestFee;
             } else {
                 // Split request fee proportionally based on gas used vs gas limit
                 uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
                 if (submitterFee > 0) {
-                    _storageV1().feeManager.addPendingFees{value: submitterFee}(payableAddress);
+                    recipients[recipientCount] = payableAddress;
+                    amounts[recipientCount] = submitterFee;
+                    recipientCount++;
+                    totalFeeAmount += submitterFee;
                     emit FeeDistributed(result.drId, payableAddress, submitterFee, FeeType.REQUEST);
                 }
-                refundAmount += requestDetails.requestFee - submitterFee;
+                requestorRefund += requestDetails.requestFee - submitterFee;
             }
         }
 
         // Process result fees
         if (requestDetails.resultFee > 0) {
-            _storageV1().feeManager.addPendingFees{value: requestDetails.resultFee}(msg.sender);
+            recipients[recipientCount] = msg.sender;
+            amounts[recipientCount] = requestDetails.resultFee;
+            recipientCount++;
+            totalFeeAmount += requestDetails.resultFee;
             emit FeeDistributed(result.drId, msg.sender, requestDetails.resultFee, FeeType.RESULT);
         }
 
         // Process batch fees
         if (requestDetails.batchFee > 0) {
             if (batchSender != address(0)) {
-                _storageV1().feeManager.addPendingFees{value: requestDetails.batchFee}(batchSender);
+                recipients[recipientCount] = batchSender;
+                amounts[recipientCount] = requestDetails.batchFee;
+                recipientCount++;
+                totalFeeAmount += requestDetails.batchFee;
                 emit FeeDistributed(result.drId, batchSender, requestDetails.batchFee, FeeType.BATCH);
             } else {
-                refundAmount += requestDetails.batchFee;
+                requestorRefund += requestDetails.batchFee;
             }
         }
 
-        // Process refund if needed
-        if (refundAmount > 0) {
-            _storageV1().feeManager.addPendingFees{value: refundAmount}(requestDetails.requestor);
-            emit FeeDistributed(result.drId, requestDetails.requestor, refundAmount, FeeType.REFUND);
+        // Add requestor as final recipient if they have any refund
+        if (requestorRefund > 0) {
+            recipients[recipientCount] = requestDetails.requestor;
+            amounts[recipientCount] = requestorRefund;
+            recipientCount++;
+            totalFeeAmount += requestorRefund;
+            emit FeeDistributed(result.drId, requestDetails.requestor, requestorRefund, FeeType.REFUND);
+        }
+
+        // If we have recipients, distribute fees
+        if (recipientCount > 0) {
+            if (recipientCount < recipients.length) {
+                // Resize the arrays to match the actual number of recipients
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    mstore(recipients, recipientCount)
+                    mstore(amounts, recipientCount)
+                }
+            }
+
+            // Distribute all fees in a single call
+            _storageV1().feeManager.addPendingFeesMultiple{value: totalFeeAmount}(recipients, amounts);
         }
     }
 }
