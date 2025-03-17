@@ -17,7 +17,7 @@ sedaScope
 export async function deployResettableProver(
   hre: HardhatRuntimeEnvironment,
   options: {
-    params: string;
+    params: string | object;
     feeManagerAddress?: string;
     reset?: boolean;
     verify?: boolean;

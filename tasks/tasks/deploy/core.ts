@@ -34,7 +34,7 @@ const SedaCoreV1Schema = v.object({
 export async function deploySedaCore(
   hre: HardhatRuntimeEnvironment,
   options: {
-    params?: string;
+    params?: string | object;
     proverAddress?: string;
     timeoutPeriod?: number;
     reset?: boolean;

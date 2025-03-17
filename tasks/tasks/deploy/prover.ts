@@ -17,7 +17,7 @@ sedaScope
 export async function deploySecp256k1Prover(
   hre: HardhatRuntimeEnvironment,
   options: {
-    params: string;
+    params: string | object;
     feeManagerAddress?: string;
     reset?: boolean;
     verify?: boolean;

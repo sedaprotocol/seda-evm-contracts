@@ -29,7 +29,7 @@ export async function deployProver(
   hre: HardhatRuntimeEnvironment,
   contractName: string,
   options: {
-    params: string;
+    params: string | object;
     feeManagerAddress?: string;
     reset?: boolean;
     verify?: boolean;

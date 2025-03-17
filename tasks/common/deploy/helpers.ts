@@ -16,7 +16,7 @@ import { updateAddressesFile, updateDeployment } from './reports';
  * before deployment.
  */
 export async function readAndValidateParams<TInput, TOutput>(
-  paramsFileOrObject: string,
+  paramsFileOrObject: string | object,
   contractKey: string,
   schema: v.BaseSchema<TInput, TOutput, v.BaseIssue<unknown>>,
 ): Promise<TOutput> {
