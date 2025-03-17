@@ -182,6 +182,11 @@ contract SedaCoreV1 is
         uint256 additionalResultFee,
         uint256 additionalBatchFee
     ) external payable override(ISedaCore) whenNotPaused {
+        // Check if fee manager is set - required for any fee operations
+        if (address(_storageV1().feeManager) == address(0)) {
+            revert FeeManagerRequired();
+        }
+
         // Validate ETH payment matches fee sum to prevent over/underpayment
         if (msg.value != additionalRequestFee + additionalResultFee + additionalBatchFee) {
             revert InvalidFeeAmount();
@@ -221,8 +226,13 @@ contract SedaCoreV1 is
         _removePendingRequest(requestId);
         delete _storageV1().requestDetails[requestId];
 
-        // Using fee manager for timed out requests
+        // Handle fee distribution if there are fees to distribute
         if (totalRefund > 0) {
+            // Check if fee manager is set
+            if (address(_storageV1().feeManager) == address(0)) {
+                revert FeeManagerRequired();
+            }
+
             _storageV1().feeManager.addPendingFees{value: totalRefund}(details.requestor);
             emit FeeDistributed(requestId, details.requestor, totalRefund, FeeType.WITHDRAW);
         }
