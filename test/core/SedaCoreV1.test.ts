@@ -1004,6 +1004,59 @@ describe('SedaCoreV1', () => {
         core,
         'FeeManagerRequired',
       );
+
+      // Test 3: Attempt to increase fees for a request
+      await core.postRequest(requests[1]);
+      const requestId = await deriveRequestId(requests[1]);
+      await expect(
+        core.increaseFees(requestId, ethers.parseEther('1.0'), 0, 0, { value: ethers.parseEther('1.0') }),
+      ).to.be.revertedWithCustomError(core, 'FeeManagerRequired');
+    });
+
+    it('requires fee manager for operations on requests with fees', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const fee = ethers.parseEther('0.1');
+
+      // First post a request with fees (this works because fee manager exists)
+      await core.postRequest(data.requests[0], fee, 0, 0, { value: fee });
+      const requestId = await deriveRequestId(data.requests[0]);
+
+      // Calculate the base storage slot
+      const nameHash = ethers.keccak256(ethers.toUtf8Bytes('sedacore.storage.v1'));
+      const nameHashAsNumber = ethers.toBigInt(nameHash);
+      const decremented = nameHashAsNumber - 1n;
+      const encoded = ethers.AbiCoder.defaultAbiCoder().encode(['uint256'], [decremented]);
+      const slot = ethers.keccak256(encoded);
+      const mask = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00');
+      const CORE_V1_STORAGE_SLOT = ethers.toBeHex(ethers.toBigInt(slot) & mask);
+
+      // Now we know the fee manager is at offset 4
+      const feeManagerSlot = ethers.toBeHex(ethers.toBigInt(CORE_V1_STORAGE_SLOT) + 4n);
+
+      // Set this slot to address(0)
+      await ethers.provider.send('hardhat_setStorageAt', [
+        await core.getAddress(),
+        feeManagerSlot,
+        ethers.zeroPadValue('0x00', 32),
+      ]);
+
+      // Mine a block to ensure the changes are reflected
+      await ethers.provider.send('evm_mine', []);
+
+      // Verify fee manager is now address(0)
+      expect(await core.getFeeManager()).to.equal(ethers.ZeroAddress);
+
+      // Test 1: Try to increase fees
+      await expect(core.increaseFees(requestId, fee, 0, 0, { value: fee })).to.be.revertedWithCustomError(
+        core,
+        'FeeManagerRequired',
+      );
+
+      // Test 2: Try to withdraw a timed-out request with fees
+      await ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS]);
+      await ethers.provider.send('evm_mine', []);
+
+      await expect(core.withdrawTimedOutRequest(requestId)).to.be.revertedWithCustomError(core, 'FeeManagerRequired');
     });
   });
 });

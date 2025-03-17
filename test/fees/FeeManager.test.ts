@@ -141,4 +141,75 @@ describe('SedaFeeManager', () => {
       expect(await feeManager.getPendingFees(recipient.address)).to.equal(0);
     });
   });
+
+  describe('addPendingFeesMultiple', () => {
+    it('should add fees for multiple valid recipients', async () => {
+      const { feeManager, recipient, otherAccount } = await deployFeeManagerFixture();
+      const amount1 = ethers.parseEther('1.0');
+      const amount2 = ethers.parseEther('0.5');
+      const totalAmount = amount1 + amount2;
+
+      await expect(
+        feeManager.addPendingFeesMultiple([recipient.address, otherAccount.address], [amount1, amount2], {
+          value: totalAmount,
+        }),
+      )
+        .to.emit(feeManager, 'FeeAdded')
+        .withArgs(recipient.address, amount1)
+        .to.emit(feeManager, 'FeeAdded')
+        .withArgs(otherAccount.address, amount2);
+
+      expect(await feeManager.getPendingFees(recipient.address)).to.equal(amount1);
+      expect(await feeManager.getPendingFees(otherAccount.address)).to.equal(amount2);
+    });
+
+    it('should revert when array lengths mismatch', async () => {
+      const { feeManager, recipient, otherAccount } = await deployFeeManagerFixture();
+      const amount = ethers.parseEther('1.0');
+
+      await expect(
+        feeManager.addPendingFeesMultiple([recipient.address, otherAccount.address], [amount], { value: amount }),
+      ).to.be.revertedWithCustomError(feeManager, 'ArrayLengthMismatch');
+    });
+
+    it('should revert when a recipient is zero address', async () => {
+      const { feeManager, recipient } = await deployFeeManagerFixture();
+      const amount1 = ethers.parseEther('0.5');
+      const amount2 = ethers.parseEther('0.5');
+      const totalAmount = amount1 + amount2;
+
+      await expect(
+        feeManager.addPendingFeesMultiple([recipient.address, ethers.ZeroAddress], [amount1, amount2], {
+          value: totalAmount,
+        }),
+      ).to.be.revertedWithCustomError(feeManager, 'InvalidRecipient');
+    });
+
+    it('should revert when fee amount does not match sent value', async () => {
+      const { feeManager, recipient, otherAccount } = await deployFeeManagerFixture();
+      const amount1 = ethers.parseEther('1.0');
+      const amount2 = ethers.parseEther('0.5');
+      const totalAmount = ethers.parseEther('2.0'); // Intentionally incorrect
+
+      await expect(
+        feeManager.addPendingFeesMultiple([recipient.address, otherAccount.address], [amount1, amount2], {
+          value: totalAmount,
+        }),
+      ).to.be.revertedWithCustomError(feeManager, 'FeeAmountMismatch');
+    });
+
+    it('should accumulate fees for existing recipients', async () => {
+      const { feeManager, recipient } = await deployFeeManagerFixture();
+      const initialAmount = ethers.parseEther('1.0');
+      const additionalAmount = ethers.parseEther('0.5');
+
+      // Add initial fees
+      await feeManager.addPendingFees(recipient.address, { value: initialAmount });
+
+      // Add more fees using addPendingFeesMultiple
+      await feeManager.addPendingFeesMultiple([recipient.address], [additionalAmount], { value: additionalAmount });
+
+      expect(await feeManager.getPendingFees(recipient.address)).to.equal(initialAmount + additionalAmount);
+    });
+  });
 });
