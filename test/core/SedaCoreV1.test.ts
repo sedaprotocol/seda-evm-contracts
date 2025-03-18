@@ -605,9 +605,9 @@ describe('SedaCoreV1', () => {
         };
         const totalFee = fees.request + fees.result + fees.batch;
         const additionalFees = {
-          request: ethers.parseEther('0.5'),
-          result: ethers.parseEther('1.0'),
-          batch: ethers.parseEther('1.5'),
+          request: ethers.parseEther('1.5'),
+          result: ethers.parseEther('3.0'),
+          batch: ethers.parseEther('4.5'),
         };
         const totalAdditionalFee = additionalFees.request + additionalFees.result + additionalFees.batch;
         const [requestor, resultSubmitter, batchSubmitter] = await ethers.getSigners();
@@ -633,8 +633,8 @@ describe('SedaCoreV1', () => {
 
         // Calculate expected request fee distribution
         const totalGas = BigInt(data.requests[1].execGasLimit) + BigInt(data.requests[1].tallyGasLimit);
-        const expectedPayback = ((fees.request + additionalFees.request) * BigInt(data.results[1].gasUsed)) / totalGas;
-        const expectedRefund = fees.request + additionalFees.request - expectedPayback;
+        const expectedPayback = (additionalFees.request * BigInt(data.results[1].gasUsed)) / totalGas;
+        const expectedRefund = additionalFees.request - expectedPayback;
 
         // Submit result
         await (core.connect(resultSubmitter) as SedaCoreV1).postResult(data.results[1], 1, data.proofs[1]);
@@ -645,14 +645,14 @@ describe('SedaCoreV1', () => {
 
         // Check pending fees before withdrawal
         const pendingResultFees = await feeManagerContract.getPendingFees(resultSubmitter.address);
-        expect(pendingResultFees).to.equal(fees.result + additionalFees.result);
+        expect(pendingResultFees).to.equal(additionalFees.result);
 
         const pendingBatchFees = await feeManagerContract.getPendingFees(batchSubmitter.address);
-        expect(pendingBatchFees).to.equal(fees.batch + additionalFees.batch);
+        expect(pendingBatchFees).to.equal(additionalFees.batch);
 
         // Check if payback address has expected fees
         if (data.results[1].paybackAddress.length === 20) {
-          const pendingPaybackFees = await feeManagerContract.getPendingFees(data.results[1].paybackAddress);
+          const pendingPaybackFees = await feeManagerContract.getPendingFees(data.results[1].paybackAddress.toString());
           expect(pendingPaybackFees).to.equal(expectedPayback);
         }
 
