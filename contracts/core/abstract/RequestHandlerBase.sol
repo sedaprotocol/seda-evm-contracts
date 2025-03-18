@@ -39,8 +39,11 @@ abstract contract RequestHandlerBase is IRequestHandler {
         }
 
         bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
+        // If the request already exists, we don't revert but simply return the request ID.
+        // This allows transactions to continue with additional logic in case of front-running,
+        // while avoiding duplicate event emissions and storage updates.
         if (bytes(_requestHandlerStorage().requests[requestId].version).length != 0) {
-            revert RequestAlreadyExists(requestId);
+            return requestId;
         }
 
         _requestHandlerStorage().requests[requestId] = SedaDataTypes.Request({
@@ -79,7 +82,7 @@ abstract contract RequestHandlerBase is IRequestHandler {
     /// @notice Returns the storage struct for the contract
     /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
     /// @return s The storage struct containing the contract's state variables
-    function _requestHandlerStorage() internal pure returns (RequestHandlerStorage storage s) {
+    function _requestHandlerStorage() private pure returns (RequestHandlerStorage storage s) {
         bytes32 slot = REQUEST_HANDLER_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {

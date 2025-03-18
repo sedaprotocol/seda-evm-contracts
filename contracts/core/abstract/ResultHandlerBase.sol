@@ -96,6 +96,13 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
         return result;
     }
 
+    /// @notice Checks if a result exists for a given request ID
+    /// @param requestId The unique identifier of the request
+    /// @return A boolean indicating whether a result exists for the request
+    function hasResult(bytes32 requestId) public view returns (bool) {
+        return _resultHandlerStorage().results[requestId].drId != bytes32(0);
+    }
+
     // ============ Internal Functions ============
 
     /// @notice Posts a result and returns both the result ID and batch sender address

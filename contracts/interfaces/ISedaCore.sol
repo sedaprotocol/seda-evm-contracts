@@ -50,14 +50,19 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @param newTimeoutPeriod The new timeout period in seconds
     event TimeoutPeriodUpdated(uint256 newTimeoutPeriod);
 
-    /// @notice Error thrown when attempting to increase fees but no fees were actually increased
-    error NoFeesUpdated();
-
     /// @notice Error thrown when the fee amount is not equal to the sum of the request, result, and batch fees
     error InvalidFeeAmount();
 
     /// @notice Error thrown when attempting to set the timeout period to zero
     error InvalidTimeoutPeriod();
+
+    /// @notice Error thrown when attempting to increase fees but no fees were actually increased
+    /// @param requestId The ID of the request that was attempted to be updated
+    error NoFeesUpdated(bytes32 requestId);
+
+    /// @notice Error thrown when a request has already been resolved
+    /// @param requestId The ID of the request that was attempted to be resolved
+    error RequestAlreadyResolved(bytes32 requestId);
 
     /// @notice Error thrown when a request has not reached its timeout period yet
     /// @param requestId The ID of the request that was attempted to be withdrawn

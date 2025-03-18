@@ -113,33 +113,34 @@ contract SedaCoreV1 is
         uint256 resultFee,
         uint256 batchFee
     ) public payable whenNotPaused returns (bytes32) {
-        // Validate that the sent ETH matches exactly the sum of all specified fees
-        // This prevents users from accidentally overpaying or underpaying fees
-        if (msg.value != requestFee + resultFee + batchFee) {
-            revert InvalidFeeAmount();
-        }
+        uint256 totalFees = requestFee + resultFee + batchFee;
+        _validateFees(totalFees);
 
-        // Check if fee manager is required but not set
-        if (msg.value > 0 && address(_storageV1().feeManager) == address(0)) {
-            revert FeeManagerRequired();
-        }
-
-        // Call parent contract's postRequest base implementation
-        // TODO: If the DR already exists, we can just replace the addresses and return fees
         bytes32 requestId = RequestHandlerBase.postRequest(inputs);
 
-        // Store pending request and request details
-        _addRequest(requestId);
-        _storageV1().requestDetails[requestId] = RequestDetails({
-            timestamp: block.timestamp,
-            requestFee: requestFee,
-            resultFee: resultFee,
-            batchFee: batchFee,
-            gasLimit: inputs.execGasLimit + inputs.tallyGasLimit,
-            requestFeeAddr: msg.sender,
-            resultFeeAddr: msg.sender,
-            batchFeeAddr: msg.sender
-        });
+        // Check if the request was already resolved
+        if (hasResult(requestId)) {
+            revert RequestAlreadyResolved(requestId);
+        }
+
+        // Request was not posted before, create new request and store details
+        if (_storageV1().requestDetails[requestId].timestamp == 0) {
+            // Create new request and store details
+            _addRequest(requestId);
+            _storageV1().requestDetails[requestId] = RequestDetails({
+                timestamp: block.timestamp,
+                requestFee: requestFee,
+                resultFee: resultFee,
+                batchFee: batchFee,
+                gasLimit: inputs.execGasLimit + inputs.tallyGasLimit,
+                requestFeeAddr: msg.sender,
+                resultFeeAddr: msg.sender,
+                batchFeeAddr: msg.sender
+            });
+        } else if (totalFees != 0) {
+            // Request was already posted before, increase fees
+            increaseFees(requestId, requestFee, resultFee, batchFee);
+        }
 
         return requestId;
     }
@@ -190,17 +191,9 @@ contract SedaCoreV1 is
         uint256 newRequestFee,
         uint256 newResultFee,
         uint256 newBatchFee
-    ) external payable override(ISedaCore) whenNotPaused {
+    ) public payable override(ISedaCore) whenNotPaused {
         // Validate ETH payment matches fee sum to prevent over/underpayment
-        uint256 totalNewFees = newRequestFee + newResultFee + newBatchFee;
-        if (msg.value != totalNewFees) {
-            revert InvalidFeeAmount();
-        }
-
-        // Check if fee manager is set - required for any fee operations
-        if (address(_storageV1().feeManager) == address(0)) {
-            revert FeeManagerRequired();
-        }
+        _validateFees(newRequestFee + newResultFee + newBatchFee);
 
         RequestDetails storage details = _storageV1().requestDetails[requestId];
         if (details.timestamp == 0) {
@@ -286,7 +279,7 @@ contract SedaCoreV1 is
 
         // Revert if no fees were updated
         if (!anyUpdates) {
-            revert NoFeesUpdated();
+            revert NoFeesUpdated(requestId);
         }
 
         // Process refunds if any
@@ -325,7 +318,7 @@ contract SedaCoreV1 is
         }
 
         // Fee is increasing - handle refund for original payer if sender changed
-        if (msg.sender != currentFeeAddr && currentFee > 0) {
+        if (currentFee > 0) {
             refundAmount = currentFee;
             refundAddr = currentFeeAddr;
             emit FeeDistributed(requestId, currentFeeAddr, currentFee, FeeType.REFUND);
@@ -520,6 +513,18 @@ contract SedaCoreV1 is
         override
         onlyOwner // solhint-disable-next-line no-empty-blocks
     {}
+
+    /// @dev Ensures transaction value matches expected fees and reverts if fees are provided but no fee manager is set
+    /// @param totalFees The total amount of fees expected for this transaction
+    function _validateFees(uint256 totalFees) internal view {
+        if (msg.value != totalFees) {
+            revert InvalidFeeAmount();
+        }
+
+        if (msg.value > 0 && address(_storageV1().feeManager) == address(0)) {
+            revert FeeManagerRequired();
+        }
+    }
 
     /// @dev Handles the distribution of fees to various participants
     /// @param result The submitted result data
