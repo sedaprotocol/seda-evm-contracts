@@ -40,21 +40,18 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @param amount The amount of fees distributed to the recipient
     event FeeDistributed(bytes32 indexed requestId, address indexed recipient, uint256 amount, FeeType indexed feeType);
 
-    /// @notice Emitted when fees are increased for a data request
-    /// @param requestId The unique identifier for the data request
-    /// @param additionalRequestFee The additional request fee
-    /// @param additionalResultFee The additional result fee
-    /// @param additionalBatchFee The additional batch fee
-    event FeesIncreased(
-        bytes32 indexed requestId,
-        uint256 additionalRequestFee,
-        uint256 additionalResultFee,
-        uint256 additionalBatchFee
-    );
+    /// @notice Emitted when fees are increased for an existing request
+    /// @param requestId The unique identifier of the request being updated
+    /// @param amount The absolute fee amount being increased
+    /// @param feeType The type of fee being increased (REQUEST, RESULT, or BATCH)
+    event FeeUpdated(bytes32 indexed requestId, uint256 amount, FeeType feeType);
 
     /// @notice Emitted when the timeout period is updated
     /// @param newTimeoutPeriod The new timeout period in seconds
     event TimeoutPeriodUpdated(uint256 newTimeoutPeriod);
+
+    /// @notice Error thrown when attempting to increase fees but no fees were actually increased
+    error NoFeesUpdated();
 
     /// @notice Error thrown when the fee amount is not equal to the sum of the request, result, and batch fees
     error InvalidFeeAmount();

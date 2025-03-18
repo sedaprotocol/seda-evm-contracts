@@ -34,12 +34,14 @@ contract SedaCoreV1 is
         keccak256(abi.encode(uint256(keccak256("sedacore.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
 
     struct RequestDetails {
-        address requestor;
         uint256 timestamp;
         uint256 requestFee;
         uint256 resultFee;
         uint256 batchFee;
         uint256 gasLimit;
+        address requestFeeAddr;
+        address resultFeeAddr;
+        address batchFeeAddr;
     }
 
     /// @custom:storage-location erc7201:sedacore.storage.v1
@@ -123,17 +125,20 @@ contract SedaCoreV1 is
         }
 
         // Call parent contract's postRequest base implementation
+        // TODO: If the DR already exists, we can just replace the addresses and return fees
         bytes32 requestId = RequestHandlerBase.postRequest(inputs);
 
         // Store pending request and request details
         _addRequest(requestId);
         _storageV1().requestDetails[requestId] = RequestDetails({
-            requestor: msg.sender,
             timestamp: block.timestamp,
             requestFee: requestFee,
             resultFee: resultFee,
             batchFee: batchFee,
-            gasLimit: inputs.execGasLimit + inputs.tallyGasLimit
+            gasLimit: inputs.execGasLimit + inputs.tallyGasLimit,
+            requestFeeAddr: msg.sender,
+            resultFeeAddr: msg.sender,
+            batchFeeAddr: msg.sender
         });
 
         return requestId;
@@ -175,21 +180,26 @@ contract SedaCoreV1 is
     }
 
     /// @inheritdoc ISedaCore
-    /// @dev Allows the owner to increase fees for a pending request
+    /// @notice Updates fees for a pending request, requiring payment of the difference between new and current fees
+    /// @param requestId The ID of the request to update fees for
+    /// @param newRequestFee New total amount for request fee (not an increment)
+    /// @param newResultFee New total amount for result fee (not an increment)
+    /// @param newBatchFee New total amount for batch fee (not an increment)
     function increaseFees(
         bytes32 requestId,
-        uint256 additionalRequestFee,
-        uint256 additionalResultFee,
-        uint256 additionalBatchFee
+        uint256 newRequestFee,
+        uint256 newResultFee,
+        uint256 newBatchFee
     ) external payable override(ISedaCore) whenNotPaused {
+        // Validate ETH payment matches fee sum to prevent over/underpayment
+        uint256 totalNewFees = newRequestFee + newResultFee + newBatchFee;
+        if (msg.value != totalNewFees) {
+            revert InvalidFeeAmount();
+        }
+
         // Check if fee manager is set - required for any fee operations
         if (address(_storageV1().feeManager) == address(0)) {
             revert FeeManagerRequired();
-        }
-
-        // Validate ETH payment matches fee sum to prevent over/underpayment
-        if (msg.value != additionalRequestFee + additionalResultFee + additionalBatchFee) {
-            revert InvalidFeeAmount();
         }
 
         RequestDetails storage details = _storageV1().requestDetails[requestId];
@@ -197,14 +207,136 @@ contract SedaCoreV1 is
             revert RequestNotFound(requestId);
         }
 
-        details.requestFee += additionalRequestFee;
-        details.resultFee += additionalResultFee;
-        details.batchFee += additionalBatchFee;
+        // Create a dynamic array for refunds that will be sized exactly as needed
+        address[] memory recipients = new address[](3);
+        uint256[] memory amounts = new uint256[](3);
+        uint256 recipientCount = 0;
+        uint256 totalRefund = 0;
+        bool anyUpdates = false;
 
-        emit FeesIncreased(requestId, additionalRequestFee, additionalResultFee, additionalBatchFee);
+        // Process each fee type
+        if (newRequestFee > 0) {
+            (bool updated, uint256 refundAmount, address refundAddr) = _processFee(
+                requestId,
+                FeeType.REQUEST,
+                newRequestFee,
+                details.requestFee,
+                details.requestFeeAddr
+            );
+
+            if (updated) {
+                details.requestFee = newRequestFee;
+                details.requestFeeAddr = msg.sender;
+                anyUpdates = true;
+            }
+
+            if (refundAmount > 0) {
+                recipients[recipientCount] = refundAddr;
+                amounts[recipientCount] = refundAmount;
+                totalRefund += refundAmount;
+                recipientCount++;
+            }
+        }
+
+        if (newResultFee > 0) {
+            (bool updated, uint256 refundAmount, address refundAddr) = _processFee(
+                requestId,
+                FeeType.RESULT,
+                newResultFee,
+                details.resultFee,
+                details.resultFeeAddr
+            );
+
+            if (updated) {
+                details.resultFee = newResultFee;
+                details.resultFeeAddr = msg.sender;
+                anyUpdates = true;
+            }
+
+            if (refundAmount > 0) {
+                recipients[recipientCount] = refundAddr;
+                amounts[recipientCount] = refundAmount;
+                totalRefund += refundAmount;
+                recipientCount++;
+            }
+        }
+
+        if (newBatchFee > 0) {
+            (bool updated, uint256 refundAmount, address refundAddr) = _processFee(
+                requestId,
+                FeeType.BATCH,
+                newBatchFee,
+                details.batchFee,
+                details.batchFeeAddr
+            );
+
+            if (updated) {
+                details.batchFee = newBatchFee;
+                details.batchFeeAddr = msg.sender;
+                anyUpdates = true;
+            }
+
+            if (refundAmount > 0) {
+                recipients[recipientCount] = refundAddr;
+                amounts[recipientCount] = refundAmount;
+                totalRefund += refundAmount;
+                recipientCount++;
+            }
+        }
+
+        // Revert if no fees were updated
+        if (!anyUpdates) {
+            revert NoFeesUpdated();
+        }
+
+        // Process refunds if any
+        if (recipientCount > 0) {
+            // Resize arrays to exactly the needed size
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                mstore(recipients, recipientCount)
+                mstore(amounts, recipientCount)
+            }
+
+            // Distribute refunds
+            _storageV1().feeManager.addPendingFeesMultiple{value: totalRefund}(recipients, amounts);
+        }
     }
 
-    /// @notice Allows anyone to withdraw fees for a timed out request to the requestor address
+    /// @dev Simplified helper to process a single fee type
+    /// @param requestId The ID of the request being updated
+    /// @param feeType The type of fee being processed
+    /// @param newFee The new proposed fee amount
+    /// @param currentFee The current fee amount
+    /// @param currentFeeAddr The current fee address
+    /// @return updated Whether the fee was updated
+    /// @return refundAmount Amount to refund (if any)
+    /// @return refundAddr Address to refund to (if any)
+    function _processFee(
+        bytes32 requestId,
+        FeeType feeType,
+        uint256 newFee,
+        uint256 currentFee,
+        address currentFeeAddr
+    ) internal returns (bool updated, uint256 refundAmount, address refundAddr) {
+        // If new fee is not larger than current fee, refund to caller and don't update
+        if (newFee <= currentFee) {
+            return (false, newFee, msg.sender);
+        }
+
+        // Fee is increasing - handle refund for original payer if sender changed
+        if (msg.sender != currentFeeAddr && currentFee > 0) {
+            refundAmount = currentFee;
+            refundAddr = currentFeeAddr;
+            emit FeeDistributed(requestId, currentFeeAddr, currentFee, FeeType.REFUND);
+        }
+
+        // Emit the update event
+        emit FeeUpdated(requestId, newFee, feeType);
+        return (true, refundAmount, refundAddr);
+    }
+
+    /// @notice Allows anyone to withdraw fees for a timed out request to the respective fee addresses
     /// @param requestId The ID of the request to withdraw
     function withdrawTimedOutRequest(bytes32 requestId) external {
         RequestDetails memory details = _storageV1().requestDetails[requestId];
@@ -233,8 +365,46 @@ contract SedaCoreV1 is
                 revert FeeManagerRequired();
             }
 
-            _storageV1().feeManager.addPendingFees{value: totalRefund}(details.requestor);
-            emit FeeDistributed(requestId, details.requestor, totalRefund, FeeType.WITHDRAW);
+            // Maximum 3 possible recipients (requestFeeAddr, resultFeeAddr, batchFeeAddr)
+            address[] memory recipients = new address[](3);
+            uint256[] memory amounts = new uint256[](3);
+            uint256 recipientCount = 0;
+
+            // Add requestFee
+            if (details.requestFee > 0) {
+                recipients[recipientCount] = details.requestFeeAddr;
+                amounts[recipientCount] = details.requestFee;
+                recipientCount++;
+                emit FeeDistributed(requestId, details.requestFeeAddr, details.requestFee, FeeType.WITHDRAW);
+            }
+
+            // Add resultFee
+            if (details.resultFee > 0) {
+                recipients[recipientCount] = details.resultFeeAddr;
+                amounts[recipientCount] = details.resultFee;
+                recipientCount++;
+                emit FeeDistributed(requestId, details.resultFeeAddr, details.resultFee, FeeType.WITHDRAW);
+            }
+
+            // Add batchFee
+            if (details.batchFee > 0) {
+                recipients[recipientCount] = details.batchFeeAddr;
+                amounts[recipientCount] = details.batchFee;
+                recipientCount++;
+                emit FeeDistributed(requestId, details.batchFeeAddr, details.batchFee, FeeType.WITHDRAW);
+            }
+
+            // Resize the arrays to match the actual number of recipients
+            if (recipientCount < recipients.length) {
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    mstore(recipients, recipientCount)
+                    mstore(amounts, recipientCount)
+                }
+            }
+
+            // Distribute all fees in a single call
+            _storageV1().feeManager.addPendingFeesMultiple{value: totalRefund}(recipients, amounts);
         }
     }
 
@@ -294,7 +464,7 @@ contract SedaCoreV1 is
             queriedPendingRequests[i] = PendingRequest({
                 id: requestId,
                 request: getRequest(requestId),
-                requestor: details.requestor,
+                requestor: details.requestFeeAddr,
                 timestamp: details.timestamp,
                 requestFee: details.requestFee,
                 resultFee: details.resultFee,
@@ -416,11 +586,11 @@ contract SedaCoreV1 is
 
         // Add requestor as final recipient if they have any refund
         if (requestorRefund > 0) {
-            recipients[recipientCount] = requestDetails.requestor;
+            recipients[recipientCount] = requestDetails.requestFeeAddr;
             amounts[recipientCount] = requestorRefund;
             recipientCount++;
             totalFeeAmount += requestorRefund;
-            emit FeeDistributed(result.drId, requestDetails.requestor, requestorRefund, FeeType.REFUND);
+            emit FeeDistributed(result.drId, requestDetails.requestFeeAddr, requestorRefund, FeeType.REFUND);
         }
 
         // If we have recipients, distribute fees
