@@ -170,9 +170,9 @@ describe('SedaCoreV1 Gas Analysis', () => {
 
       // Test increaseFees
       const additionalFees = {
-        request: ethers.parseEther('0.002'),
-        result: ethers.parseEther('0.001'),
-        batch: ethers.parseEther('0.0005'),
+        request: requestFee + ethers.parseEther('0.002'),
+        result: resultFee + ethers.parseEther('0.001'),
+        batch: batchFee + ethers.parseEther('0.0005'),
       };
 
       const increaseFeesGas = await measureGas(

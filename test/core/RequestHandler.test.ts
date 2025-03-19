@@ -7,14 +7,14 @@ import { deployWithOptions } from '../helpers/fixtures';
 import { deriveRequestId } from '../utils/crypto';
 
 describe('RequestHandler', () => {
-  async function deployRequestHandlerFixture() {
+  async function deployFixture() {
     const { core: handler, data } = await deployWithOptions({ requests: 4 });
     return { handler, requests: data.requests };
   }
 
   describe('deriveRequestId', () => {
     it('generates consistent request IDs', async () => {
-      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
+      const { handler, requests } = await loadFixture(deployFixture);
 
       const requestIdFromUtils = deriveRequestId(requests[0]);
       const requestId = await handler.deriveRequestId.staticCall(requests[0]);
@@ -23,7 +23,7 @@ describe('RequestHandler', () => {
     });
 
     it('generates unique IDs for different requests', async () => {
-      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
+      const { handler, requests } = await loadFixture(deployFixture);
 
       const id1 = await handler.deriveRequestId.staticCall(requests[0]);
       const id2 = await handler.deriveRequestId.staticCall(requests[1]);
@@ -34,7 +34,7 @@ describe('RequestHandler', () => {
 
   describe('postRequest', () => {
     it('posts request and retrieves it successfully', async () => {
-      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
+      const { handler, requests } = await loadFixture(deployFixture);
 
       const requestId = await handler.postRequest.staticCall(requests[0]);
       await handler.postRequest(requests[0]);
@@ -43,19 +43,23 @@ describe('RequestHandler', () => {
       compareRequests(postedRequest, requests[0]);
     });
 
-    it('reverts when posting duplicate request', async () => {
-      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
+    it('allows posting duplicate request', async () => {
+      const { handler, requests } = await loadFixture(deployFixture);
 
-      const requestId = await handler.deriveRequestId.staticCall(requests[0]);
+      const requestId = await handler.postRequest.staticCall(requests[0]);
       await handler.postRequest(requests[0]);
 
-      await expect(handler.postRequest(requests[0]))
-        .to.be.revertedWithCustomError(handler, 'RequestAlreadyExists')
-        .withArgs(requestId);
+      // Second post of the same request should succeed and return the same ID
+      const duplicateRequestId = await handler.postRequest.staticCall(requests[0]);
+      expect(duplicateRequestId).to.equal(requestId);
+
+      // Verify the request data remains unchanged
+      const postedRequest = await handler.getRequest(requestId);
+      compareRequests(postedRequest, requests[0]);
     });
 
     it('emits RequestPosted event', async () => {
-      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
+      const { handler, requests } = await loadFixture(deployFixture);
 
       const requestId = await handler.deriveRequestId.staticCall(requests[0]);
 
@@ -63,7 +67,7 @@ describe('RequestHandler', () => {
     });
 
     it('reverts when replication factor is zero', async () => {
-      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
+      const { handler, requests } = await loadFixture(deployFixture);
 
       const invalidRequest = { ...requests[0], replicationFactor: 0 };
 
@@ -76,7 +80,7 @@ describe('RequestHandler', () => {
 
   describe('getRequest', () => {
     it('reverts for non-existent request', async () => {
-      const { handler } = await loadFixture(deployRequestHandlerFixture);
+      const { handler } = await loadFixture(deployFixture);
 
       const nonExistentRequestId = ethers.ZeroHash;
 
@@ -86,7 +90,7 @@ describe('RequestHandler', () => {
     });
 
     it('retrieves existing request correctly', async () => {
-      const { handler, requests } = await loadFixture(deployRequestHandlerFixture);
+      const { handler, requests } = await loadFixture(deployFixture);
 
       const requestId = await handler.postRequest.staticCall(requests[0]);
       await handler.postRequest(requests[0]);
