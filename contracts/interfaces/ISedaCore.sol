@@ -40,10 +40,10 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @param amount The amount of fees distributed to the recipient
     event FeeDistributed(bytes32 indexed requestId, address indexed recipient, uint256 amount, FeeType indexed feeType);
 
-    /// @notice Emitted when fees are increased for an existing request
+    /// @notice Emitted when fees are updated for an existing request
     /// @param requestId The unique identifier of the request being updated
     /// @param amount The absolute fee amount being increased
-    /// @param feeType The type of fee being increased (REQUEST, RESULT, or BATCH)
+    /// @param feeType The type of fee being updated (REQUEST, RESULT, or BATCH)
     event FeeUpdated(bytes32 indexed requestId, uint256 amount, FeeType feeType);
 
     /// @notice Emitted when the timeout period is updated
@@ -56,7 +56,7 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @notice Error thrown when attempting to set the timeout period to zero
     error InvalidTimeoutPeriod();
 
-    /// @notice Error thrown when attempting to increase fees but no fees were actually increased
+    /// @notice Error thrown when attempting to update fees but no fees were actually changed
     /// @param requestId The ID of the request that was attempted to be updated
     error NoFeesUpdated(bytes32 requestId);
 

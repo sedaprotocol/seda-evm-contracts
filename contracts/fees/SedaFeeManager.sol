@@ -5,7 +5,8 @@ import {IFeeManager} from "../interfaces/IFeeManager.sol";
 
 /// @title SedaFeeManager
 /// @notice Manages fee distribution and withdrawals for the Seda protocol
-/// @dev Implements a pull-based payment system where recipients can withdraw their fees
+/// @dev Implements a pull-based payment system where recipients can withdraw their fees.
+///      Uses a mapping to track pending fees for each address and ensures atomic fee distribution.
 contract SedaFeeManager is IFeeManager {
     // Mapping to track pending fees for each address
     mapping(address => uint256) public pendingFees;

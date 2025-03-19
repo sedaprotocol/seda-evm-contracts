@@ -195,6 +195,8 @@ contract SedaCoreV1 is
         // Validate ETH payment matches fee sum to prevent over/underpayment
         _validateFees(newRequestFee + newResultFee + newBatchFee);
 
+        // If the request was already resolved or doesn't exist, the timestamp in request details
+        // will be 0, causing the subsequent check to revert with RequestNotFound
         RequestDetails storage details = _storageV1().requestDetails[requestId];
         if (details.timestamp == 0) {
             revert RequestNotFound(requestId);
@@ -294,39 +296,6 @@ contract SedaCoreV1 is
             // Distribute refunds
             _storageV1().feeManager.addPendingFeesMultiple{value: totalRefund}(recipients, amounts);
         }
-    }
-
-    /// @dev Simplified helper to process a single fee type
-    /// @param requestId The ID of the request being updated
-    /// @param feeType The type of fee being processed
-    /// @param newFee The new proposed fee amount
-    /// @param currentFee The current fee amount
-    /// @param currentFeeAddr The current fee address
-    /// @return updated Whether the fee was updated
-    /// @return refundAmount Amount to refund (if any)
-    /// @return refundAddr Address to refund to (if any)
-    function _processFee(
-        bytes32 requestId,
-        FeeType feeType,
-        uint256 newFee,
-        uint256 currentFee,
-        address currentFeeAddr
-    ) internal returns (bool updated, uint256 refundAmount, address refundAddr) {
-        // If new fee is not larger than current fee, refund to caller and don't update
-        if (newFee <= currentFee) {
-            return (false, newFee, msg.sender);
-        }
-
-        // Fee is increasing - handle refund for original payer if sender changed
-        if (currentFee > 0) {
-            refundAmount = currentFee;
-            refundAddr = currentFeeAddr;
-            emit FeeDistributed(requestId, currentFeeAddr, currentFee, FeeType.REFUND);
-        }
-
-        // Emit the update event
-        emit FeeUpdated(requestId, newFee, feeType);
-        return (true, refundAmount, refundAddr);
     }
 
     /// @notice Allows anyone to withdraw fees for a timed out request to the respective fee addresses
@@ -486,25 +455,9 @@ contract SedaCoreV1 is
         }
     }
 
-    /// @notice Adds a request ID to the pendingRequests set
-    /// @dev This function is internal to ensure that only the contract's internal logic can add requests,
-    /// preventing unauthorized additions and maintaining proper state management.
-    /// @param requestId The ID of the request to add
-    function _addRequest(bytes32 requestId) internal {
-        _storageV1().pendingRequests.add(requestId);
-    }
-
-    /// @notice Removes a request ID from the pendingRequests set if it exists
-    /// @dev This function is internal to ensure that only the contract's internal logic can remove requests,
-    /// maintaining proper state transitions and preventing unauthorized removals.
-    /// @param requestId The ID of the request to remove
-    function _removePendingRequest(bytes32 requestId) internal {
-        _storageV1().pendingRequests.remove(requestId);
-    }
-
-    /// @dev Required override for UUPSUpgradeable. Ensures only the owner can upgrade the implementation.
-    /// @inheritdoc UUPSUpgradeable
-    /// @param newImplementation Address of the new implementation contract
+    /// @notice Authorizes an upgrade to a new implementation
+    /// @dev Can only be called by the contract owner
+    /// @param newImplementation The address of the new implementation
     function _authorizeUpgrade(
         address newImplementation
     )
@@ -514,16 +467,12 @@ contract SedaCoreV1 is
         onlyOwner // solhint-disable-next-line no-empty-blocks
     {}
 
-    /// @dev Ensures transaction value matches expected fees and reverts if fees are provided but no fee manager is set
-    /// @param totalFees The total amount of fees expected for this transaction
-    function _validateFees(uint256 totalFees) internal view {
-        if (msg.value != totalFees) {
-            revert InvalidFeeAmount();
-        }
-
-        if (msg.value > 0 && address(_storageV1().feeManager) == address(0)) {
-            revert FeeManagerRequired();
-        }
+    /// @notice Adds a request ID to the pendingRequests set
+    /// @dev This function is internal to ensure that only the contract's internal logic can add requests,
+    /// preventing unauthorized additions and maintaining proper state management.
+    /// @param requestId The ID of the request to add
+    function _addRequest(bytes32 requestId) private {
+        _storageV1().pendingRequests.add(requestId);
     }
 
     /// @dev Handles the distribution of fees to various participants
@@ -611,6 +560,58 @@ contract SedaCoreV1 is
 
             // Distribute all fees in a single call
             _storageV1().feeManager.addPendingFeesMultiple{value: totalFeeAmount}(recipients, amounts);
+        }
+    }
+
+    /// @dev Simplified helper to process a single fee type
+    /// @param requestId The ID of the request being updated
+    /// @param feeType The type of fee being processed
+    /// @param newFee The new proposed fee amount
+    /// @param currentFee The current fee amount
+    /// @param currentFeeAddr The current fee address
+    /// @return updated Whether the fee was updated
+    /// @return refundAmount Amount to refund (if any)
+    /// @return refundAddr Address to refund to (if any)
+    function _processFee(
+        bytes32 requestId,
+        FeeType feeType,
+        uint256 newFee,
+        uint256 currentFee,
+        address currentFeeAddr
+    ) private returns (bool updated, uint256 refundAmount, address refundAddr) {
+        // If new fee is not larger than current fee, refund to caller and don't update
+        if (newFee <= currentFee) {
+            return (false, newFee, msg.sender);
+        }
+
+        // Fee is increasing - handle refund for original payer if sender changed
+        if (currentFee > 0) {
+            refundAmount = currentFee;
+            refundAddr = currentFeeAddr;
+            emit FeeDistributed(requestId, currentFeeAddr, currentFee, FeeType.REFUND);
+        }
+
+        // Emit the update event
+        emit FeeUpdated(requestId, newFee, feeType);
+        return (true, refundAmount, refundAddr);
+    }
+
+    /// @notice Removes a request from the pending requests set
+    /// @dev Internal helper function to clean up state
+    /// @param requestId The ID of the request to remove
+    function _removePendingRequest(bytes32 requestId) private {
+        _storageV1().pendingRequests.remove(requestId);
+    }
+
+    /// @dev Ensures transaction value matches expected fees and reverts if fees are provided but no fee manager is set
+    /// @param totalFees The total amount of fees expected for this transaction
+    function _validateFees(uint256 totalFees) private view {
+        if (msg.value != totalFees) {
+            revert InvalidFeeAmount();
+        }
+
+        if (msg.value > 0 && address(_storageV1().feeManager) == address(0)) {
+            revert FeeManagerRequired();
         }
     }
 }

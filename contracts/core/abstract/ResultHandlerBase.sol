@@ -141,7 +141,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     /// @notice Returns the storage struct for the contract
     /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
     /// @return s The storage struct containing the contract's state variables
-    function _resultHandlerStorage() private pure returns (ResultHandlerStorage storage s) {
+    function _resultHandlerStorage() internal pure returns (ResultHandlerStorage storage s) {
         bytes32 slot = RESULT_HANDLER_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {

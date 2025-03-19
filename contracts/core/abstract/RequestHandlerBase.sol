@@ -82,7 +82,7 @@ abstract contract RequestHandlerBase is IRequestHandler {
     /// @notice Returns the storage struct for the contract
     /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
     /// @return s The storage struct containing the contract's state variables
-    function _requestHandlerStorage() private pure returns (RequestHandlerStorage storage s) {
+    function _requestHandlerStorage() internal pure returns (RequestHandlerStorage storage s) {
         bytes32 slot = REQUEST_HANDLER_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {
