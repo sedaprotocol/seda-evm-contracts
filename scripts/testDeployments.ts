@@ -23,6 +23,7 @@ async function main() {
         resultsRoot: bytes32Value,
         provingMetadata: bytes32Value,
       },
+      maxBatchAge: 100,
     },
     Secp256k1ProverResettable: {
       initialBatch: {
@@ -32,6 +33,7 @@ async function main() {
         resultsRoot: bytes32Value,
         provingMetadata: bytes32Value,
       },
+      maxBatchAge: 100,
     },
     SedaCoreV1: {
       timeoutPeriod: 86400,
