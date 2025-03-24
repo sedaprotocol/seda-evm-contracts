@@ -11,11 +11,15 @@ function padBigIntToBytes(value: bigint, byteLength: number): string {
   return ethers.zeroPadValue(ethers.toBeArray(value), byteLength);
 }
 
-export function generateNewBatchWithId(initialBatch: ProverDataTypes.BatchStruct) {
+export function generateNewBatchWithId(
+  initialBatch: ProverDataTypes.BatchStruct,
+  batchHeightIncrement: bigint = BigInt(1),
+  blockHeightIncrement: bigint = BigInt(1),
+) {
   const newBatch: ProverDataTypes.BatchStruct = {
     ...initialBatch,
-    batchHeight: BigInt(initialBatch.batchHeight) + BigInt(1),
-    blockHeight: BigInt(initialBatch.blockHeight) + BigInt(1),
+    batchHeight: BigInt(initialBatch.batchHeight) + batchHeightIncrement,
+    blockHeight: BigInt(initialBatch.blockHeight) + blockHeightIncrement,
   };
 
   const newBatchId = deriveBatchId(newBatch);

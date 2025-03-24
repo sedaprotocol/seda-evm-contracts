@@ -129,17 +129,71 @@ describe('Secp256k1ProverV1', () => {
       );
     });
 
-    it('rejects batch with lower batch height', async () => {
+    it('rejects batch with zero height', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
-      newBatch.batchHeight = 0; // Set to current batch height
+      newBatch.batchHeight = 0;
       const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
 
       await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])).to.be.revertedWithCustomError(
         prover,
-        'InvalidBatchHeight',
+        'BatchAlreadyExists',
       );
+    });
+
+    it('rejects posting same batch twice', async () => {
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
+      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
+      await prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]);
+
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]])).to.be.revertedWithCustomError(
+        prover,
+        'BatchAlreadyExists',
+      );
+    });
+
+    it('allows posting an old batch within MAX_BATCH_AGE', async () => {
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+
+      // First post a newer batch
+      const { newBatchId: newerBatchId, newBatch: newerBatch } = generateNewBatchWithId(data.initialBatch, BigInt(50));
+      await prover.postBatch(
+        newerBatch,
+        [await wallets[0].signingKey.sign(newerBatchId).serialized],
+        [data.validatorProofs[0]],
+      );
+
+      // Now post an older batch that's within MAX_BATCH_AGE
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch, BigInt(10));
+      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
+
+      await expect(prover.postBatch(newBatch, signatures, [data.validatorProofs[0]]))
+        .to.emit(prover, 'BatchPosted')
+        .withArgs(newBatch.batchHeight, newBatchId, (await ethers.getSigners())[0].address);
+
+      // Verify the lastBatchHeight hasn't changed
+      expect(await prover.getLastBatchHeight()).to.equal(newerBatch.batchHeight);
+    });
+
+    it('rejects batch that is too old', async () => {
+      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+
+      // First post a newer batch to increase lastBatchHeight
+      const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch, BigInt(200));
+      const signatures1 = [await wallets[0].signingKey.sign(newBatchId).serialized];
+
+      await prover.postBatch(newBatch, signatures1, [data.validatorProofs[0]]);
+
+      // Now try to post a batch that's too old
+      const { newBatchId: olderBatchId, newBatch: olderBatch } = generateNewBatchWithId(data.initialBatch, BigInt(99));
+      const signatures2 = [await wallets[0].signingKey.sign(olderBatchId).serialized];
+
+      await expect(prover.postBatch(olderBatch, signatures2, [data.validatorProofs[0]]))
+        .to.be.revertedWithCustomError(prover, 'BatchHeightTooOld')
+        .withArgs(olderBatch.batchHeight, newBatch.batchHeight);
     });
 
     it('updates batch with full validator set', async () => {
