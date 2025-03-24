@@ -16,17 +16,17 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @notice Implements the ProverBase for Secp256k1 signature verification in the Seda protocol
 /// @dev This contract manages batch updates and result proof verification using Secp256k1 signatures.
 ///      Batch validity is determined by consensus among validators, requiring:
-///      - Increasing batch and block heights
+///      - Either a higher batch height than the last known batch,
+///        or a recent batch height within maxBatchAge of the last known batch
 ///      - Valid validator proofs and signatures
 ///      - Sufficient voting power to meet the consensus threshold
+///      Only batches with higher height than the last known batch update the validator set.
+///      If maxBatchAge is zero, only strictly increasing batches are accepted.
 contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     // ============ Types & State ============
 
     // The percentage of voting power required for consensus (66.666666%, represented as parts per 100,000,000)
     uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
-
-    // Maximum allowed batch age
-    uint64 public constant MAX_BATCH_AGE = 100;
 
     // Domain separator for Secp256k1 Merkle Tree leaves
     bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
@@ -42,12 +42,14 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
     /// @custom:storage-location secp256k1prover.storage.v1
     struct Secp256k1ProverStorage {
-        // Height of the last batch that was successfully posted (strictly increasing batch order)
-        uint64 lastBatchHeight;
-        // Merkle root of the current validator set, used to verify validator proofs in subsequent batches
-        bytes32 lastValidatorsRoot;
         // Mapping of batch heights to batch data, including results root and sender address
         mapping(uint64 => BatchData) batches;
+        // Merkle root of the current validator set, used to verify validator proofs in subsequent batches
+        bytes32 lastValidatorsRoot;
+        // Height of the latest batch that updates the validator set
+        uint64 lastBatchHeight;
+        // Maximum allowed age difference between batches. If zero, only strictly increasing batches are accepted
+        uint64 maxBatchAge;
         // Interface for managing and processing verification fees
         IFeeManager feeManager;
     }
@@ -67,7 +69,13 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @notice Initializes the contract with initial batch data
     /// @dev Sets up the contract's initial state and initializes inherited contracts
     /// @param initialBatch The initial batch data containing height, validators root, and results root
-    function initialize(SedaDataTypes.Batch memory initialBatch, address feeManager) external initializer {
+    /// @param maxBatchAge The maximum allowed age difference between batches
+    /// @param feeManager The address of the fee manager contract
+    function initialize(
+        SedaDataTypes.Batch memory initialBatch,
+        uint64 maxBatchAge,
+        address feeManager
+    ) external initializer {
         // Initialize inherited contracts
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
@@ -78,6 +86,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         s.batches[initialBatch.batchHeight] = BatchData({resultsRoot: initialBatch.resultsRoot, sender: address(0)});
         s.lastBatchHeight = initialBatch.batchHeight;
         s.lastValidatorsRoot = initialBatch.validatorsRoot;
+        s.maxBatchAge = maxBatchAge;
         s.feeManager = IFeeManager(feeManager);
 
         emit BatchPosted(initialBatch.batchHeight, SedaDataTypes.deriveBatchId(initialBatch), address(0));
@@ -88,7 +97,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @inheritdoc ProverBase
     /// @notice Posts a new batch with new data, ensuring validity through consensus
     /// @dev Validates a new batch by checking:
-    ///   1. Higher batch height than the current batch
+    ///   1. Newer batch height than the current batch or a recent batch that doesn't exist yet
     ///   2. Matching number of signatures and validator proofs
     ///   3. Validator signers must be provided in strictly increasing order
     ///   4. Valid validator proofs (verified against the batch's validator root)
@@ -117,8 +126,8 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
                 revert BatchAlreadyExists(newBatch.batchHeight);
             }
             // Check if the batch is too old compared to the latest batch height
-            if (s.lastBatchHeight >= newBatch.batchHeight + MAX_BATCH_AGE) {
-                revert BatchHeightTooOld(newBatch.batchHeight, s.lastBatchHeight);
+            if (s.lastBatchHeight >= newBatch.batchHeight + s.maxBatchAge) {
+                revert BatchHeightTooOld(newBatch.batchHeight, s.lastBatchHeight, s.maxBatchAge);
             }
         }
 
@@ -156,6 +165,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @param batchHeight The height of the batch containing the result
     /// @param merkleProof The Merkle proof for the result
     /// @return bool Returns true if the proof is valid, false otherwise
+    /// @return sender The address that posted the batch if valid, address(0) otherwise
     function verifyResultProof(
         bytes32 resultId,
         uint64 batchHeight,
@@ -164,6 +174,13 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         BatchData memory batch = _storageV1().batches[batchHeight];
         bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
         return MerkleProof.verify(merkleProof, batch.resultsRoot, leaf) ? (true, batch.sender) : (false, address(0));
+    }
+
+    /// @notice Returns the batch data for a given height
+    /// @param batchHeight The height of the batch to retrieve
+    /// @return The batch data containing results root and sender address
+    function getBatch(uint64 batchHeight) external view returns (BatchData memory) {
+        return _storageV1().batches[batchHeight];
     }
 
     /// @notice Returns the address of the fee manager contract
@@ -182,6 +199,12 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @return The Merkle root of the last validator set
     function getLastValidatorsRoot() external view returns (bytes32) {
         return _storageV1().lastValidatorsRoot;
+    }
+
+    /// @notice Returns the maximum allowed age difference between batches
+    /// @return The maximum allowed age difference
+    function getMaxBatchAge() external view returns (uint64) {
+        return _storageV1().maxBatchAge;
     }
 
     // ============ Internal Functions ============
