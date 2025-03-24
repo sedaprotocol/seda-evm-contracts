@@ -6,6 +6,7 @@ import { ethers, upgrades } from 'hardhat';
 import type { ProverDataTypes } from '../../ts-types';
 import type { Secp256k1ProverV1 } from '../../typechain-types';
 import { deployWithOptions, generateDataFixtures } from '../helpers/fixtures';
+import { MAX_BATCH_AGE } from '../utils/constants';
 import { computeResultLeafHash, deriveBatchId, deriveResultId, generateNewBatchWithId } from '../utils/crypto';
 
 describe('Secp256k1ProverV1', () => {
@@ -25,8 +26,8 @@ describe('Secp256k1ProverV1', () => {
     return { newBatchId, newBatch, signatures };
   }
 
-  describe('batch management', () => {
-    it('retrieves current batch', async () => {
+  describe('view functions', () => {
+    it('returns last batch height', async () => {
       const {
         prover,
         data: { initialBatch },
@@ -35,6 +36,46 @@ describe('Secp256k1ProverV1', () => {
       expect(lastBatchHeight).to.equal(initialBatch.batchHeight);
     });
 
+    it('returns batch data by height', async () => {
+      const {
+        prover,
+        data: { initialBatch },
+      } = await loadFixture(deployProverFixture);
+      const batch = await prover.getBatch(initialBatch.batchHeight);
+      expect(batch.resultsRoot).to.equal(initialBatch.resultsRoot);
+      expect(batch.sender).to.equal(ethers.ZeroAddress);
+    });
+
+    it('retrieves current validators root', async () => {
+      const {
+        prover,
+        data: { initialBatch },
+      } = await loadFixture(deployProverFixture);
+      const lastValidatorsRoot = await prover.getLastValidatorsRoot();
+      expect(lastValidatorsRoot).to.equal(initialBatch.validatorsRoot);
+    });
+
+    it('retrieves current max batch age', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      expect(await prover.getMaxBatchAge()).to.equal(MAX_BATCH_AGE);
+    });
+
+    it('checks if batch exists', async () => {
+      const { prover, data } = await loadFixture(deployProverFixture);
+      const batch = await prover.getBatch(data.initialBatch.batchHeight);
+      expect(batch.resultsRoot).to.not.equal(ethers.ZeroHash);
+      expect(batch.sender).to.equal(ethers.ZeroAddress);
+    });
+
+    it('checks if batch does not exist', async () => {
+      const { prover } = await loadFixture(deployProverFixture);
+      const batch = await prover.getBatch(1);
+      expect(batch.resultsRoot).to.equal(ethers.ZeroHash);
+      expect(batch.sender).to.equal(ethers.ZeroAddress);
+    });
+  });
+
+  describe('batch posting', () => {
     it('updates batch with single validator (75% power)', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
@@ -129,7 +170,7 @@ describe('Secp256k1ProverV1', () => {
       );
     });
 
-    it('rejects batch with zero height', async () => {
+    it('rejects posting a batch with same height as initial batch', async () => {
       const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
       const { newBatchId, newBatch } = generateNewBatchWithId(data.initialBatch);
@@ -193,7 +234,7 @@ describe('Secp256k1ProverV1', () => {
 
       await expect(prover.postBatch(olderBatch, signatures2, [data.validatorProofs[0]]))
         .to.be.revertedWithCustomError(prover, 'BatchHeightTooOld')
-        .withArgs(olderBatch.batchHeight, newBatch.batchHeight);
+        .withArgs(olderBatch.batchHeight, newBatch.batchHeight, MAX_BATCH_AGE);
     });
 
     it('updates batch with full validator set', async () => {
@@ -224,116 +265,120 @@ describe('Secp256k1ProverV1', () => {
     });
   });
 
-  describe('result verification', () => {
-    it('verifies valid result proof', async () => {
-      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+  describe('verification', () => {
+    describe('result proofs', () => {
+      it('verifies valid result proof', async () => {
+        const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      // Generate a mock result and its proof
-      const { results } = generateDataFixtures(10);
-      const resultIds = results.map(deriveResultId);
-      const resultLeaves = resultIds.map(computeResultLeafHash);
-      const resultsTree = SimpleMerkleTree.of(resultLeaves);
+        // Generate a mock result and its proof
+        const { results } = generateDataFixtures(10);
+        const resultIds = results.map(deriveResultId);
+        const resultLeaves = resultIds.map(computeResultLeafHash);
+        const resultsTree = SimpleMerkleTree.of(resultLeaves);
 
-      // Create a batch with results
-      const batch = {
-        ...data.initialBatch,
-        batchHeight: 1,
-        resultsRoot: resultsTree.root,
-      };
-      const newBatchId = deriveBatchId(batch);
-      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
+        // Create a batch with results
+        const batch = {
+          ...data.initialBatch,
+          batchHeight: 1,
+          resultsRoot: resultsTree.root,
+        };
+        const newBatchId = deriveBatchId(batch);
+        const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
 
-      const [batchSender] = await ethers.getSigners();
-      await (prover.connect(batchSender) as Secp256k1ProverV1).postBatch(batch, signatures, [data.validatorProofs[0]]);
+        const [batchSender] = await ethers.getSigners();
+        await (prover.connect(batchSender) as Secp256k1ProverV1).postBatch(batch, signatures, [
+          data.validatorProofs[0],
+        ]);
 
-      // Verify a valid proof
-      const [isValid, sender] = await prover.verifyResultProof(resultIds[1], 1, resultsTree.getProof(1));
-      expect(isValid).to.be.true;
-      expect(sender).to.equal(batchSender.address);
+        // Verify a valid proof
+        const [isValid, sender] = await prover.verifyResultProof(resultIds[1], 1, resultsTree.getProof(1));
+        expect(isValid).to.be.true;
+        expect(sender).to.equal(batchSender.address);
+      });
+
+      it('rejects invalid result proof', async () => {
+        const { prover, wallets, data } = await loadFixture(deployProverFixture);
+
+        // Generate a mock result and its proof
+        const { results } = generateDataFixtures(10);
+        const resultIds = results.map(deriveResultId);
+        const resultLeaves = resultIds.map(computeResultLeafHash);
+        const resultsTree = SimpleMerkleTree.of(resultLeaves);
+
+        // Create a batch with results
+        const batch = {
+          ...data.initialBatch,
+          batchHeight: 1,
+          resultsRoot: resultsTree.root,
+        };
+        const newBatchId = deriveBatchId(batch);
+        const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
+        await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
+
+        // Verify an invalid proof
+        const [isValid, batchSender] = await prover.verifyResultProof(resultIds[0], 1, resultsTree.getProof(1));
+        expect(isValid).to.be.false;
+        expect(batchSender).to.equal(ethers.ZeroAddress);
+      });
     });
 
-    it('rejects invalid result proof', async () => {
-      const { prover, wallets, data } = await loadFixture(deployProverFixture);
+    describe('batch proofs', () => {
+      it('verifies valid batch proof', async () => {
+        const { prover, wallets, data } = await loadFixture(deployProverFixture);
 
-      // Generate a mock result and its proof
-      const { results } = generateDataFixtures(10);
-      const resultIds = results.map(deriveResultId);
-      const resultLeaves = resultIds.map(computeResultLeafHash);
-      const resultsTree = SimpleMerkleTree.of(resultLeaves);
+        // Generate a mock result and its proof
+        const { results } = generateDataFixtures(10);
+        const resultIds = results.map(deriveResultId);
+        const resultLeaves = resultIds.map(computeResultLeafHash);
+        const resultsTree = SimpleMerkleTree.of(resultLeaves);
 
-      // Create a batch with results
-      const batch = {
-        ...data.initialBatch,
-        batchHeight: 1,
-        resultsRoot: resultsTree.root,
-      };
-      const newBatchId = deriveBatchId(batch);
-      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
-      await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
+        // Create a batch with results
+        const batch = {
+          ...data.initialBatch,
+          batchHeight: 1,
+          resultsRoot: resultsTree.root,
+        };
+        const newBatchId = deriveBatchId(batch);
+        const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
+        await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
 
-      // Verify an invalid proof
-      const [isValid, batchSender] = await prover.verifyResultProof(resultIds[0], 1, resultsTree.getProof(1));
-      expect(isValid).to.be.false;
-      expect(batchSender).to.equal(ethers.ZeroAddress);
+        // Verify a valid proof
+        const [resultBatch] = await prover.verifyResultProof(resultIds[0], batch.batchHeight, resultsTree.getProof(0));
+        expect(resultBatch).to.be.true;
+      });
+
+      it('rejects invalid batch proof', async () => {
+        const { prover, wallets, data } = await loadFixture(deployProverFixture);
+
+        // Generate a mock result and its proof
+        const { results } = generateDataFixtures(10);
+        const resultIds = results.map(deriveResultId);
+        const resultLeaves = resultIds.map(computeResultLeafHash);
+        const resultsTree = SimpleMerkleTree.of(resultLeaves);
+
+        // Create a new batch with no results
+        const batch1 = {
+          ...data.initialBatch,
+          batchHeight: 1,
+          resultsRoot: ethers.ZeroHash,
+        };
+        const newBatchId1 = deriveBatchId(batch1);
+        const signatures1 = [await wallets[0].signingKey.sign(newBatchId1).serialized];
+        await prover.postBatch(batch1, signatures1, [data.validatorProofs[0]]);
+
+        // Verify an invalid proof
+        const [resultBatch1, batchSender] = await prover.verifyResultProof(
+          resultIds[0],
+          batch1.batchHeight,
+          resultsTree.getProof(0),
+        );
+        expect(resultBatch1).to.be.false;
+        expect(batchSender).to.equal(ethers.ZeroAddress);
+      });
     });
   });
 
-  describe('batch verification', () => {
-    it('verifies valid batch proof', async () => {
-      const { prover, wallets, data } = await loadFixture(deployProverFixture);
-
-      // Generate a mock result and its proof
-      const { results } = generateDataFixtures(10);
-      const resultIds = results.map(deriveResultId);
-      const resultLeaves = resultIds.map(computeResultLeafHash);
-      const resultsTree = SimpleMerkleTree.of(resultLeaves);
-
-      // Create a batch with results
-      const batch = {
-        ...data.initialBatch,
-        batchHeight: 1,
-        resultsRoot: resultsTree.root,
-      };
-      const newBatchId = deriveBatchId(batch);
-      const signatures = [await wallets[0].signingKey.sign(newBatchId).serialized];
-      await prover.postBatch(batch, signatures, [data.validatorProofs[0]]);
-
-      // Verify a valid proof
-      const [resultBatch] = await prover.verifyResultProof(resultIds[0], batch.batchHeight, resultsTree.getProof(0));
-      expect(resultBatch).to.be.true;
-    });
-
-    it('rejects invalid batch proof', async () => {
-      const { prover, wallets, data } = await loadFixture(deployProverFixture);
-
-      // Generate a mock result and its proof
-      const { results } = generateDataFixtures(10);
-      const resultIds = results.map(deriveResultId);
-      const resultLeaves = resultIds.map(computeResultLeafHash);
-      const resultsTree = SimpleMerkleTree.of(resultLeaves);
-
-      // Create a new batch with no results
-      const batch1 = {
-        ...data.initialBatch,
-        batchHeight: 1,
-        resultsRoot: ethers.ZeroHash,
-      };
-      const newBatchId1 = deriveBatchId(batch1);
-      const signatures1 = [await wallets[0].signingKey.sign(newBatchId1).serialized];
-      await prover.postBatch(batch1, signatures1, [data.validatorProofs[0]]);
-
-      // Verify an invalid proof
-      const [resultBatch1, batchSender] = await prover.verifyResultProof(
-        resultIds[0],
-        batch1.batchHeight,
-        resultsTree.getProof(0),
-      );
-      expect(resultBatch1).to.be.false;
-      expect(batchSender).to.equal(ethers.ZeroAddress);
-    });
-  });
-
-  describe('batch identification', () => {
+  describe('test vectors', () => {
     it('generates correct batch id for test vectors', async () => {
       const testBatch: ProverDataTypes.BatchStruct = {
         batchHeight: 4,
@@ -347,7 +392,7 @@ describe('Secp256k1ProverV1', () => {
 
       // Deploy the contract
       const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-      const prover = await upgrades.deployProxy(ProverFactory, [testBatch, ethers.ZeroAddress], {
+      const prover = await upgrades.deployProxy(ProverFactory, [testBatch, MAX_BATCH_AGE, ethers.ZeroAddress], {
         initializer: 'initialize',
       });
       await prover.waitForDeployment();
@@ -356,7 +401,7 @@ describe('Secp256k1ProverV1', () => {
     });
   });
 
-  describe('pause functionality', () => {
+  describe('access control', () => {
     it('allows owner to pause and unpause', async () => {
       const { prover } = await loadFixture(deployProverFixture);
       const [owner] = await ethers.getSigners();
@@ -430,7 +475,7 @@ describe('Secp256k1ProverV1', () => {
     });
   });
 
-  describe('fee manager', () => {
+  describe('fee management', () => {
     it('returns zero address when fee manager is not set', async () => {
       // Use the deployWithSize helper which deploys with zero address fee manager
       const { prover } = await deployWithOptions({ validators: 4 });
