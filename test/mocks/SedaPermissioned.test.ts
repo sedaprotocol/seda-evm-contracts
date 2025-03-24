@@ -3,7 +3,8 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { compareRequests, compareResults } from '../helpers/assertions';
 import { convertPendingToRequestInputs } from '../helpers/conversions';
-import { deriveRequestId, deriveResultId, generateDataFixtures } from '../utils/crypto';
+import { generateDataFixtures } from '../helpers/fixtures';
+import { deriveRequestId, deriveResultId } from '../utils/crypto';
 
 describe('SedaPermissioned', () => {
   const MAX_REPLICATION_FACTOR = 1;
@@ -201,10 +202,9 @@ describe('SedaPermissioned', () => {
       'InvalidReplicationFactor',
     );
     const invalidRequest2 = { ...requests[0], replicationFactor: 0 };
-    await expect(core.connect(signers.relayer).postRequest(invalidRequest2)).to.be.revertedWithCustomError(
-      core,
-      'InvalidReplicationFactor',
-    );
+    await expect(core.connect(signers.relayer).postRequest(invalidRequest2))
+      .to.be.revertedWithCustomError(core, 'InvalidParameter')
+      .withArgs('replicationFactor', 0, 1);
   });
 
   it('allows admin to set max replication factor', async () => {

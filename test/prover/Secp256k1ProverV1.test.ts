@@ -5,14 +5,8 @@ import type { Wallet } from 'ethers';
 import { ethers, upgrades } from 'hardhat';
 import type { ProverDataTypes } from '../../ts-types';
 import type { Secp256k1ProverV1 } from '../../typechain-types';
-import { deployWithOptions } from '../helpers/fixtures';
-import {
-  computeResultLeafHash,
-  deriveBatchId,
-  deriveResultId,
-  generateDataFixtures,
-  generateNewBatchWithId,
-} from '../utils/crypto';
+import { deployWithOptions, generateDataFixtures } from '../helpers/fixtures';
+import { computeResultLeafHash, deriveBatchId, deriveResultId, generateNewBatchWithId } from '../utils/crypto';
 
 describe('Secp256k1ProverV1', () => {
   async function deployProverFixture() {

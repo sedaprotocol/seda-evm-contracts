@@ -5,7 +5,7 @@ import { ethers, upgrades } from 'hardhat';
 
 import type { Secp256k1ProverV1, SedaCoreV1 } from '../../typechain-types';
 import { compareRequests, compareResults } from '../helpers/assertions';
-import { convertPendingToRequestInputs } from '../helpers/conversions';
+import { generateDataFixtures } from '../helpers/fixtures';
 import { ONE_DAY_IN_SECONDS } from '../utils/constants';
 import {
   computeResultLeafHash,
@@ -13,7 +13,6 @@ import {
   deriveBatchId,
   deriveRequestId,
   deriveResultId,
-  generateDataFixtures,
 } from '../utils/crypto';
 
 describe('SedaCoreV1', () => {

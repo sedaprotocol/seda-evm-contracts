@@ -71,10 +71,39 @@ describe('RequestHandler', () => {
 
       const invalidRequest = { ...requests[0], replicationFactor: 0 };
 
-      await expect(handler.postRequest(invalidRequest)).to.be.revertedWithCustomError(
-        handler,
-        'InvalidReplicationFactor',
-      );
+      await expect(handler.postRequest(invalidRequest))
+        .to.be.revertedWithCustomError(handler, 'InvalidParameter')
+        .withArgs('replicationFactor', 0, 1);
+    });
+
+    it('reverts when gas price is too low', async () => {
+      const { handler, requests } = await loadFixture(deployFixture);
+
+      const invalidRequest = { ...requests[0], gasPrice: 999n };
+
+      await expect(handler.postRequest(invalidRequest))
+        .to.be.revertedWithCustomError(handler, 'InvalidParameter')
+        .withArgs('gasPrice', 999n, 1_000n);
+    });
+
+    it('reverts when exec gas limit is too low', async () => {
+      const { handler, requests } = await loadFixture(deployFixture);
+
+      const invalidRequest = { ...requests[0], execGasLimit: 9_999_999_999_999n };
+
+      await expect(handler.postRequest(invalidRequest))
+        .to.be.revertedWithCustomError(handler, 'InvalidParameter')
+        .withArgs('execGasLimit', 9_999_999_999_999n, 10_000_000_000_000n);
+    });
+
+    it('reverts when tally gas limit is too low', async () => {
+      const { handler, requests } = await loadFixture(deployFixture);
+
+      const invalidRequest = { ...requests[0], tallyGasLimit: 9_999_999_999_999n };
+
+      await expect(handler.postRequest(invalidRequest))
+        .to.be.revertedWithCustomError(handler, 'InvalidParameter')
+        .withArgs('tallyGasLimit', 9_999_999_999_999n, 10_000_000_000_000n);
     });
   });
 
