@@ -21,6 +21,7 @@ export const ProverSchema = v.object({
     resultsRoot: HexString,
     provingMetadata: HexString,
   }),
+  maxBatchAge: v.optional(v.number()),
   feeManagerAddress: v.optional(HexString),
 });
 
@@ -30,17 +31,24 @@ export async function deployProver(
   contractName: string,
   options: {
     params: string | object;
+    maxBatchAge?: number;
     feeManagerAddress?: string;
     reset?: boolean;
     verify?: boolean;
   },
 ): Promise<{ contractAddress: string; contractImplAddress: string }> {
+  console.log('options', options);
   // Contract Parameters
   const params = await readAndValidateParams(options.params, contractName, ProverSchema);
   const constructorArgs = {
     initialBatch: { ...params.initialBatch },
+    maxBatchAge: options.maxBatchAge || params.maxBatchAge,
     feeManagerAddress: options.feeManagerAddress || params.feeManagerAddress,
   };
+
+  if (!constructorArgs.maxBatchAge) {
+    throw new Error('maxBatchAge must be provided either in the params file or as a command-line argument');
+  }
 
   if (!constructorArgs.feeManagerAddress) {
     throw new Error('feeManagerAddress must be provided either in the params file or as a command-line argument');
@@ -58,7 +66,7 @@ export async function deployProver(
   return await deployAndVerifyContractWithProxy(
     hre,
     contractName as keyof UupsContracts,
-    [constructorArgs.initialBatch, constructorArgs.feeManagerAddress],
+    [constructorArgs.initialBatch, constructorArgs.maxBatchAge, constructorArgs.feeManagerAddress],
     owner,
     options.verify,
   );

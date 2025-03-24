@@ -5,10 +5,10 @@ import type { ProverDataTypes } from '../../../ts-types';
 
 export type UupsContracts = {
   Secp256k1ProverV1: {
-    constructorArgs: [ProverDataTypes.BatchStruct, string];
+    constructorArgs: [ProverDataTypes.BatchStruct, number, string];
   };
   Secp256k1ProverResettable: {
-    constructorArgs: [ProverDataTypes.BatchStruct, string];
+    constructorArgs: [ProverDataTypes.BatchStruct, number, string];
   };
   SedaCoreV1: {
     constructorArgs: [string, number];
