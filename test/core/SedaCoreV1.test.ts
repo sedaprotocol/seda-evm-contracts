@@ -6,7 +6,7 @@ import { ethers, upgrades } from 'hardhat';
 import type { Secp256k1ProverV1, SedaCoreV1 } from '../../typechain-types';
 import { compareRequests, compareResults } from '../helpers/assertions';
 import { generateDataFixtures } from '../helpers/fixtures';
-import { ONE_DAY_IN_SECONDS } from '../utils/constants';
+import { MAX_BATCH_AGE, ONE_DAY_IN_SECONDS } from '../utils/constants';
 import {
   computeResultLeafHash,
   computeValidatorLeafHash,
@@ -88,7 +88,7 @@ describe('SedaCoreV1', () => {
     const feeManagerAddress = await feeManager.getAddress();
 
     const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch, feeManagerAddress], {
+    const prover = await upgrades.deployProxy(ProverFactory, [initialBatch, MAX_BATCH_AGE, feeManagerAddress], {
       initializer: 'initialize',
     });
     await prover.waitForDeployment();

@@ -1,7 +1,7 @@
 import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { ethers, upgrades } from 'hardhat';
 import type { CoreRequestTypes, CoreResultTypes } from '../../ts-types';
-import { ONE_DAY_IN_SECONDS } from '../utils/constants';
+import { MAX_BATCH_AGE, ONE_DAY_IN_SECONDS } from '../utils/constants';
 import { NON_ZERO_HASH, SEDA_DATA_TYPES_VERSION } from '../utils/constants';
 import { computeResultLeafHash, computeValidatorLeafHash, deriveResultId } from '../utils/crypto';
 import { deriveRequestId } from '../utils/crypto';
@@ -79,7 +79,7 @@ export async function deployWithOptions(options: DeployOptions) {
   }
 
   const ProverFactory = await ethers.getContractFactory('Secp256k1ProverV1');
-  const prover = await upgrades.deployProxy(ProverFactory, [initialBatch, feeManager], {
+  const prover = await upgrades.deployProxy(ProverFactory, [initialBatch, MAX_BATCH_AGE, feeManager], {
     initializer: 'initialize',
     kind: 'uups',
   });
