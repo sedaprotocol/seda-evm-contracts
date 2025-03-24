@@ -15,14 +15,17 @@ abstract contract ProverBase is IProver {
 
     // ============ Errors ============
 
-    /// @notice Error thrown when batch height <= lastBatchHeight, enforcing sequential processing
-    error InvalidBatchHeight();
+    /// @notice Error thrown when a batch already exists at the given height
+    error BatchAlreadyExists(uint64 height);
 
-    /// @notice Error thrown when validator's address is not strictly increasing
-    error InvalidValidatorOrder();
+    /// @notice Error thrown when batch height is too far in the past from the latest batch
+    error BatchHeightTooOld(uint64 height, uint64 lastHeight);
 
     /// @notice Error thrown when signature verification fails for a validator's signed batch
     error InvalidSignature();
+
+    /// @notice Error thrown when validator's address is not strictly increasing
+    error InvalidValidatorOrder();
 
     /// @notice Error thrown when validator's Merkle proof fails verification against current validator set
     error InvalidValidatorProof();

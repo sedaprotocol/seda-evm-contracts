@@ -38,7 +38,7 @@ contract MockProver is ProverBase {
         SedaDataTypes.ValidatorProof[] calldata // validatorProofs (ignored)
     ) external override {
         if (newBatch.batchHeight <= _lastBatchHeight) {
-            revert InvalidBatchHeight();
+            revert BatchAlreadyExists(newBatch.batchHeight);
         }
 
         _lastBatchHeight = newBatch.batchHeight;
