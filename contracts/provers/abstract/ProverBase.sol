@@ -16,10 +16,14 @@ abstract contract ProverBase is IProver {
     // ============ Errors ============
 
     /// @notice Error thrown when a batch already exists at the given height
+    /// @param height The height of the batch being submitted
     error BatchAlreadyExists(uint64 height);
 
     /// @notice Error thrown when batch height is too far in the past from the latest batch
-    error BatchHeightTooOld(uint64 height, uint64 lastHeight);
+    /// @param batchHeight The height of the batch being submitted
+    /// @param lastBatchHeight The height of the latest batch
+    /// @param maxAge The maximum allowed age difference
+    error BatchHeightTooOld(uint64 batchHeight, uint64 lastBatchHeight, uint64 maxAge);
 
     /// @notice Error thrown when signature verification fails for a validator's signed batch
     error InvalidSignature();
