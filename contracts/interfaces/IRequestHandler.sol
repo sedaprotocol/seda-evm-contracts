@@ -10,8 +10,11 @@ interface IRequestHandler {
     /// @param requestId The unique identifier of the posted request
     event RequestPosted(bytes32 indexed requestId);
 
-    /// @notice Error thrown when the replication factor is set to zero or exceeds limits
-    error InvalidReplicationFactor();
+    /// @notice Error thrown when a data request parameter is invalid (e.g., replication factor is zero, gas price is too low)
+    /// @param parameterName The name of the invalid parameter
+    /// @param value The provided invalid value
+    /// @param minimumRequired The minimum required value for the parameter
+    error InvalidParameter(string parameterName, uint256 value, uint256 minimumRequired);
 
     /// @notice Error thrown when attempting to post a request with an ID that already exists
     /// @param requestId The ID that was already used for a previous request

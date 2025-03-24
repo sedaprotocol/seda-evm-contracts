@@ -33,6 +33,8 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
 
     error FeesNotImplemented();
 
+    error InvalidReplicationFactor(uint16 provided, uint16 max);
+
     // ============ Constructor ============
 
     /// @notice Contract constructor
@@ -122,9 +124,18 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
             revert FeesNotImplemented();
         }
 
-        // Check max replication factor first
+        // Check data request parameters
         if (inputs.replicationFactor > maxReplicationFactor) {
-            revert InvalidReplicationFactor();
+            revert InvalidReplicationFactor(inputs.replicationFactor, maxReplicationFactor);
+        }
+        if (inputs.gasPrice < RequestHandlerBase.MIN_GAS_PRICE) {
+            revert InvalidParameter("gasPrice", inputs.gasPrice, RequestHandlerBase.MIN_GAS_PRICE);
+        }
+        if (inputs.execGasLimit < RequestHandlerBase.MIN_EXEC_GAS_LIMIT) {
+            revert InvalidParameter("execGasLimit", inputs.execGasLimit, RequestHandlerBase.MIN_EXEC_GAS_LIMIT);
+        }
+        if (inputs.tallyGasLimit < RequestHandlerBase.MIN_TALLY_GAS_LIMIT) {
+            revert InvalidParameter("tallyGasLimit", inputs.tallyGasLimit, RequestHandlerBase.MIN_TALLY_GAS_LIMIT);
         }
 
         // Call parent implementation which handles the rest

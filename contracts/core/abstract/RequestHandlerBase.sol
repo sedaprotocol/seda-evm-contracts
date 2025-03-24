@@ -7,6 +7,12 @@ import {IRequestHandler} from "../../interfaces/IRequestHandler.sol";
 /// @title RequestHandler
 /// @notice Implements the RequestHandlerBase for managing Seda protocol requests
 abstract contract RequestHandlerBase is IRequestHandler {
+    // ============ Constants ============
+    uint256 internal constant MIN_REPLICATION_FACTOR = 1;
+    uint256 internal constant MIN_GAS_PRICE = 1_000;
+    uint256 internal constant MIN_EXEC_GAS_LIMIT = 10_000_000_000_000;
+    uint256 internal constant MIN_TALLY_GAS_LIMIT = 10_000_000_000_000;
+
     // ============ Types & State ============
 
     // Define a unique storage slot for RequestHandlerBase
@@ -34,8 +40,18 @@ abstract contract RequestHandlerBase is IRequestHandler {
     function postRequest(
         SedaDataTypes.RequestInputs calldata inputs
     ) public payable virtual override(IRequestHandler) returns (bytes32) {
-        if (inputs.replicationFactor == 0) {
-            revert InvalidReplicationFactor();
+        // Validate parameters
+        if (inputs.replicationFactor < MIN_REPLICATION_FACTOR) {
+            revert InvalidParameter("replicationFactor", inputs.replicationFactor, MIN_REPLICATION_FACTOR);
+        }
+        if (inputs.gasPrice < MIN_GAS_PRICE) {
+            revert InvalidParameter("gasPrice", inputs.gasPrice, MIN_GAS_PRICE);
+        }
+        if (inputs.execGasLimit < MIN_EXEC_GAS_LIMIT) {
+            revert InvalidParameter("execGasLimit", inputs.execGasLimit, MIN_EXEC_GAS_LIMIT);
+        }
+        if (inputs.tallyGasLimit < MIN_TALLY_GAS_LIMIT) {
+            revert InvalidParameter("tallyGasLimit", inputs.tallyGasLimit, MIN_TALLY_GAS_LIMIT);
         }
 
         bytes32 requestId = SedaDataTypes.deriveRequestId(inputs);
