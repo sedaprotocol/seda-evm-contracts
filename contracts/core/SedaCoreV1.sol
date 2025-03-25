@@ -510,8 +510,10 @@ contract SedaCoreV1 is
             if (payableAddress == address(0)) {
                 requestorRefund += requestDetails.requestFee;
             } else {
-                // Split request fee proportionally based on gas used vs gas limit
+                // Calculate submitter fee proportionally based on gas used vs gas limit
                 uint256 submitterFee = (result.gasUsed * requestDetails.requestFee) / requestDetails.gasLimit;
+                // Sanity check: limit the fee as a safeguard (gasUsed should never exceed gasLimit)
+                if (submitterFee > requestDetails.requestFee) submitterFee = requestDetails.requestFee;
                 if (submitterFee > 0) {
                     recipients[recipientCount] = payableAddress;
                     amounts[recipientCount] = submitterFee;
