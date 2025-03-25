@@ -24,22 +24,25 @@ describe('SedaCoreV1', () => {
     // This simulates an invalid result with a timestamp from 1970-01-01T00:00:01Z
     results[results.length - 1].blockTimestamp = 1;
 
-    // Modify results to have:
-    // - a zero payback address
-    // - a non-zero payback address
-    // - a longer non-EVM-compatible payback address (40 bytes)
-    // - a shorter non-EVM-compatible payback address (10 bytes)
+    // Different test cases for payback address and gas used:
+    // Zero Payback address
     results[0].paybackAddress = ethers.ZeroAddress;
+    // Valid payback address (20 bytes) with 1/4 of the gas limit used
     results[1].paybackAddress = '0x0123456789012345678901234567890123456789';
-    results[2].paybackAddress = '0x01234567890123456789012345678901234567890123456789012345678901234567890123456789';
-    results[3].paybackAddress = '0x01234567890123456789';
-
-    // Modify results to have different gas used
     results[1].gasUsed = 500000; // 1/4 of the gas limit
-    results[4].gasUsed = 0;
+    // Invalid payback address (too long, 40 bytes)
+    results[2].paybackAddress = '0x01234567890123456789012345678901234567890123456789012345678901234567890123456789';
+    // Invalid payback address (too short, 10 bytes)
+    results[3].paybackAddress = '0x01234567890123456789';
+    // Valid payback address (20 bytes) with 0 gas used
     results[4].paybackAddress = '0x0123456789012345678901234567890123456789';
+    results[4].gasUsed = 0;
+    // Valid payback address (20 bytes) with full gas limit used
     results[5].paybackAddress = '0x0123456789012345678901234567890123456789';
     results[5].gasUsed = BigInt(requests[5].execGasLimit) + BigInt(requests[5].tallyGasLimit);
+    // Valid payback address (20 bytes) with 2x gas limit used (should be capped at request fee)
+    results[6].paybackAddress = '0x0123456789012345678901234567890123456789';
+    results[6].gasUsed = (BigInt(requests[6].execGasLimit) + BigInt(requests[6].tallyGasLimit)) * 2n;
 
     const leaves = results.map(deriveResultId).map(computeResultLeafHash);
 
@@ -387,6 +390,20 @@ describe('SedaCoreV1', () => {
 
         const pendingRequestorFees = await feeManager.getPendingFees(requestor.address);
         expect(pendingRequestorFees).to.equal(1);
+      });
+
+      it('caps submitter fee to request fee when gas used exceeds limit', async () => {
+        const { core, data } = await loadFixture(deployCoreFixture);
+        const requestFee = ethers.parseEther('1');
+
+        // Create a result with gas used higher than gas limit
+        await core.postRequest(data.requests[6], requestFee, 0, 0, { value: requestFee });
+
+        // Since gasUsed > gasLimit, the entire request fee should go to the payback address
+        // if it's valid, otherwise back to the requestor
+        await expect(core.postResult(data.results[6], 0, data.proofs[6]))
+          .to.emit(core, 'FeeDistributed')
+          .withArgs(data.results[6].drId, data.results[6].paybackAddress, requestFee, 0);
       });
     });
   });
