@@ -51,7 +51,9 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     event TimeoutPeriodUpdated(uint256 newTimeoutPeriod);
 
     /// @notice Error thrown when the fee amount is not equal to the sum of the request, result, and batch fees
-    error InvalidFeeAmount();
+    /// @param providedFee The fee amount provided by the user
+    /// @param expectedFee The expected fee amount
+    error InvalidFeeAmount(uint256 providedFee, uint256 expectedFee);
 
     /// @notice Error thrown when attempting to set the timeout period to zero
     error InvalidTimeoutPeriod();

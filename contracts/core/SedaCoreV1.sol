@@ -401,6 +401,13 @@ contract SedaCoreV1 is
         return address(_storageV1().feeManager);
     }
 
+    /// @notice Returns the details of a pending request
+    /// @param requestId The ID of the request to retrieve details for
+    /// @return The details of the pending request
+    function getPendingRequestDetails(bytes32 requestId) external view returns (RequestDetails memory) {
+        return _storageV1().requestDetails[requestId];
+    }
+
     /// @notice Retrieves a list of active requests
     /// @dev This function is gas-intensive due to iteration over the pendingRequests array.
     /// Users should be cautious when using high `limit` values in production environments, as it can result in high gas consumption.
@@ -607,7 +614,7 @@ contract SedaCoreV1 is
     /// @param totalFees The total amount of fees expected for this transaction
     function _validateFees(uint256 totalFees) private view {
         if (msg.value != totalFees) {
-            revert InvalidFeeAmount();
+            revert InvalidFeeAmount(msg.value, totalFees);
         }
 
         if (msg.value > 0 && address(_storageV1().feeManager) == address(0)) {

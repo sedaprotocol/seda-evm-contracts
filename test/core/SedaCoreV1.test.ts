@@ -866,6 +866,78 @@ describe('SedaCoreV1', () => {
     });
   });
 
+  describe('getRequestDetails', () => {
+    it('returns request details for pending requests', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+      const fees = {
+        request: ethers.parseEther('1.0'),
+        result: ethers.parseEther('2.0'),
+        batch: ethers.parseEther('3.0'),
+      };
+      const totalFee = fees.request + fees.result + fees.batch;
+
+      // Post request with fees
+      await core.postRequest(data.requests[0], fees.request, fees.result, fees.batch, { value: totalFee });
+      const requestId = await deriveRequestId(data.requests[0]);
+
+      // Get request details
+      const details = await core.getPendingRequestDetails(requestId);
+
+      // Verify details
+      expect(details.timestamp).to.not.equal(0);
+      expect(details.requestFee).to.equal(fees.request);
+      expect(details.resultFee).to.equal(fees.result);
+      expect(details.batchFee).to.equal(fees.batch);
+      expect(details.gasLimit).to.equal(BigInt(data.requests[0].execGasLimit) + BigInt(data.requests[0].tallyGasLimit));
+      expect(details.requestFeeAddr).to.equal(await core.owner());
+      expect(details.resultFeeAddr).to.equal(await core.owner());
+      expect(details.batchFeeAddr).to.equal(await core.owner());
+    });
+
+    it('returns empty details for non-existent requests', async () => {
+      const { core } = await loadFixture(deployCoreFixture);
+      const nonExistentRequestId = ethers.randomBytes(32);
+
+      const details = await core.getPendingRequestDetails(nonExistentRequestId);
+
+      // Verify all fields are zero/empty
+      expect(details.timestamp).to.equal(0);
+      expect(details.requestFee).to.equal(0);
+      expect(details.resultFee).to.equal(0);
+      expect(details.batchFee).to.equal(0);
+      expect(details.gasLimit).to.equal(0);
+      expect(details.requestFeeAddr).to.equal(ethers.ZeroAddress);
+      expect(details.resultFeeAddr).to.equal(ethers.ZeroAddress);
+      expect(details.batchFeeAddr).to.equal(ethers.ZeroAddress);
+    });
+
+    it('returns empty details after request is resolved', async () => {
+      const { core, data } = await loadFixture(deployCoreFixture);
+
+      // Post request
+      await core.postRequest(data.requests[0]);
+      const requestId = await deriveRequestId(data.requests[0]);
+
+      // Verify details exist
+      const detailsBefore = await core.getPendingRequestDetails(requestId);
+      expect(detailsBefore.timestamp).to.not.equal(0);
+
+      // Post result
+      await core.postResult(data.results[0], 0, data.proofs[0]);
+
+      // Verify details are cleared
+      const detailsAfter = await core.getPendingRequestDetails(requestId);
+      expect(detailsAfter.timestamp).to.equal(0);
+      expect(detailsAfter.requestFee).to.equal(0);
+      expect(detailsAfter.resultFee).to.equal(0);
+      expect(detailsAfter.batchFee).to.equal(0);
+      expect(detailsAfter.gasLimit).to.equal(0);
+      expect(detailsAfter.requestFeeAddr).to.equal(ethers.ZeroAddress);
+      expect(detailsAfter.resultFeeAddr).to.equal(ethers.ZeroAddress);
+      expect(detailsAfter.batchFeeAddr).to.equal(ethers.ZeroAddress);
+    });
+  });
+
   describe('fee manager integration', () => {
     it('handles case when fee manager is not set', async () => {
       // Generate data fixtures for the test
