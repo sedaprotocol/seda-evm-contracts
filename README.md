@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://seda.xyz/">
-    <img width="90%" alt="seda-evm-contracts" src="https://www.seda.xyz/images/footer/footer-image.png">
+    <img width="90%" alt="seda-evm-contracts" src="https://raw.githubusercontent.com/sedaprotocol/.github/refs/heads/main/images/banner.png">
   </a>
 </p>
 
@@ -294,10 +294,12 @@ AVAILABLE TASKS:
 
   deploy:all                    Deploys the Secp256k1ProverV1 and SedaCoreV1 contracts
   deploy:core                   Deploys the SedaCoreV1 contract
+  deploy:dev:all-reset          Deploys the Secp256k1ProverV1 and SedaCoreV1 contracts (only for testing)
   deploy:dev:permissioned       Deploys the Permissioned SEDA contract (only for testing)
   deploy:dev:prover-reset       Deploys the Secp256k1ProverResettable contract (only for testing)
+  deploy:fee-manager            Deploys the SedaFeeManager contract
   deploy:prover                 Deploys the Secp256k1ProverV1 contract
-  post-request                  Post a data request to a ISedaCore contract
+  post-request                  Post a data request to a ISedaCore contract with attached funds
   reset-prover                  Resets a Secp256k1ProverResettable contract to a specified batch (only for testing)
 
 seda: Deploy and interact with SEDA contracts
@@ -309,6 +311,14 @@ For global options help run: hardhat help
 > - The `--reset` flag replaces existing deployment files
 > - The `--verify` flag triggers contract verification on block explorers
 > - The `--params` flag specifies a JSON file with deployment parameters
+
+Example deployment with parameters:
+
+```bash
+bun run seda deploy:all --params deployments/parameters-example.json
+```
+
+See [parameters-example.json](deployments/parameters-example.json) for an example configuration file that specifies contract initialization parameters.
 
 ## Contributing
 
