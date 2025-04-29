@@ -21,16 +21,6 @@ export const networks: Networks = {
       browserUrl: 'https://sepolia.basescan.org',
     },
   },
-  berachainBartio: {
-    accounts: 'EVM_PRIVATE_KEY',
-    chainId: 80084,
-    url: 'https://bartio.rpc.berachain.com/',
-    etherscan: {
-      apiKey: 'NO_API_KEY',
-      apiUrl: 'https://api.routescan.io/v2/network/testnet/evm/80084/etherscan/api',
-      browserUrl: 'https://bartio.beratrail.io',
-    },
-  },
   flowTestnet: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 545,
