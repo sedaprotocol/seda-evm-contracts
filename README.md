@@ -294,13 +294,15 @@ AVAILABLE TASKS:
 
   deploy:all                    Deploys the Secp256k1ProverV1 and SedaCoreV1 contracts
   deploy:core                   Deploys the SedaCoreV1 contract
-  deploy:dev:all-reset          Deploys the Secp256k1ProverV1 and SedaCoreV1 contracts (only for testing)
-  deploy:dev:permissioned       Deploys the Permissioned SEDA contract (only for testing)
-  deploy:dev:prover-reset       Deploys the Secp256k1ProverResettable contract (only for testing)
   deploy:fee-manager            Deploys the SedaFeeManager contract
   deploy:prover                 Deploys the Secp256k1ProverV1 contract
-  post-request                  Post a data request to a ISedaCore contract with attached funds
-  reset-prover                  Resets a Secp256k1ProverResettable contract to a specified batch (only for testing)
+  dev:deploy:all                Deploys the Secp256k1ProverResettable and SedaCoreV1 contracts (only for testing)
+  dev:deploy:permissioned       Deploys the Permissioned SEDA contract (only for testing)
+  dev:deploy:prover             Deploys the Secp256k1ProverResettable contract (only for testing)
+  dev:reset-prover              Resets a Secp256k1ProverResettable contract to a specified batch (only for testing)
+  utils:post-request            Post a data request to a ISedaCore contract with attached funds
+  utils:upgrade-proxy           Deploys and upgrades a proxy implementation contract
+```
 
 seda: Deploy and interact with SEDA contracts
 

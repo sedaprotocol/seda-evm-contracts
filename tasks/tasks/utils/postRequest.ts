@@ -1,9 +1,9 @@
 import { parseUnits } from 'ethers';
-import { logger } from '../common/logger';
-import { sedaScope } from '../index';
+import { logger } from '../../common/logger';
+import { sedaScope } from '../../index';
 
 sedaScope
-  .task('post-request', 'Post a data request to a ISedaCore contract with attached funds')
+  .task('utils:post-request', 'Post a data request to an ISedaCore contract with attached funds')
   .addParam('core', 'The address of the SedaCore contract')
   .addOptionalParam('requestFee', 'The fee for executing the request in gwei', '25000')
   .addOptionalParam('resultFee', 'The fee for posting the result in gwei', '10000')

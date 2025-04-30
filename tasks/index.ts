@@ -10,13 +10,13 @@ import './tasks/deploy/core';
 import './tasks/deploy/prover';
 import './tasks/deploy/feeManager';
 import './tasks/deploy/all';
-import './tasks/deploy/dev/permissioned';
-import './tasks/deploy/dev/resettableProver';
-import './tasks/deploy/dev/allResettable';
 
-// Upgrade task
-import './tasks/upgrade';
+// Development tasks
+import './tasks/dev/permissioned';
+import './tasks/dev/resettableProver';
+import './tasks/dev/allResettable';
+import './tasks/dev/resetProver';
 
-// Request tasks
-import './tasks/postRequest';
-import './tasks/resetProver';
+// Utils tasks
+import './tasks/utils/postRequest';
+import './tasks/utils/proxyUpgrade';

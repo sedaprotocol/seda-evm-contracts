@@ -4,9 +4,9 @@ import hre from 'hardhat';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deploySedaCore } from '../tasks/tasks/deploy/core';
-import { deployResettableProver } from '../tasks/tasks/deploy/dev/resettableProver';
 import { deployFeeManager } from '../tasks/tasks/deploy/feeManager';
 import { deploySecp256k1Prover } from '../tasks/tasks/deploy/prover';
+import { deployResettableProver } from '../tasks/tasks/dev/resettableProver';
 
 async function main() {
   console.log('🧪 Testing All Deployment Functions');

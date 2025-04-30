@@ -1,14 +1,14 @@
 import { types } from 'hardhat/config';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { sedaScope } from '../../..';
-import { logger } from '../../../common/logger';
-import { deploySedaCore } from '../core';
-import { deployFeeManager } from '../feeManager';
+import { sedaScope } from '../..';
+import { logger } from '../../common/logger';
+import { deploySedaCore } from '../deploy/core';
+import { deployFeeManager } from '../deploy/feeManager';
 import { deployResettableProver } from './resettableProver';
 
 sedaScope
-  .task('deploy:dev:all-reset', 'Deploys the Secp256k1ProverV1 and SedaCoreV1 contracts')
+  .task('dev:deploy:all', 'Deploys the Secp256k1ProverResettable and SedaCoreV1 contracts (only for testing)')
   .addParam('params', 'The parameters file to use', undefined, types.string)
   .addFlag('reset', 'Replace existing deployment files')
   .addFlag('verify', 'Verify the contract on etherscan')
@@ -32,7 +32,7 @@ export async function deployAll(
   });
 
   // 1. Deploy Secp256k1Prover
-  logger.section('1. Deploy Secp256k1Prover contracts', 'meta');
+  logger.section('1. Deploy Secp256k1ProverResettable contracts', 'meta');
   const { contractAddress: proverAddress } = await deployResettableProver(hre, {
     params: options.params,
     feeManagerAddress: feeManagerAddress,

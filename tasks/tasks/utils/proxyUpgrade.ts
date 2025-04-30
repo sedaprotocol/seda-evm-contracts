@@ -24,15 +24,15 @@ import { sedaScope } from '../../index';
  * 3. Copy the proxy address from deployment output
  *
  * 4. Run upgrade:
- *    `bun run seda upgrade:dev <proxy-address> MockSecp256k1ProverV2 --network local`
+ *    `bun run seda utils:upgrade-proxy <proxy-address> MockSecp256k1ProverV2 --network local`
  *
  * Example usage for Base Sepolia Testnet:
  * - Deploy: `bun run seda deploy:prover --params deployments/parameters-example.json --verify --network baseSepolia`
- * - Upgrade: `bun run seda upgrade:dev 0xC1b213990a78De8E8A4efAFd2F47406d65481C45 MockSecp256k1ProverV2 --verify --network baseSepolia`
+ * - Upgrade: `bun run seda utils:upgrade-proxy 0xC1b213990a78De8E8A4efAFd2F47406d65481C45 MockSecp256k1ProverV2 --verify --network baseSepolia`
  */
 
 sedaScope
-  .task('upgrade:dev', 'Deploys and upgrades a proxy implementation contract')
+  .task('utils:upgrade-proxy', 'Deploys and upgrades a proxy implementation contract')
   .addPositionalParam('proxy', 'The proxy address to upgrade', undefined, types.string)
   .addPositionalParam('contractName', 'The contract name to upgrade', undefined, types.string)
   .addOptionalParam('args', 'The initialize arguments to use', undefined, types.string)
