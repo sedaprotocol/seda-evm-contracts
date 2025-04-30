@@ -7,7 +7,7 @@ import { pathExists, prompt } from '../io';
 import { logger } from '../logger';
 import { readParams } from '../params';
 import { getNetworkKey } from '../utils';
-import { type UupsContracts, deployProxyContract } from './proxy';
+import { type UupsContracts, deployProxyContract, upgradeProxyContract } from './proxy';
 import { updateAddressesFile, updateDeployment } from './reports';
 
 /**
@@ -100,6 +100,39 @@ export async function deployAndVerifyContractWithProxy<T extends keyof UupsContr
   }
 
   return { contractAddress, contractImplAddress };
+}
+
+/**
+ * Handles the complete contract upgrade workflow:
+ * 1. Confirms deployment configuration and user approval
+ * 2. Upgrades the proxy implementation contract
+ * 3. Updates deployment records and address files
+ * Returns the new implementation address
+ */
+export async function upgradeAndVerifyContractWithProxy(
+  hre: HardhatRuntimeEnvironment,
+  proxyAddress: string,
+  contractName: string,
+  owner: Signer,
+): Promise<{ contractImplAddress: string }> {
+  // Deploy
+  logger.section('Upgrading Contract', 'deploy');
+  const { contractImplAddress } = await upgradeProxyContract(hre, proxyAddress, contractName, owner);
+  logger.success(`Proxy address: ${proxyAddress}`);
+  logger.success(`Impl. address: ${contractImplAddress}`);
+
+  // Update deployment files (if not local hardhat)
+  if (hre.network.name !== 'hardhat') {
+    logger.section('Updating Deployment Files', 'files');
+    const networkKey = await getNetworkKey(hre);
+    await updateDeployment(hre, contractName);
+    await updateAddressesFile(networkKey, contractName, {
+      proxy: proxyAddress,
+      implementation: contractImplAddress,
+    });
+  }
+
+  return { contractImplAddress };
 }
 
 /**

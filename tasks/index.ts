@@ -14,6 +14,9 @@ import './tasks/deploy/dev/permissioned';
 import './tasks/deploy/dev/resettableProver';
 import './tasks/deploy/dev/allResettable';
 
+// Upgrade task
+import './tasks/upgrade';
+
 // Request tasks
 import './tasks/postRequest';
 import './tasks/resetProver';

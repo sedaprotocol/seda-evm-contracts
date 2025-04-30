@@ -35,3 +35,22 @@ export async function deployProxyContract<T extends keyof UupsContracts>(
     contractImplAddress,
   };
 }
+
+export async function upgradeProxyContract(
+  hre: HardhatRuntimeEnvironment,
+  proxyAddress: string,
+  contractName: string,
+  signer: Signer,
+) {
+  const ContractFactory = await hre.ethers.getContractFactory(contractName, signer);
+  const upgraded = await hre.upgrades.upgradeProxy(proxyAddress, ContractFactory, {
+    kind: 'uups',
+  });
+  await upgraded.waitForDeployment();
+
+  const contractImplAddress = await hre.upgrades.erc1967.getImplementationAddress(await upgraded.getAddress());
+
+  return {
+    contractImplAddress,
+  };
+}

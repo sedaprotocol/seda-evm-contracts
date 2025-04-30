@@ -1,7 +1,7 @@
 import { CONFIG } from './config';
 
 type LogLevel = 'info' | 'success' | 'error' | 'warn';
-type SectionType = 'config' | 'deploy' | 'files' | 'test' | 'verify' | 'default' | 'params' | 'meta';
+type SectionType = 'config' | 'deploy' | 'files' | 'test' | 'verify' | 'default' | 'params' | 'meta' | 'upgrade';
 
 class Logger {
   private prefix?: string;

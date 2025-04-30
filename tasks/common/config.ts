@@ -22,6 +22,7 @@ const LOGGER_CONFIG = {
     params: '📜',
     default: '🔹',
     meta: '🌟',
+    upgrade: '🔄',
   },
   META_BORDER: '━',
 } as const;
