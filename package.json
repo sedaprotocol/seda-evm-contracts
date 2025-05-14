@@ -1,6 +1,6 @@
 {
   "name": "@seda-protocol/evm",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.3",
   "description": "EVM smart contracts enabling any blockchain to connect with the SEDA decentralized network",
   "keywords": ["ethereum", "evm", "oracle", "seda", "smart-contracts", "solidity", "cross-chain"],
   "author": "SEDA Protocol <info@seda.xyz>",
@@ -46,12 +46,14 @@
     "valibot": "^0.42.1"
   },
   "files": [
-    "!/artifacts/contracts/**/*.dbg.json",
-    "!/artifacts/contracts/mocks/**/*",
-    "!/contracts/mocks/**/*",
     "/artifacts/contracts/**/*.json",
+    "!/artifacts/contracts/**/*.dbg.json",
+    "!/artifacts/contracts/test/**/*",
     "/contracts/**/*.sol",
+    "!/contracts/test/**/*",
     "/typechain-types/**/*.d.ts",
-    "/typechain-types/**/*.ts"
+    "/typechain-types/**/*.ts",
+    "!/typechain-types/contracts/test/**/*",
+    "!/typechain-types/factories/contracts/test/**/*"
   ]
 }
