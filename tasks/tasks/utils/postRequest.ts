@@ -16,15 +16,15 @@ sedaScope
 
     const timestamp = Math.floor(Date.now() / 1000).toString(16);
     const request = {
-      execProgramId: '0x577cd378ec40de8f3a3fa3d19c49bd1f1dbd97d59934440b38fa8c162852537d',
+      execProgramId: '0x40b918f78a20008a722fa92089048d1a817edc193f0d5124b64adce91427beee',
       execInputs: '0x6574682d75736474',
-      execGasLimit: 300000000000000n,
+      execGasLimit: 200000000000000n,
       tallyProgramId: '0x577cd378ec40de8f3a3fa3d19c49bd1f1dbd97d59934440b38fa8c162852537d',
       tallyInputs: '0x6574682d75736474',
-      tallyGasLimit: 150000000000000n,
+      tallyGasLimit: 200000000000000n,
       replicationFactor: 1,
       consensusFilter: '0x00',
-      gasPrice: 5000n,
+      gasPrice: 2000n,
       memo: `0x${timestamp}`,
     };
 
