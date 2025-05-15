@@ -3,6 +3,6 @@ module.exports = {
     grep: '[Gg]as.*[Aa]nalysis',
     invert: true,
   },
-  skipFiles: ['mocks/', 'interfaces/', 'libraries/SedaDataTypes.sol', 'test/MaliciousRecipient.sol'],
+  skipFiles: ['mocks/', 'interfaces/', 'libraries/SedaDataTypes.sol', 'test/'],
   modifierWhitelist: ['initializer', 'onlyInitializing'],
 };
