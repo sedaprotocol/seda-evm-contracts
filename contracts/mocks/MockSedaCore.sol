@@ -9,8 +9,10 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @dev NOTE: This contract is designed for testing integration with the SEDA core interface.
 ///      It mocks core functionality for testing purposes and should never be used in production.
 contract MockSedaCore is ISedaCore {
+    // State variables
     uint256 private timeoutPeriod = 86400; // 1 day default
 
+    // Storage mappings
     mapping(bytes32 => SedaDataTypes.Request) private requests;
     mapping(bytes32 => SedaDataTypes.Result) private results;
     mapping(bytes32 => RequestDetails) private requestDetails;
@@ -204,10 +206,16 @@ contract MockSedaCore is ISedaCore {
 
     // Helper functions
     function getRequest(bytes32 requestId) public view returns (SedaDataTypes.Request memory) {
+        if (bytes(requests[requestId].version).length == 0) {
+            revert RequestNotFound(requestId);
+        }
         return requests[requestId];
     }
 
     function getResult(bytes32 requestId) public view returns (SedaDataTypes.Result memory) {
+        if (results[requestId].drId != requestId) {
+            revert ResultNotFound(requestId);
+        }
         return results[requestId];
     }
 
