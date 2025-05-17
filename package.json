@@ -1,6 +1,6 @@
 {
   "name": "@seda-protocol/evm",
-  "version": "1.0.0-rc.5",
+  "version": "1.0.0-rc.6",
   "description": "EVM smart contracts enabling any blockchain to connect with the SEDA decentralized network",
   "keywords": ["ethereum", "evm", "oracle", "seda", "smart-contracts", "solidity", "cross-chain"],
   "author": "SEDA Protocol <info@seda.xyz>",
@@ -25,25 +25,25 @@
     "seda": "hardhat seda",
     "test": "hardhat test --grep \"^(?!.*[Gg]as.*[Aa]nalysis).*$\"",
     "test:coverage": "COVERAGE=true hardhat coverage",
-    "test:gas": "REPORT_GAS=true hardhat test --grep \"[Gg]as.*[Aa]nalysis\"",
-    "test:deployments": "hardhat run scripts/testDeployments.ts"
+    "test:deployments": "hardhat run scripts/testDeployments.ts",
+    "test:gas": "REPORT_GAS=true hardhat test --grep \"[Gg]as.*[Aa]nalysis\""
   },
   "dependencies": {
-    "@openzeppelin/contracts": "5.2.0",
-    "@openzeppelin/contracts-upgradeable": "5.2.0"
+    "@openzeppelin/contracts": "5.3.0",
+    "@openzeppelin/contracts-upgradeable": "5.3.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/hardhat-upgrades": "^3.9.0",
-    "@openzeppelin/merkle-tree": "^1.0.7",
-    "dotenv": "^16.4.7",
-    "hardhat": "^2.22.18",
-    "prettier": "^3.4.2",
-    "prettier-plugin-solidity": "^1.4.2",
+    "@openzeppelin/merkle-tree": "^1.0.8",
+    "dotenv": "^16.5.0",
+    "hardhat": "^2.24.0",
+    "prettier": "^3.5.3",
+    "prettier-plugin-solidity": "^2.0.0",
     "rimraf": "^6.0.1",
-    "solhint": "^5.0.5",
-    "valibot": "^0.42.1"
+    "solhint": "^5.1.0",
+    "valibot": "^1.1.0"
   },
   "files": [
     "/artifacts/contracts/**/*.json",

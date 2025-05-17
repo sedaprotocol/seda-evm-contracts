@@ -200,9 +200,13 @@ contract MockSedaCore is ISedaCore {
         return result;
     }
 
-    function getFeeManager() external view override returns (address) {}
+    function getFeeManager() external pure override returns (address) {
+        return address(0);
+    }
 
-    function getSedaProver() external view override returns (address) {}
+    function getSedaProver() external pure override returns (address) {
+        return address(0);
+    }
 
     // Helper functions
     function getRequest(bytes32 requestId) public view returns (SedaDataTypes.Request memory) {

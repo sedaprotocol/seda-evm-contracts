@@ -1,13 +1,8 @@
 import * as fs from 'node:fs';
 import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { ethers } from 'hardhat';
-import {
-  computeResultLeafHash,
-  computeValidatorLeafHash,
-  deriveRequestId,
-  deriveResultId,
-  generateDataFixtures,
-} from '../test/utils/crypto';
+import { generateDataFixtures } from '../test/helpers/fixtures';
+import { computeResultLeafHash, computeValidatorLeafHash, deriveRequestId, deriveResultId } from '../test/utils/crypto';
 
 // Function to write JSON data to a file with error handling
 function writeJsonToFile(filename: string, data: object) {
