@@ -75,7 +75,7 @@ contract SedaPermissioned is ISedaCore, RequestHandlerBase, AccessControl, Pausa
         }
         results[result.drId] = result;
         _removePendingRequest(result.drId);
-        emit ResultPosted(resultId);
+        emit ResultPosted(result.drId, resultId);
         return resultId;
     }
 
