@@ -57,7 +57,7 @@ describe('SedaPermissioned', () => {
 
     await expect(core.connect(signers.relayer).postResult(results[0], 0, []))
       .to.emit(core, 'ResultPosted')
-      .withArgs(deriveResultId(results[0]));
+      .withArgs(results[0].drId, deriveResultId(results[0]));
 
     const result = await core.getResult(requestId);
     compareResults(result, results[0]);

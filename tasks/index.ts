@@ -1,4 +1,4 @@
-import { scope, types } from 'hardhat/config';
+import { scope } from 'hardhat/config';
 
 /**
  * Defines the scope for SEDA-related tasks.

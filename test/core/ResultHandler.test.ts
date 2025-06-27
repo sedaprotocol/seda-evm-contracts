@@ -66,7 +66,7 @@ describe('ResultHandler', () => {
 
       await expect(core.postResult(data.results[0], 0, data.resultProofs[0]))
         .to.emit(core, 'ResultPosted')
-        .withArgs(deriveResultId(data.results[0]));
+        .withArgs(data.results[0].drId, deriveResultId(data.results[0]));
     });
 
     it('reverts when proof is empty', async () => {
