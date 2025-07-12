@@ -134,7 +134,7 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
 
         _resultHandlerStorage().results[result.drId] = result;
 
-        emit ResultPosted(resultId);
+        emit ResultPosted(result.drId, resultId);
         return (resultId, batchSender);
     }
 

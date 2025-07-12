@@ -8,7 +8,7 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 interface IResultHandler {
     /// @notice Emitted when a new result is successfully posted
     /// @param resultId The unique identifier of the posted result
-    event ResultPosted(bytes32 indexed resultId);
+    event ResultPosted(bytes32 indexed requestId, bytes32 indexed resultId);
 
     /// @notice Error thrown when the provided result proof fails verification
     /// @param resultId The ID of the result with invalid proof
