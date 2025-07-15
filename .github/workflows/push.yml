@@ -37,9 +37,13 @@ jobs:
         run: |
           {
             echo "## Test Coverage Report"
-            echo "\`\`\`"
-            awk '/^-+\|/,/^-+\|$/' coverage-report.txt | head -n -1
-            echo "\`\`\`"
+            echo ""
+            echo "| File | % Stmts | % Branch | % Funcs | % Lines | Uncovered Lines |"
+            echo "|:-----|----------|----------|----------|----------|----------------|"
+            awk '/^-+\|/,/^-+\|$/' coverage-report.txt | 
+            grep -v '^-' | grep -v '^|$' | grep -v '^File' | grep -v 'Istanbul' | 
+            sed 's/^| //; s/ |$//; s/ | /|/g; s/^All files/**All files**/'
+            echo ""
           } > code-coverage-results.md
 
       - name: "Add Coverage PR Comment 💬"
