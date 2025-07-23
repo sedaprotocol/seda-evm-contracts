@@ -11,72 +11,70 @@ library SedaDataTypes {
     struct RequestInputs {
         /// Identifier of Execution WASM binary
         bytes32 execProgramId;
-        /// Inputs for Execution WASM binary
-        bytes execInputs;
-        /// Maximum of gas units for DR Execution
-        uint64 execGasLimit;
         /// Identifier of Tally WASM binary
         bytes32 tallyProgramId;
-        /// Inputs for Tally WASM binary
-        bytes tallyInputs;
+        /// Amount of SEDA tokens per gas unit
+        uint128 gasPrice;
+        /// Maximum of gas units for DR Execution
+        uint64 execGasLimit;
         /// Maximum of gas units for DR Tally
         uint64 tallyGasLimit;
         /// Amount of required DR executors
         uint16 replicationFactor;
+        /// Inputs for Execution WASM binary
+        bytes execInputs;
+        /// Inputs for Tally WASM binary
+        bytes tallyInputs;
         /// Filter applied before tally execution
         bytes consensusFilter;
-        /// Amount of SEDA tokens per gas unit
-        uint128 gasPrice;
         /// Public info attached to DR
         bytes memo;
     }
 
     /// @notice Full data request structure
     struct Request {
-        /// Semantic Version
-        string version;
-        // DR definition
         /// Identifier of Execution WASM binary
         bytes32 execProgramId;
-        /// Inputs for Execution WASM binary
-        bytes execInputs;
-        /// Maximum of gas units for DR Execution
-        uint64 execGasLimit;
         /// Identifier of Tally WASM binary
         bytes32 tallyProgramId;
-        /// Inputs for Tally WASM binary
-        bytes tallyInputs;
+        /// Amount of SEDA tokens per gas unit
+        uint128 gasPrice;
+        /// Maximum of gas units for DR Execution
+        uint64 execGasLimit;
         /// Maximum of gas units for DR Tally
         uint64 tallyGasLimit;
         /// Amount of required DR executors
         uint16 replicationFactor;
+        /// Semantic Version
+        string version;
+        /// Inputs for Execution WASM binary
+        bytes execInputs;
+        /// Inputs for Tally WASM binary
+        bytes tallyInputs;
         /// Filter to be applied before tally execution
         bytes consensusFilter;
-        /// Amount of SEDA tokens per gas unit
-        uint128 gasPrice;
         /// Public info attached to DR
         bytes memo;
     }
 
     /// @notice Result of a data request execution
     struct Result {
-        /// Semantic Version
-        string version;
         /// Data Request Identifier
         bytes32 drId;
-        /// True or false whether the reveal results are in consensus or not (≥ 66%)
-        bool consensus;
-        /// Exit code of Tally WASM binary execution
-        uint8 exitCode;
-        /// Result from Tally WASM binary execution
-        bytes result;
+        /// Gas used by the complete data request execution
+        uint128 gasUsed;
         /// Block Height at which data request was finalized
         uint64 blockHeight;
         /// The timestamp of the block the data result is included
         uint64 blockTimestamp;
-        /// Gas used by the complete data request execution
-        uint128 gasUsed;
-        // Fields from Data Request Execution
+        /// True or false whether the reveal results are in consensus or not (≥ 66%)
+        bool consensus;
+        /// Exit code of Tally WASM binary execution
+        uint8 exitCode;
+        /// Semantic Version
+        string version;
+        /// Result from Tally WASM binary execution
+        bytes result;
         /// Payback address set by the relayer
         bytes paybackAddress;
         /// Payload set by SEDA Protocol (e.g. OEV-enabled data requests)
