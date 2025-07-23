@@ -74,7 +74,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @param maxBatchAge The maximum allowed age difference between batches
     /// @param feeManager The address of the fee manager contract
     function initialize(
-        SedaDataTypes.Batch memory initialBatch,
+        SedaDataTypes.Batch calldata initialBatch,
         uint64 maxBatchAge,
         address feeManager
     ) external initializer {
@@ -238,7 +238,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         uint64 votingPower = 0;
         address previousSigner = address(0);
 
-        for (uint256 i = 0; i < validatorProofs.length; i++) {
+        for (uint256 i = 0; i < validatorProofs.length; ++i) {
             address signer = validatorProofs[i].signer;
 
             if (signer <= previousSigner) revert InvalidValidatorOrder();

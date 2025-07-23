@@ -30,7 +30,7 @@ contract SedaFeeManager is IFeeManager {
 
         uint256 totalAmount = 0;
 
-        for (uint256 i = 0; i < recipients.length; i++) {
+        for (uint256 i = 0; i < recipients.length; ++i) {
             address recipient = recipients[i];
             uint256 amount = amounts[i];
 

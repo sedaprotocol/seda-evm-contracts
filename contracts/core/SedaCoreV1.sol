@@ -231,7 +231,7 @@ contract SedaCoreV1 is
                 recipients[recipientCount] = refundAddr;
                 amounts[recipientCount] = refundAmount;
                 totalRefund += refundAmount;
-                recipientCount++;
+                ++recipientCount;
             }
         }
 
@@ -254,7 +254,7 @@ contract SedaCoreV1 is
                 recipients[recipientCount] = refundAddr;
                 amounts[recipientCount] = refundAmount;
                 totalRefund += refundAmount;
-                recipientCount++;
+                ++recipientCount;
             }
         }
 
@@ -277,7 +277,7 @@ contract SedaCoreV1 is
                 recipients[recipientCount] = refundAddr;
                 amounts[recipientCount] = refundAmount;
                 totalRefund += refundAmount;
-                recipientCount++;
+                ++recipientCount;
             }
         }
 
@@ -338,7 +338,7 @@ contract SedaCoreV1 is
             if (details.requestFee > 0) {
                 recipients[recipientCount] = details.requestFeeAddr;
                 amounts[recipientCount] = details.requestFee;
-                recipientCount++;
+                ++recipientCount;
                 emit FeeDistributed(requestId, details.requestFeeAddr, details.requestFee, FeeType.WITHDRAW);
             }
 
@@ -346,7 +346,7 @@ contract SedaCoreV1 is
             if (details.resultFee > 0) {
                 recipients[recipientCount] = details.resultFeeAddr;
                 amounts[recipientCount] = details.resultFee;
-                recipientCount++;
+                ++recipientCount;
                 emit FeeDistributed(requestId, details.resultFeeAddr, details.resultFee, FeeType.WITHDRAW);
             }
 
@@ -354,7 +354,7 @@ contract SedaCoreV1 is
             if (details.batchFee > 0) {
                 recipients[recipientCount] = details.batchFeeAddr;
                 amounts[recipientCount] = details.batchFee;
-                recipientCount++;
+                ++recipientCount;
                 emit FeeDistributed(requestId, details.batchFeeAddr, details.batchFee, FeeType.WITHDRAW);
             }
 
@@ -428,7 +428,7 @@ contract SedaCoreV1 is
 
         uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
         PendingRequest[] memory queriedPendingRequests = new PendingRequest[](actualLimit);
-        for (uint256 i = 0; i < actualLimit; i++) {
+        for (uint256 i = 0; i < actualLimit; ++i) {
             bytes32 requestId = _storageV1().pendingRequests.at(offset + i);
             RequestDetails memory details = _storageV1().requestDetails[requestId];
 
@@ -520,7 +520,7 @@ contract SedaCoreV1 is
                 if (submitterFee > 0) {
                     recipients[recipientCount] = payableAddress;
                     amounts[recipientCount] = submitterFee;
-                    recipientCount++;
+                    ++recipientCount;
                     totalFeeAmount += submitterFee;
                     emit FeeDistributed(result.drId, payableAddress, submitterFee, FeeType.REQUEST);
                 }
@@ -532,7 +532,7 @@ contract SedaCoreV1 is
         if (requestDetails.resultFee > 0) {
             recipients[recipientCount] = msg.sender;
             amounts[recipientCount] = requestDetails.resultFee;
-            recipientCount++;
+            ++recipientCount;
             totalFeeAmount += requestDetails.resultFee;
             emit FeeDistributed(result.drId, msg.sender, requestDetails.resultFee, FeeType.RESULT);
         }
@@ -542,7 +542,7 @@ contract SedaCoreV1 is
             if (batchSender != address(0)) {
                 recipients[recipientCount] = batchSender;
                 amounts[recipientCount] = requestDetails.batchFee;
-                recipientCount++;
+                ++recipientCount;
                 totalFeeAmount += requestDetails.batchFee;
                 emit FeeDistributed(result.drId, batchSender, requestDetails.batchFee, FeeType.BATCH);
             } else {
@@ -554,7 +554,7 @@ contract SedaCoreV1 is
         if (requestorRefund > 0) {
             recipients[recipientCount] = requestDetails.requestFeeAddr;
             amounts[recipientCount] = requestorRefund;
-            recipientCount++;
+            ++recipientCount;
             totalFeeAmount += requestorRefund;
             emit FeeDistributed(result.drId, requestDetails.requestFeeAddr, requestorRefund, FeeType.REFUND);
         }
