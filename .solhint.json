@@ -1,7 +1,10 @@
 {
   "extends": "solhint:recommended",
   "rules": {
-    "compiler-version": ["error", "^0.8.0"],
-    "func-visibility": ["warn", { "ignoreConstructors": true }]
+    "compiler-version": ["error", "^0.8.28"],
+    "func-visibility": ["warn", { "ignoreConstructors": true }],
+    "gas-strict-inequalities": "off",
+    "function-max-lines": "off",
+    "gas-indexed-events": "off"
   }
 }
