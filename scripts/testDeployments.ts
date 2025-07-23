@@ -1,7 +1,4 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import hre from 'hardhat';
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { deploySedaCore } from '../tasks/tasks/deploy/core';
 import { deployFeeManager } from '../tasks/tasks/deploy/feeManager';

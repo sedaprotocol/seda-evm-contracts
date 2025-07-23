@@ -1,4 +1,3 @@
-import { types } from 'hardhat/config';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 import * as v from 'valibot';
 

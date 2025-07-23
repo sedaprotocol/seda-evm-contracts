@@ -1,4 +1,3 @@
-import { types } from 'hardhat/config';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { confirmDeployment, deployAndVerifyContract, logDeploymentConfig } from '../../common/deploy/helpers';

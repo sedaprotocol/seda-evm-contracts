@@ -1,10 +1,8 @@
 import { SimpleMerkleTree } from '@openzeppelin/merkle-tree';
 import { ethers, upgrades } from 'hardhat';
 import type { CoreRequestTypes, CoreResultTypes } from '../../ts-types';
-import { MAX_BATCH_AGE, ONE_DAY_IN_SECONDS } from '../utils/constants';
-import { NON_ZERO_HASH, SEDA_DATA_TYPES_VERSION } from '../utils/constants';
-import { computeResultLeafHash, computeValidatorLeafHash, deriveResultId } from '../utils/crypto';
-import { deriveRequestId } from '../utils/crypto';
+import { MAX_BATCH_AGE, NON_ZERO_HASH, ONE_DAY_IN_SECONDS, SEDA_DATA_TYPES_VERSION } from '../utils/constants';
+import { computeResultLeafHash, computeValidatorLeafHash, deriveRequestId, deriveResultId } from '../utils/crypto';
 
 interface DeployOptions {
   requests?: number;

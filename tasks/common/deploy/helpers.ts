@@ -7,7 +7,7 @@ import { pathExists, prompt } from '../io';
 import { logger } from '../logger';
 import { readParams } from '../params';
 import { getNetworkKey } from '../utils';
-import { type UupsContracts, deployProxyContract, upgradeProxyContract } from './proxy';
+import { deployProxyContract, type UupsContracts, upgradeProxyContract } from './proxy';
 import { updateAddressesFile, updateDeployment } from './reports';
 
 /**

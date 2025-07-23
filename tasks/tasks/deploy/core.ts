@@ -5,7 +5,6 @@ import * as v from 'valibot';
 import {
   confirmDeployment,
   deployAndVerifyContractWithProxy,
-  logConstructorArgs,
   logDeploymentConfig,
   readAndValidateParams,
 } from '../../common/deploy/helpers';

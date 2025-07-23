@@ -1,11 +1,6 @@
 import { ethers } from 'hardhat';
 import type { CoreRequestTypes, CoreResultTypes, ProverDataTypes } from '../../ts-types';
-import {
-  NON_ZERO_HASH,
-  RESULT_DOMAIN_SEPARATOR,
-  SECP256K1_DOMAIN_SEPARATOR,
-  SEDA_DATA_TYPES_VERSION,
-} from './constants';
+import { RESULT_DOMAIN_SEPARATOR, SECP256K1_DOMAIN_SEPARATOR, SEDA_DATA_TYPES_VERSION } from './constants';
 
 function padBigIntToBytes(value: bigint, byteLength: number): string {
   return ethers.zeroPadValue(ethers.toBeArray(value), byteLength);

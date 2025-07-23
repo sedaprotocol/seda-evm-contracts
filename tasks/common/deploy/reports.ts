@@ -1,8 +1,7 @@
-import type { Artifact, BuildInfo } from 'hardhat/types';
-import type { HardhatRuntimeEnvironment } from 'hardhat/types';
+import type { Artifact, BuildInfo, HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { CONFIG } from '../config';
-import { path, ensureDirectoryExists, pathExists, readFile, writeFile } from '../io';
+import { ensureDirectoryExists, path, pathExists, readFile, writeFile } from '../io';
 
 const DEPLOYMENTS_FOLDER = CONFIG.DEPLOYMENTS.FOLDER;
 const ADDRESSES_FILE = CONFIG.DEPLOYMENTS.FILES.ADDRESSES;
