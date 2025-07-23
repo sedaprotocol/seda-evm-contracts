@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -8,6 +8,7 @@ import {IProver} from "../../interfaces/IProver.sol";
 import {IResultHandler} from "../../interfaces/IResultHandler.sol";
 
 /// @title ResultHandler
+/// @author Open Oracle Association
 /// @notice Implements the ResultHandlerBase for managing Seda protocol results
 /// @dev Inherits Initializable to set the sedaProver address (normally done in constructor)
 ///      in a way that's compatible with upgradeability while maintaining consistent storage layout.
@@ -28,19 +29,21 @@ abstract contract ResultHandlerBase is IResultHandler, Initializable {
     // ============ Constructor & Initializer ============
 
     /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @notice Disables initializers to prevent future reinitialization
     constructor() {
         _disableInitializers();
     }
 
+    // solhint-disable func-name-mixedcase
     /// @notice Initializes the ResultHandler contract
     /// @dev Sets up the contract with the provided Seda prover address. Uses initializer pattern
     ///      instead of a constructor to maintain upgradeability while ensuring the prover is set
     ///      exactly once.
     /// @param sedaProverAddress The address of the Seda prover contract
-    // solhint-disable-next-line func-name-mixedcase
     function __ResultHandler_init(address sedaProverAddress) internal onlyInitializing {
         _resultHandlerStorage().sedaProver = IProver(sedaProverAddress);
     }
+    // solhint-enable func-name-mixedcase
 
     // ============ External Functions ============
 

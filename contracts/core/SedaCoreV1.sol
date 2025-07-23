@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -16,6 +16,7 @@ import {ResultHandlerBase} from "./abstract/ResultHandlerBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title SedaCoreV1
+/// @author Open Oracle Association
 /// @notice Core contract for the Seda protocol, managing requests and results
 /// @dev Implements ResultHandler and RequestHandler functionalities, and manages active requests
 contract SedaCoreV1 is
@@ -69,6 +70,7 @@ contract SedaCoreV1 is
     // ============ Constructor & Initializer ============
 
     /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @notice Disables initializers to prevent future reinitialization
     constructor() {
         _disableInitializers();
     }
@@ -445,6 +447,7 @@ contract SedaCoreV1 is
     }
 
     /// @notice Returns the current timeout period
+    /// @return The current timeout period
     function getTimeoutPeriod() external view returns (uint256) {
         return _storageV1().timeoutPeriod;
     }
@@ -482,7 +485,7 @@ contract SedaCoreV1 is
         _storageV1().pendingRequests.add(requestId);
     }
 
-    /// @dev Handles the distribution of fees to various participants
+    /// @notice Handles the distribution of fees to various participants
     /// @param result The submitted result data
     /// @param requestDetails The details of the original request
     /// @param batchSender The address that submitted the batch containing this result
@@ -572,7 +575,7 @@ contract SedaCoreV1 is
         }
     }
 
-    /// @dev Simplified helper to process a single fee type
+    /// @notice Simplified helper to process a single fee type
     /// @param requestId The ID of the request being updated
     /// @param feeType The type of fee being processed
     /// @param newFee The new proposed fee amount
@@ -612,7 +615,7 @@ contract SedaCoreV1 is
         _storageV1().pendingRequests.remove(requestId);
     }
 
-    /// @dev Ensures transaction value matches expected fees and reverts if fees are provided but no fee manager is set
+    /// @notice Ensures transaction value matches expected fees and reverts if fees are provided but no fee manager is set
     /// @param totalFees The total amount of fees expected for this transaction
     function _validateFees(uint256 totalFees) private view {
         if (msg.value != totalFees) {

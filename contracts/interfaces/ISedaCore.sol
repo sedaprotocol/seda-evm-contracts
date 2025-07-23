@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {IResultHandler} from "./IResultHandler.sol";
 import {IRequestHandler} from "./IRequestHandler.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title ISedaCoreV1
+/// @author Open Oracle Association
 /// @notice Interface for the main Seda protocol contract that handles both requests and results
 interface ISedaCore is IResultHandler, IRequestHandler {
     /// @notice Enum representing different types of fee distributions
@@ -38,6 +39,7 @@ interface ISedaCore is IResultHandler, IRequestHandler {
     /// @param requestId The unique identifier for the data request
     /// @param recipient The address receiving the fee distribution
     /// @param amount The amount of fees distributed to the recipient
+    /// @param feeType The type of fee being distributed (REQUEST, RESULT, BATCH, REFUND, or WITHDRAW)
     event FeeDistributed(bytes32 indexed requestId, address indexed recipient, uint256 amount, FeeType indexed feeType);
 
     /// @notice Emitted when fees are updated for an existing request

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {IProver} from "../../interfaces/IProver.sol";
 import {SedaDataTypes} from "../../libraries/SedaDataTypes.sol";
 
 /// @title ProverBase
+/// @author Open Oracle Association
 /// @notice Base contract for implementing proof verification logic
 /// @dev This abstract contract defines the basic structure and error handling for proof verification
 abstract contract ProverBase is IProver {

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 /// @title ISedaFeeManager
+/// @author Open Oracle Association
 /// @notice Interface for the SedaFeeManager contract
 /// @dev Defines functions for fee balance tracking and withdrawals
 interface IFeeManager {

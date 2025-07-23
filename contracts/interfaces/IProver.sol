@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title IProver Interface
+/// @author Open Oracle Association
 /// @notice Interface for the Prover contract in the Seda protocol
 interface IProver {
     /// @notice Emitted when a new batch of results is successfully posted
@@ -35,6 +36,7 @@ interface IProver {
     /// @param batchHeight The height of the batch to verify the result proof for
     /// @param merkleProof The Merkle proof to be verified
     /// @return bool Returns true if the Merkle proof is valid, false otherwise
+    /// @return address The address that posted the batch if valid, address(0) otherwise
     function verifyResultProof(
         bytes32 resultId,
         uint64 batchHeight,

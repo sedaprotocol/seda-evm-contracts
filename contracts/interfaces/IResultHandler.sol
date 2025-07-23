@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title IResultHandler
+/// @author Open Oracle Association
 /// @notice Interface for handling result posting and retrieval
 interface IResultHandler {
     /// @notice Emitted when a new result is successfully posted
+    /// @param requestId The unique identifier of the request that the result belongs to
     /// @param resultId The unique identifier of the posted result
     event ResultPosted(bytes32 indexed requestId, bytes32 indexed resultId);
 

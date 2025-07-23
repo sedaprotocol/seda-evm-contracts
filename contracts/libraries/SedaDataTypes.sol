@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 /// @title SedaDataTypes Library
+/// @author Open Oracle Association
 /// @notice Contains data structures and utility functions for the SEDA protocol
 library SedaDataTypes {
     string internal constant VERSION = "0.0.1";

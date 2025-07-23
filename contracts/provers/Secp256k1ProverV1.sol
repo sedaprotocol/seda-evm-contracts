@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -13,6 +13,7 @@ import {ProverBase} from "./abstract/ProverBase.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title Secp256k1ProverV1
+/// @author Open Oracle Association
 /// @notice Implements the ProverBase for Secp256k1 signature verification in the Seda protocol
 /// @dev This contract manages batch updates and result proof verification using Secp256k1 signatures.
 ///      Batch validity is determined by consensus among validators, requiring:
@@ -25,10 +26,10 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     // ============ Types & State ============
 
-    // The percentage of voting power required for consensus (66.666666%, represented as parts per 100,000,000)
+    /// @notice The percentage of voting power required for consensus (66.666666%, represented as parts per 100,000,000)
     uint32 public constant CONSENSUS_PERCENTAGE = 66_666_666;
 
-    // Domain separator for Secp256k1 Merkle Tree leaves
+    /// @notice Domain separator for Secp256k1 Merkle Tree leaves
     bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
 
     // Constant storage slot for the state following the ERC-7201 standard
@@ -62,6 +63,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     // ============ Constructor & Initializer ============
 
     /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @notice Disables initializers to prevent future reinitialization
     constructor() {
         _disableInitializers();
     }
@@ -279,7 +281,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         return ECDSA.recover(messageHash, signature) == signer;
     }
 
-    /// @dev Required override for UUPSUpgradeable. Ensures only the owner can upgrade the implementation.
+    /// @notice Required override for UUPSUpgradeable. Ensures only the owner can upgrade the implementation.
     /// @inheritdoc UUPSUpgradeable
     /// @param newImplementation Address of the new implementation contract
     function _authorizeUpgrade(

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {SedaDataTypes} from "../../libraries/SedaDataTypes.sol";
 import {IRequestHandler} from "../../interfaces/IRequestHandler.sol";
 
 /// @title RequestHandler
+/// @author Open Oracle Association
 /// @notice Implements the RequestHandlerBase for managing Seda protocol requests
 abstract contract RequestHandlerBase is IRequestHandler {
     // ============ Constants ============
