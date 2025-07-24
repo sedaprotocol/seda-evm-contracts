@@ -62,7 +62,7 @@ export const getNetworksConfig = (): NetworksUserConfig => {
 export const getEtherscanConfig = (): Partial<EtherscanConfig> | undefined => {
   const skippedNetworks: { network: string; reason: string }[] = [];
 
-  const apiKey = getEnv('ETHERSCAN_API_KEY');
+  const apiKey = getEnv('ETHERSCAN_API_KEY', '');
 
   const customChains: ChainConfig[] = Object.entries(networks)
     .map(([key, network]) => {
