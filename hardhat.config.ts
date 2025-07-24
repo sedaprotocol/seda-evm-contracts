@@ -1,4 +1,5 @@
 import '@nomicfoundation/hardhat-toolbox';
+import '@nomicfoundation/hardhat-verify';
 import '@openzeppelin/hardhat-upgrades';
 import type { HardhatUserConfig } from 'hardhat/config';
 import { getEtherscanConfig, getNetworksConfig } from './config';

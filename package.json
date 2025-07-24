@@ -43,6 +43,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.1.2",
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.0",
     "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "@openzeppelin/merkle-tree": "^1.0.8",
     "dotenv": "^17.2.0",
