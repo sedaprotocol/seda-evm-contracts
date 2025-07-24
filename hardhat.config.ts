@@ -7,10 +7,11 @@ import { getEtherscanConfig, getNetworksConfig } from './config';
 import './tasks';
 
 const gasReporterConfig = {
+  enabled: process.env.REPORT_GAS === 'true',
   currency: 'USD',
-  gasPrice: 20,
+  gasPrice: 10,
   token: 'ETH',
-  ethPrice: 3200,
+  ethPrice: 3600,
   reportPureAndViewMethods: true,
 };
 
