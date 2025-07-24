@@ -81,14 +81,12 @@ contract SedaCoreV1 is
     /// @dev This function replaces the constructor for proxy compatibility and can only be called once
     function initialize(address sedaProverAddress, uint256 initialTimeoutPeriod) external initializer {
         // Initialize inherited contracts
-        __UUPSUpgradeable_init();
+        __ResultHandler_init(sedaProverAddress);
         __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
         __Pausable_init();
 
-        // Initialize derived contracts
-        __ResultHandler_init(sedaProverAddress);
         _storageV1().timeoutPeriod = initialTimeoutPeriod;
-
         // Get the fee manager from the prover
         _storageV1().feeManager = IFeeManager(IProver(sedaProverAddress).getFeeManager());
     }

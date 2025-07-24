@@ -6,6 +6,7 @@ import {Secp256k1ProverV1} from "../../provers/Secp256k1ProverV1.sol";
 /// @title MockSecp256k1ProverV2
 /// @notice Mock version of Secp256k1Prover for testing purposes
 /// @dev This contract is a mock and should not be used in production
+/// @custom:oz-upgrades-unsafe-allow missing-initializer-call
 contract MockSecp256k1ProverV2 is Secp256k1ProverV1 {
     // ============ Types & State ============
     bytes32 private constant PROVER_V2_STORAGE_SLOT =
@@ -25,6 +26,7 @@ contract MockSecp256k1ProverV2 is Secp256k1ProverV1 {
         _disableInitializers();
     }
 
+    /// @custom:oz-upgrades-validate-as-initializer
     function initialize() external reinitializer(2) onlyOwner {
         V2Storage storage s = _storageV2();
         s.version = "2.0.0";

@@ -9,6 +9,7 @@ import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 /// @dev This contract extends Secp256k1ProverV1 to add state reset functionality
 ///      It should only be used for testing purposes and never in production
 ///      as it can create inconsistent state by allowing arbitrary state changes
+/// @custom:oz-upgrades-unsafe-allow missing-initializer
 contract Secp256k1ProverResettable is Secp256k1ProverV1 {
     /// @notice Resets the prover's state to a given batch state
     /// @dev This function is only available in mock contracts for testing purposes.
