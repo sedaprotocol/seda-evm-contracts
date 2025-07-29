@@ -302,7 +302,6 @@ AVAILABLE TASKS:
   dev:reset-prover              Resets a Secp256k1ProverResettable contract to a specified batch (only for testing)
   utils:post-request            Post a data request to a ISedaCore contract with attached funds
   utils:upgrade-proxy           Deploys and upgrades a proxy implementation contract
-```
 
 seda: Deploy and interact with SEDA contracts
 

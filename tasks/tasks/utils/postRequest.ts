@@ -16,12 +16,12 @@ sedaScope
 
     const timestamp = Math.floor(Date.now() / 1000).toString(16);
     const request = {
-      execProgramId: '0x40b918f78a20008a722fa92089048d1a817edc193f0d5124b64adce91427beee',
-      execInputs: '0x6574682d75736474',
-      execGasLimit: 200000000000000n,
-      tallyProgramId: '0x577cd378ec40de8f3a3fa3d19c49bd1f1dbd97d59934440b38fa8c162852537d',
-      tallyInputs: '0x6574682d75736474',
-      tallyGasLimit: 200000000000000n,
+      execProgramId: '0x86c31245770e22a393f8d32daef2c4add5960ffbf73dd3820738b0864b4daecb',
+      tallyProgramId: '0x86c31245770e22a393f8d32daef2c4add5960ffbf73dd3820738b0864b4daecb',
+      execInputs: '0x',
+      tallyInputs: '0x',
+      execGasLimit: 50000000000000n,
+      tallyGasLimit: 50000000000000n,
       replicationFactor: 1,
       consensusFilter: '0x00',
       gasPrice: 2000n,
@@ -49,6 +49,6 @@ sedaScope
       logger.success('Data request posted successfully!');
       logger.info(`Data Request ID: ${requestId}`);
     } else {
-      logger.error('Data request failed');
+      logger.error('Data request possibly failed, check transaction');
     }
   });

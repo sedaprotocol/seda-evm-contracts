@@ -143,6 +143,8 @@ export async function upgradeAndVerifyContractWithProxy(
  */
 export async function verifyContract(hre: HardhatRuntimeEnvironment, address: string) {
   logger.section('Verifying Contracts', 'verify');
+  logger.info(`Waiting ${CONFIG.SLEEP_TIME_IN_SECONDS}s for indexing before verification...`);
+  await new Promise((resolve) => setTimeout(resolve, CONFIG.SLEEP_TIME_IN_SECONDS * 1000));
   try {
     await hre.run('verify:verify', {
       address,

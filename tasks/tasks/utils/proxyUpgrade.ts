@@ -38,6 +38,7 @@ sedaScope
   .addOptionalParam('args', 'The initialize arguments to use', undefined, types.string)
   .addFlag('reset', 'Replace existing deployment files')
   .addFlag('verify', 'Verify the contract on etherscan')
+  .addFlag('noinit', 'Do not initialize the contract')
   .setAction(async (taskArgs, hre) => {
     await upgradeProver(hre, taskArgs);
   });
@@ -50,6 +51,7 @@ export async function upgradeProver(
     args: string | undefined;
     reset?: boolean;
     verify?: boolean;
+    noinit?: boolean;
   },
 ): Promise<{ contractImplAddress: string }> {
   const contractName = options.contractName;
@@ -74,9 +76,11 @@ export async function upgradeProver(
   logger.section('Initializing implementation contract', 'upgrade');
   logger.info(`Initialize args: ${options.args}`);
   const proxy = await hre.ethers.getContractAt(contractName, options.proxy, owner);
-  const tx = options.args ? await proxy.initialize(options.args) : await proxy.initialize();
-  logger.info(`Transaction: ${tx.hash}`);
-  await tx.wait();
+  if (!options.noinit) {
+    const tx = options.args ? await proxy.initialize(options.args) : await proxy.initialize();
+    logger.info(`Transaction: ${tx.hash}`);
+    await tx.wait();
+  }
 
   if (options.verify) {
     await verifyContract(hre, result.contractImplAddress);

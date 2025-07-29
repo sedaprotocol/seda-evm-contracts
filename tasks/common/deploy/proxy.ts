@@ -2,6 +2,8 @@ import type { Signer } from 'ethers';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import type { ProverDataTypes } from '../../../ts-types';
+import { CONFIG } from '../config';
+import { logger } from '../logger';
 
 export type UupsContracts = {
   Secp256k1ProverV1: {
@@ -27,6 +29,9 @@ export async function deployProxyContract<T extends keyof UupsContracts>(
     kind: 'uups',
   });
   await contract.waitForDeployment();
+
+  logger.info(`Waiting ${CONFIG.SLEEP_TIME_IN_SECONDS}s for contract to be indexed (required for verification)`);
+  await new Promise((resolve) => setTimeout(resolve, CONFIG.SLEEP_TIME_IN_SECONDS * 1000));
 
   const contractImplAddress = await hre.upgrades.erc1967.getImplementationAddress(await contract.getAddress());
 
