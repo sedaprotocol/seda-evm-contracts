@@ -18,5 +18,9 @@ import './tasks/dev/allResettable';
 import './tasks/dev/resetProver';
 
 // Utils tasks
+import './tasks/utils/pause';
 import './tasks/utils/postRequest';
 import './tasks/utils/proxyUpgrade';
+import './tasks/utils/queryCore';
+import './tasks/utils/queryProver';
+import './tasks/utils/transferOwnership';

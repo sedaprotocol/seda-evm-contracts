@@ -30,7 +30,7 @@ export async function deployProxyContract<T extends keyof UupsContracts>(
   });
   await contract.waitForDeployment();
 
-  logger.info(`Waiting ${CONFIG.SLEEP_TIME_IN_SECONDS}s for contract to be indexed (required for verification)`);
+  logger.info(`Waiting ${CONFIG.SLEEP_TIME_IN_SECONDS}s for contract to be indexed...`);
   await new Promise((resolve) => setTimeout(resolve, CONFIG.SLEEP_TIME_IN_SECONDS * 1000));
 
   const contractImplAddress = await hre.upgrades.erc1967.getImplementationAddress(await contract.getAddress());
