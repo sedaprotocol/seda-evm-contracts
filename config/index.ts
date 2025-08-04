@@ -1,8 +1,10 @@
 import type { ChainConfig, EtherscanConfig } from '@nomicfoundation/hardhat-verify/types';
+import dotenv from 'dotenv';
 import type { NetworksUserConfig } from 'hardhat/types';
-
 import { networks } from './networks';
 import { getAccount, getEnv, getUrl } from './utils';
+
+dotenv.config();
 
 export const getNetworksConfig = (): NetworksUserConfig => {
   return Object.fromEntries(
@@ -24,6 +26,21 @@ export const getNetworksConfig = (): NetworksUserConfig => {
 };
 
 export const getEtherscanConfig = (): Partial<EtherscanConfig> => {
+  // If CUSTOM_CHAINS is false, use a single apiKey for all networks
+  if (!process.env.CUSTOM_CHAINS) {
+    const apiKey = getEnv('ETHERSCAN_API_KEY');
+
+    if (!apiKey) {
+      console.log('Warning: ETHERSCAN_API_KEY is not set');
+    }
+
+    return {
+      enabled: true,
+      apiKey,
+    };
+  }
+
+  // If CUSTOM_CHAINS is true, use a different apiKey and URLs for each network
   const apiKey: Record<string, string> = {};
   const customChains: ChainConfig[] = [];
 
@@ -37,13 +54,13 @@ export const getEtherscanConfig = (): Partial<EtherscanConfig> => {
     }
 
     // Add custom chain if it has custom URLs
-    if (etherscan.apiUrl || etherscan.browserUrl) {
+    if (etherscan.apiUrl && etherscan.browserUrl) {
       customChains.push({
         network: networkName,
         chainId: network.chainId,
         urls: {
-          apiURL: etherscan.apiUrl ?? '',
-          browserURL: etherscan.browserUrl ?? '',
+          apiURL: etherscan.apiUrl,
+          browserURL: etherscan.browserUrl,
         },
       });
     }

@@ -237,7 +237,9 @@ Available commands:
 
 ### Configuration
 
-The project uses a network configuration file (`config/networks.ts`) to manage different EVM network connections. Here's how to set it up:
+The project uses a network configuration file (`config/networks.ts`) to manage different EVM network connections and Etherscan v2 for contract verification. Here's how to set it up:
+
+#### Network Configuration
 
 1. Create or modify `config/networks.ts`:
 ```typescript
@@ -248,14 +250,18 @@ export const networks: Networks = {
     accounts: 'EVM_PRIVATE_KEY', // Ensure this is set in your .env file
     chainId: 84532,
     url: 'https://sepolia.base.org',
-    verify: {
-      etherscan: {
-        apiKey: process.env.BASE_SEPOLIA_ETHERSCAN_API_KEY, // Ensure this is set in your .env file
-        apiUrl: 'https://api-sepolia.basescan.org/api',
-        browserUrl: 'https://sepolia.basescan.org',
-      }
-    }
-  }
+  },
+  // For networks with custom block explorers, add etherscan configuration:
+  anotherChain: {
+    accounts: 'EVM_PRIVATE_KEY', // could be different
+    chainId: 12345,
+    url: 'https://rpc.anotherchain.com',
+    etherscan: {
+      apiKey: 'ANOTHER_CHAIN_API_KEY', // Environment variable name
+      apiUrl: 'https://api.anotherchain.com/api',
+      browserUrl: 'https://explorer.anotherchain.com',
+    },
+  },
 };
 ```
 
@@ -263,23 +269,48 @@ export const networks: Networks = {
 ```bash
 # Network Configuration
 EVM_PRIVATE_KEY=your-private-key-here # Replace with your actual private key
-BASE_SEPOLIA_ETHERSCAN_API_KEY=your-api-key-here # Replace with your actual API key
 
-# Add other network-specific variables as needed
+# Etherscan Configuration
+# Option 1: Single API key for all supported chains (default)
+ETHERSCAN_API_KEY=your-etherscan-api-key-here
+
+# Option 2: Custom chains with individual API keys
+ANOTHER_CHAIN_API_KEY=your-anotherchain-api-key-here
+# Add other network-specific API keys as needed
 ```
 
-### Configuration Options
+#### Etherscan v2 Configuration
+
+The project supports two Etherscan verification modes:
+
+**Mode 1: Single API Key (Default)**
+- Uses one `ETHERSCAN_API_KEY` for all supported chains
+- Works with major networks like Base, Arbitrum, etc.
+- Set `ETHERSCAN_API_KEY` in your `.env` file
+- No need to set `CUSTOM_CHAINS` environment variable
+
+**Mode 2: Custom Chains**
+- Uses individual API keys for each network
+- Required for networks with custom block explorers
+- Set `CUSTOM_CHAINS=true` in your `.env` file or through CLI
+- Each network with custom explorer needs its own API key in the `networks.ts` configuration
+
+#### Configuration Options
 
 Each network configuration can include:
 
 - **accounts**: Array of private keys or HD wallet configuration
 - **chainId** (required): The network's chain ID
 - **url** (required): RPC endpoint URL
-- **verify**: Contract verification settings
-  - **etherscan**: Block explorer API configuration
-    - **apiKey**: Your block explorer API key
-    - **apiUrl**: API endpoint for verification
-    - **browserUrl**: Block explorer URL
+- **etherscan** (optional): Custom block explorer configuration
+  - **apiKey**: Environment variable name for the API key
+  - **apiUrl**: API endpoint for verification
+  - **browserUrl**: Block explorer URL
+
+> [!NOTE]
+> - For networks without custom `etherscan` configuration, the default Etherscan API key will be used
+> - Set `CUSTOM_CHAINS=true` only when you need custom chain configurations
+> - The `--verify` flag triggers contract verification on block explorers
 
 ### Deployment
 
