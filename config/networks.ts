@@ -2,10 +2,25 @@ import type { Networks } from './types';
 
 export const networks: Networks = {
   // MAINNETS
+  arbitrumOne: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 42161,
+    url: 'https://arb-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
+  },
   base: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 8453,
     url: 'https://base-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
+  },
+  hyperliquid: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 999,
+    url: 'https://hyperliquid-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
+    etherscan: {
+      apiKey: 'ETHERSCAN_API_KEY',
+      apiUrl: 'https://api.etherscan.io/v2/api?chainid=999',
+      browserUrl: 'https://hyperevmscan.io/',
+    },
   },
   // TESTNETS
   arbitrumSepolia: {
