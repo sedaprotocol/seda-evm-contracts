@@ -48,6 +48,17 @@ export const networks: Networks = {
     chainId: 998,
     url: 'https://rpc.hyperliquid-testnet.xyz/evm',
   },
+  injectiveTestnet: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 1439,
+    url: 'https://k8s.testnet.json-rpc.injective.network/',
+    gasPrice: 160e6,
+    etherscan: {
+      apiKey: 'NO_API_KEY',
+      apiUrl: 'https://testnet.blockscout-api.injective.network/api',
+      browserUrl: 'https://testnet.blockscout.injective.network/',
+    },
+  },
   mantraDukong: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 5887,
