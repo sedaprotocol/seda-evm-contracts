@@ -12,6 +12,11 @@ export const networks: Networks = {
     chainId: 8453,
     url: 'https://base-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
   },
+  gnosis: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 100,
+    url: 'https://gnosis-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
+  },
   hyperliquid: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 999,
