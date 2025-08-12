@@ -27,6 +27,16 @@ export const networks: Networks = {
       browserUrl: 'https://hyperevmscan.io/',
     },
   },
+  plume: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 98866,
+    url: 'https://rpc.plume.org',
+    etherscan: {
+      apiKey: "NO_API_KEY",
+      apiUrl: "https://explorer-plume-mainnet-1.t.conduit.xyz/api",
+      browserUrl: "https://explorer-plume-mainnet-1.t.conduit.xyz:443"
+    }
+  },
   // TESTNETS
   arbitrumSepolia: {
     accounts: 'EVM_PRIVATE_KEY',
@@ -68,6 +78,11 @@ export const networks: Networks = {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 5887,
     url: 'https://evm.dukong.mantrachain.io',
+  },
+  plumeTestnet: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 98867,
+    url: 'https://testnet-rpc.plume.org',
   },
   superseedSepolia: {
     accounts: 'EVM_PRIVATE_KEY',
