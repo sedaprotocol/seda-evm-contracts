@@ -83,6 +83,11 @@ export const networks: Networks = {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 98867,
     url: 'https://testnet-rpc.plume.org',
+    etherscan: {
+      apiKey: 'NO_API_KEY',
+      apiUrl: 'https://explorer-plume-testnet-1.t.conduit.xyz/api',
+      browserUrl: 'https://explorer-plume-testnet-1.t.conduit.xyz:443',
+    },
   },
   superseedSepolia: {
     accounts: 'EVM_PRIVATE_KEY',
