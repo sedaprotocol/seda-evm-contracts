@@ -32,10 +32,10 @@ export const networks: Networks = {
     chainId: 98866,
     url: 'https://rpc.plume.org',
     etherscan: {
-      apiKey: "NO_API_KEY",
-      apiUrl: "https://explorer-plume-mainnet-1.t.conduit.xyz/api",
-      browserUrl: "https://explorer-plume-mainnet-1.t.conduit.xyz:443"
-    }
+      apiKey: 'NO_API_KEY',
+      apiUrl: 'https://explorer-plume-mainnet-1.t.conduit.xyz/api',
+      browserUrl: 'https://explorer-plume-mainnet-1.t.conduit.xyz:443',
+    },
   },
   // TESTNETS
   arbitrumSepolia: {
