@@ -56,11 +56,20 @@ describe('Proxy: SedaCore', () => {
 
       // Upgrade to V2
       const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), CoreV2Factory);
-      await proxyV2.initialize();
+      await proxyV2.getFunction('initialize')();
 
       // Check new V2 functionality
       const version = await proxyV2.getVersion();
       expect(version).to.equal('2.0.0');
+    });
+
+    it('prevents non-owner from upgrading the proxy', async () => {
+      const { core: proxy, CoreV2Factory } = await loadFixture(deployProxyFixture);
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect(
+        upgrades.upgradeProxy(await proxy.getAddress(), CoreV2Factory.connect(nonOwner)),
+      ).to.be.revertedWithCustomError(proxy, 'OwnableUnauthorizedAccount');
     });
   });
 });
