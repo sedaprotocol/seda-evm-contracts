@@ -67,8 +67,8 @@ sedaScope
       // Execute the pause/unpause action
       const tx =
         action === 'pause'
-          ? await contractInstance.connect(signer).pause()
-          : await contractInstance.connect(signer).unpause();
+          ? await contractInstance.connect(signer).getFunction('pause')()
+          : await contractInstance.connect(signer).getFunction('unpause')();
 
       logger.info(`Transaction hash: ${tx.hash}`);
       await tx.wait();

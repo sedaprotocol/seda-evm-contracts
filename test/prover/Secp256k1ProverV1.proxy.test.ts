@@ -55,7 +55,7 @@ describe('Proxy: Secp256k1Prover', () => {
 
       // Upgrade and verify new functionality
       const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), ProverV2Factory);
-      await proxyV2.initialize();
+      await proxyV2.getFunction('initialize')();
       expect(await proxyV2.getVersion()).to.equal('2.0.0');
     });
 
@@ -77,9 +77,9 @@ describe('Proxy: Secp256k1Prover', () => {
       const { proxy, ProverV2Factory } = await loadFixture(deployProxyFixture);
 
       const proxyV2 = await upgrades.upgradeProxy(await proxy.getAddress(), ProverV2Factory);
-      await proxyV2.initialize();
+      await proxyV2.getFunction('initialize')();
 
-      await expect(proxyV2.initialize()).to.be.revertedWithCustomError(proxyV2, 'InvalidInitialization');
+      await expect(proxyV2.getFunction('initialize')()).to.be.revertedWithCustomError(proxyV2, 'InvalidInitialization');
     });
 
     it('prevents non-owner from upgrading the proxy', async () => {
