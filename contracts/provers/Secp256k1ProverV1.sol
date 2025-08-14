@@ -10,6 +10,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 import {IFeeManager} from "../interfaces/IFeeManager.sol";
 import {ProverBase} from "./abstract/ProverBase.sol";
+import {Secp256k1ProverStorage} from "../libraries/Secp256k1ProverStorage.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title Secp256k1ProverV1
@@ -31,29 +32,6 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
 
     /// @notice Domain separator for Secp256k1 Merkle Tree leaves
     bytes1 internal constant SECP256K1_DOMAIN_SEPARATOR = 0x01;
-
-    // Constant storage slot for the state following the ERC-7201 standard
-    bytes32 private constant PROVER_V1_STORAGE_SLOT =
-        keccak256(abi.encode(uint256(keccak256("secp256k1prover.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
-
-    struct BatchData {
-        bytes32 resultsRoot;
-        address sender;
-    }
-
-    /// @custom:storage-location secp256k1prover.storage.v1
-    struct Secp256k1ProverStorage {
-        // Mapping of batch heights to batch data, including results root and sender address
-        mapping(uint64 => BatchData) batches;
-        // Merkle root of the current validator set, used to verify validator proofs in subsequent batches
-        bytes32 lastValidatorsRoot;
-        // Height of the latest batch that updates the validator set
-        uint64 lastBatchHeight;
-        // Maximum allowed age difference between batches. If zero, only strictly increasing batches are accepted
-        uint64 maxBatchAge;
-        // Interface for managing and processing verification fees
-        IFeeManager feeManager;
-    }
 
     // ============ Errors ============
 
@@ -84,8 +62,11 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         __Pausable_init();
 
         // Initialize storage
-        Secp256k1ProverStorage storage s = _storageV1();
-        s.batches[initialBatch.batchHeight] = BatchData({resultsRoot: initialBatch.resultsRoot, sender: address(0)});
+        Secp256k1ProverStorage.Layout storage s = Secp256k1ProverStorage.layout();
+        s.batches[initialBatch.batchHeight] = Secp256k1ProverStorage.BatchData({
+            resultsRoot: initialBatch.resultsRoot,
+            sender: address(0)
+        });
         s.lastBatchHeight = initialBatch.batchHeight;
         s.lastValidatorsRoot = initialBatch.validatorsRoot;
         s.maxBatchAge = maxBatchAge;
@@ -113,7 +94,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         bytes[] calldata signatures,
         SedaDataTypes.ValidatorProof[] calldata validatorProofs
     ) external override(ProverBase) whenNotPaused {
-        Secp256k1ProverStorage storage s = _storageV1();
+        Secp256k1ProverStorage.Layout storage s = Secp256k1ProverStorage.layout();
 
         // Input validation: signatures and proofs must be of the same length
         if (signatures.length != validatorProofs.length) {
@@ -138,7 +119,10 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         _validateConsensus(batchId, signatures, validatorProofs, s.lastValidatorsRoot);
 
         // State updates
-        s.batches[newBatch.batchHeight] = BatchData({resultsRoot: newBatch.resultsRoot, sender: msg.sender});
+        s.batches[newBatch.batchHeight] = Secp256k1ProverStorage.BatchData({
+            resultsRoot: newBatch.resultsRoot,
+            sender: msg.sender
+        });
         if (shouldUpdateChainState) {
             s.lastBatchHeight = newBatch.batchHeight;
             s.lastValidatorsRoot = newBatch.validatorsRoot;
@@ -173,7 +157,7 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
         uint64 batchHeight,
         bytes32[] calldata merkleProof
     ) external view override(ProverBase) returns (bool, address) {
-        BatchData memory batch = _storageV1().batches[batchHeight];
+        Secp256k1ProverStorage.BatchData memory batch = Secp256k1ProverStorage.layout().batches[batchHeight];
         bytes32 leaf = keccak256(abi.encodePacked(RESULT_DOMAIN_SEPARATOR, resultId));
         return MerkleProof.verify(merkleProof, batch.resultsRoot, leaf) ? (true, batch.sender) : (false, address(0));
     }
@@ -181,46 +165,35 @@ contract Secp256k1ProverV1 is ProverBase, Initializable, UUPSUpgradeable, Ownabl
     /// @notice Returns the batch data for a given height
     /// @param batchHeight The height of the batch to retrieve
     /// @return The batch data containing results root and sender address
-    function getBatch(uint64 batchHeight) external view returns (BatchData memory) {
-        return _storageV1().batches[batchHeight];
+    function getBatch(uint64 batchHeight) external view returns (Secp256k1ProverStorage.BatchData memory) {
+        return Secp256k1ProverStorage.layout().batches[batchHeight];
     }
 
     /// @notice Returns the address of the fee manager contract
     /// @return The address of the fee manager
     function getFeeManager() external view override returns (address) {
-        return address(_storageV1().feeManager);
+        return address(Secp256k1ProverStorage.layout().feeManager);
     }
 
     /// @notice Returns the last processed batch height
     /// @return The height of the last batch
     function getLastBatchHeight() external view override returns (uint64) {
-        return _storageV1().lastBatchHeight;
+        return Secp256k1ProverStorage.layout().lastBatchHeight;
     }
 
     /// @notice Returns the last validators root hash
     /// @return The Merkle root of the last validator set
     function getLastValidatorsRoot() external view returns (bytes32) {
-        return _storageV1().lastValidatorsRoot;
+        return Secp256k1ProverStorage.layout().lastValidatorsRoot;
     }
 
     /// @notice Returns the maximum allowed age difference between batches
     /// @return The maximum allowed age difference
     function getMaxBatchAge() external view returns (uint64) {
-        return _storageV1().maxBatchAge;
+        return Secp256k1ProverStorage.layout().maxBatchAge;
     }
 
     // ============ Internal Functions ============
-
-    /// @notice Returns the storage struct for the contract
-    /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
-    /// @return s The storage struct containing the contract's state variables
-    function _storageV1() internal pure returns (Secp256k1ProverStorage storage s) {
-        bytes32 slot = PROVER_V1_STORAGE_SLOT;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            s.slot := slot
-        }
-    }
 
     /// @notice Validates consensus by checking validator proofs and signatures
     /// @dev Verifies each validator proof and signature, then checks if sufficient voting power is reached
