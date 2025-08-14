@@ -21,11 +21,11 @@ jobs:
       - name: "Install the dependencies 📦"
         run: "bun install"
 
-      - name: "Lint TypeScript & Solidity 🧹"
-        run: "bun run check"
-
       - name: "Compile the contracts 🛠️"
         run: "bun run compile"
+
+      - name: "Lint TypeScript & Solidity 🧹"
+        run: "bun run check"
 
       - name: "Run tests with coverage 🧪"
         run: |
