@@ -52,7 +52,9 @@ describe('SedaCoreV1 Gas Analysis', () => {
           let totalRequestGas = 0n;
           for (const request of data.requests) {
             const usedGas = await measureGas(
-              core.postRequest(request, requestFee, resultFee, batchFee, { value: requestFee + resultFee + batchFee }),
+              core.getFunction('postRequest')(request, requestFee, resultFee, batchFee, {
+                value: requestFee + resultFee + batchFee,
+              }),
             );
             totalRequestGas += usedGas;
           }
@@ -61,7 +63,7 @@ describe('SedaCoreV1 Gas Analysis', () => {
 
           let totalResultGas = 0n;
           for (let i = 0; i < data.results.length; i++) {
-            const usedGas = await measureGas(core.postResult(data.results[i], 0, data.resultProofs[i], { value: 0 }));
+            const usedGas = await measureGas(core.postResult(data.results[i], 0, data.resultProofs[i]));
             totalResultGas += usedGas;
           }
           const avgResultGas = Number(totalResultGas) / data.results.length;
@@ -115,7 +117,7 @@ describe('SedaCoreV1 Gas Analysis', () => {
           // Measure postResult gas
           let totalResultGas = 0n;
           for (let i = 0; i < data.results.length; i++) {
-            const usedGas = await measureGas(core.postResult(data.results[i], 0, data.resultProofs[i], { value: 0 }));
+            const usedGas = await measureGas(core.postResult(data.results[i], 0, data.resultProofs[i]));
             totalResultGas += usedGas;
           }
           const avgResultGas = Number(totalResultGas) / data.results.length;
@@ -160,7 +162,7 @@ describe('SedaCoreV1 Gas Analysis', () => {
 
       const request = data.requests[0];
       // Wait for transaction to be mined and get the request ID
-      const tx = await core.postRequest(request, requestFee, resultFee, batchFee, {
+      const tx = await core.getFunction('postRequest')(request, requestFee, resultFee, batchFee, {
         value: requestFee + resultFee + batchFee,
       });
       await tx.wait();

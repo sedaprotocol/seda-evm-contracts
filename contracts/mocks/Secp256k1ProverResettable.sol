@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Secp256k1ProverV1} from "../provers/Secp256k1ProverV1.sol";
+import {Secp256k1ProverStorage} from "../libraries/Secp256k1ProverStorage.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title Secp256k1ProverResettable
@@ -19,8 +20,11 @@ contract Secp256k1ProverResettable is Secp256k1ProverV1 {
     /// @param batch The batch data to reset the state to, containing height, validators root, and results root
     function resetProverState(SedaDataTypes.Batch memory batch) external onlyOwner {
         // Reset storage to zero values
-        Secp256k1ProverStorage storage s = _storageV1();
-        s.batches[batch.batchHeight] = BatchData({resultsRoot: batch.resultsRoot, sender: address(0)});
+        Secp256k1ProverStorage.Layout storage s = Secp256k1ProverStorage.layout();
+        s.batches[batch.batchHeight] = Secp256k1ProverStorage.BatchData({
+            resultsRoot: batch.resultsRoot,
+            sender: address(0)
+        });
         s.lastBatchHeight = batch.batchHeight;
         s.lastValidatorsRoot = batch.validatorsRoot;
         emit BatchPosted(batch.batchHeight, SedaDataTypes.deriveBatchId(batch), msg.sender);

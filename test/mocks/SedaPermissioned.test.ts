@@ -29,10 +29,10 @@ describe('SedaPermissioned', () => {
     const inputs = requests[0];
 
     // Check the request ID before posting
-    const expectedRequestId = await core.connect(signers.anyone).postRequest.staticCall(inputs);
+    const expectedRequestId = await core.connect(signers.anyone).getFunction('postRequest').staticCall(inputs);
 
     // Post the request
-    await expect(core.connect(signers.anyone).postRequest(inputs))
+    await expect(core.connect(signers.anyone).getFunction('postRequest')(inputs))
       .to.emit(core, 'RequestPosted')
       .withArgs(expectedRequestId);
 
@@ -50,7 +50,7 @@ describe('SedaPermissioned', () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(1);
 
-    await core.connect(signers.relayer).postRequest(requests[0]);
+    await core.connect(signers.relayer).getFunction('postRequest')(requests[0]);
 
     const requestId = deriveRequestId(requests[0]);
     await expect(core.getResult(requestId)).to.be.revertedWithCustomError(core, 'ResultNotFound').withArgs(requestId);
@@ -71,7 +71,7 @@ describe('SedaPermissioned', () => {
     const { requests } = generateDataFixtures(5);
 
     for (const request of requests) {
-      await core.connect(signers.relayer).postRequest(request);
+      await core.connect(signers.relayer).getFunction('postRequest')(request);
     }
 
     const requests1 = await core.getPendingRequests(0, 2);
@@ -96,8 +96,8 @@ describe('SedaPermissioned', () => {
 
     const requestIds = [];
     for (const request of requests) {
-      const requestId = await core.connect(signers.relayer).postRequest.staticCall(request);
-      await core.connect(signers.relayer).postRequest(request);
+      const requestId = await core.connect(signers.relayer).getFunction('postRequest').staticCall(request);
+      await core.connect(signers.relayer).getFunction('postRequest')(request);
       requestIds.push(requestId);
     }
 
@@ -123,7 +123,7 @@ describe('SedaPermissioned', () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(1);
 
-    await core.connect(signers.relayer).postRequest(requests[0]);
+    await core.connect(signers.relayer).getFunction('postRequest')(requests[0]);
 
     await expect(core.connect(signers.admin).postResult(results[0], 0, [])).to.be.revertedWithCustomError(
       core,
@@ -160,8 +160,8 @@ describe('SedaPermissioned', () => {
     const { core, signers } = await loadFixture(deployFixture);
     const { requests, results } = generateDataFixtures(1);
 
-    const requestId = await core.connect(signers.relayer).postRequest.staticCall(requests[0]);
-    await core.connect(signers.relayer).postRequest(requests[0]);
+    const requestId = await core.connect(signers.relayer).getFunction('postRequest').staticCall(requests[0]);
+    await core.connect(signers.relayer).getFunction('postRequest')(requests[0]);
 
     const storedRequest = await core.getRequest(requestId);
     compareRequests(storedRequest, requests[0]);
@@ -182,7 +182,7 @@ describe('SedaPermissioned', () => {
     const request = requests[0];
     const result = results[0];
 
-    const requestId = await core.postRequest.staticCall(request);
+    const requestId = await core.getFunction('postRequest').staticCall(request);
     const resultId = await core.connect(signers.relayer).postResult.staticCall(result, 0, []);
 
     expect(requestId).to.equal(deriveRequestId(request));
@@ -197,12 +197,11 @@ describe('SedaPermissioned', () => {
       ...requests[0],
       replicationFactor: MAX_REPLICATION_FACTOR + 1,
     };
-    await expect(core.connect(signers.relayer).postRequest(invalidRequest1)).to.be.revertedWithCustomError(
-      core,
-      'InvalidReplicationFactor',
-    );
+    await expect(
+      core.connect(signers.relayer).getFunction('postRequest')(invalidRequest1),
+    ).to.be.revertedWithCustomError(core, 'InvalidReplicationFactor');
     const invalidRequest2 = { ...requests[0], replicationFactor: 0 };
-    await expect(core.connect(signers.relayer).postRequest(invalidRequest2))
+    await expect(core.connect(signers.relayer).getFunction('postRequest')(invalidRequest2))
       .to.be.revertedWithCustomError(core, 'InvalidParameter')
       .withArgs('replicationFactor', 0, 1);
   });
@@ -231,7 +230,7 @@ describe('SedaPermissioned', () => {
 
     await core.connect(signers.admin).pause();
 
-    await expect(core.connect(signers.anyone).postRequest(requests[0])).to.be.revertedWithCustomError(
+    await expect(core.connect(signers.anyone).getFunction('postRequest')(requests[0])).to.be.revertedWithCustomError(
       core,
       'EnforcedPause',
     );
@@ -243,7 +242,7 @@ describe('SedaPermissioned', () => {
 
     await core.connect(signers.admin).unpause();
 
-    await expect(core.connect(signers.anyone).postRequest(requests[0])).to.not.be.reverted;
+    await expect(core.connect(signers.anyone).getFunction('postRequest')(requests[0])).to.not.be.reverted;
   });
 
   it('handles getPendingRequests with various offsets and limits', async () => {
@@ -251,7 +250,7 @@ describe('SedaPermissioned', () => {
     const { requests } = generateDataFixtures(10);
 
     for (const request of requests) {
-      await core.connect(signers.relayer).postRequest(request);
+      await core.connect(signers.relayer).getFunction('postRequest')(request);
     }
 
     const allRequests = await core.getPendingRequests(0, 100);
@@ -274,7 +273,7 @@ describe('SedaPermissioned', () => {
     const { requests, results } = generateDataFixtures(5);
 
     for (const request of requests) {
-      await core.connect(signers.relayer).postRequest(request);
+      await core.connect(signers.relayer).getFunction('postRequest')(request);
     }
 
     let pending = await core.getPendingRequests(0, 10);

@@ -1,6 +1,6 @@
 {
   "name": "@seda-protocol/evm",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "EVM smart contracts enabling any blockchain to connect with the SEDA decentralized network",
   "keywords": [
     "ethereum",
@@ -18,7 +18,7 @@
     "url": "git+https://github.com/sedaprotocol/seda-evm-contracts.git"
   },
   "scripts": {
-    "check": "bun run lint && bun run format:sol",
+    "check": "bun run lint && bun run format:sol && bun tsc --noEmit",
     "clean": "rimraf artifacts cache typechain-types coverage",
     "compile": "hardhat compile",
     "format:sol": "prettier --check \"**/*.sol\"",
@@ -41,13 +41,13 @@
     "@openzeppelin/contracts-upgradeable": "5.4.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.1.2",
+    "@biomejs/biome": "^2.2.0",
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
-    "@nomicfoundation/hardhat-verify": "^2.1.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.1",
     "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "@openzeppelin/merkle-tree": "^1.0.8",
-    "dotenv": "^17.2.0",
-    "hardhat": "^2.26.1",
+    "dotenv": "^17.2.1",
+    "hardhat": "^2.26.3",
     "prettier": "^3.6.2",
     "prettier-plugin-solidity": "^2.1.0",
     "rimraf": "^6.0.1",

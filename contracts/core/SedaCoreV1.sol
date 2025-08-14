@@ -13,6 +13,7 @@ import {IResultHandler} from "../interfaces/IResultHandler.sol";
 import {ISedaCore} from "../interfaces/ISedaCore.sol";
 import {RequestHandlerBase} from "./abstract/RequestHandlerBase.sol";
 import {ResultHandlerBase} from "./abstract/ResultHandlerBase.sol";
+import {SedaCoreStorage} from "../libraries/SedaCoreStorage.sol";
 import {SedaDataTypes} from "../libraries/SedaDataTypes.sol";
 
 /// @title SedaCoreV1
@@ -29,35 +30,6 @@ contract SedaCoreV1 is
 {
     // ============ Types & State ============
     using EnumerableSet for EnumerableSet.Bytes32Set;
-
-    // Constant storage slot for the state following the ERC-7201 standard
-    bytes32 private constant CORE_V1_STORAGE_SLOT =
-        keccak256(abi.encode(uint256(keccak256("sedacore.storage.v1")) - 1)) & ~bytes32(uint256(0xff));
-
-    struct RequestDetails {
-        uint256 timestamp;
-        uint256 requestFee;
-        uint256 resultFee;
-        uint256 batchFee;
-        uint256 gasLimit;
-        address requestFeeAddr;
-        address resultFeeAddr;
-        address batchFeeAddr;
-    }
-
-    /// @custom:storage-location erc7201:sedacore.storage.v1
-    struct SedaCoreStorage {
-        // Period in seconds after which a request can be withdrawn
-        uint256 timeoutPeriod;
-        // Tracks active data requests to ensure proper lifecycle management and prevent
-        // duplicate fulfillments. Requests are removed only after successful fulfillment
-        EnumerableSet.Bytes32Set pendingRequests;
-        // Associates request IDs with their metadata to enable fee distribution and
-        // timestamp validation during result submission
-        mapping(bytes32 => RequestDetails) requestDetails;
-        // Fee manager contract for handling fee distributions
-        IFeeManager feeManager;
-    }
 
     // ============ Errors ============
 
@@ -86,9 +58,10 @@ contract SedaCoreV1 is
         __UUPSUpgradeable_init();
         __Pausable_init();
 
-        _storageV1().timeoutPeriod = initialTimeoutPeriod;
+        SedaCoreStorage.Layout storage s = SedaCoreStorage.layout();
+        s.timeoutPeriod = initialTimeoutPeriod;
         // Get the fee manager from the prover
-        _storageV1().feeManager = IFeeManager(IProver(sedaProverAddress).getFeeManager());
+        s.feeManager = IFeeManager(IProver(sedaProverAddress).getFeeManager());
     }
 
     // ============ Public Functions ============
@@ -123,11 +96,13 @@ contract SedaCoreV1 is
             revert RequestAlreadyResolved(requestId);
         }
 
+        SedaCoreStorage.Layout storage s = SedaCoreStorage.layout();
+
         // Request was not posted before, create new request and store details
-        if (_storageV1().requestDetails[requestId].timestamp == 0) {
+        if (s.requestDetails[requestId].timestamp == 0) {
             // Create new request and store details
             _addRequest(requestId);
-            _storageV1().requestDetails[requestId] = RequestDetails({
+            s.requestDetails[requestId] = SedaCoreStorage.RequestDetails({
                 timestamp: block.timestamp,
                 requestFee: requestFee,
                 resultFee: resultFee,
@@ -152,7 +127,7 @@ contract SedaCoreV1 is
         uint64 batchHeight,
         bytes32[] calldata proof
     ) public override(ResultHandlerBase, IResultHandler) whenNotPaused returns (bytes32) {
-        RequestDetails memory requestDetails = _storageV1().requestDetails[result.drId];
+        SedaCoreStorage.RequestDetails memory requestDetails = SedaCoreStorage.layout().requestDetails[result.drId];
 
         // Ensures results can't be submitted with timestamps from before the request was made,
         // preventing potential replay or front-running attacks
@@ -167,10 +142,10 @@ contract SedaCoreV1 is
 
         // Clean up state
         _removePendingRequest(result.drId);
-        delete _storageV1().requestDetails[result.drId];
+        delete SedaCoreStorage.layout().requestDetails[result.drId];
 
         // If fee manager is not set, skip fee distribution
-        if (_storageV1().feeManager == IFeeManager(address(0))) {
+        if (SedaCoreStorage.layout().feeManager == IFeeManager(address(0))) {
             return resultId;
         }
 
@@ -195,9 +170,11 @@ contract SedaCoreV1 is
         // Validate ETH payment matches fee sum to prevent over/underpayment
         _validateFees(newRequestFee + newResultFee + newBatchFee);
 
+        SedaCoreStorage.Layout storage s = SedaCoreStorage.layout();
+
         // If the request was already resolved or doesn't exist, the timestamp in request details
         // will be 0, causing the subsequent check to revert with RequestNotFound
-        RequestDetails storage details = _storageV1().requestDetails[requestId];
+        SedaCoreStorage.RequestDetails storage details = s.requestDetails[requestId];
         if (details.timestamp == 0) {
             revert RequestNotFound(requestId);
         }
@@ -294,14 +271,15 @@ contract SedaCoreV1 is
             }
 
             // Distribute refunds
-            _storageV1().feeManager.addPendingFeesMultiple{value: totalRefund}(recipients, amounts);
+            s.feeManager.addPendingFeesMultiple{value: totalRefund}(recipients, amounts);
         }
     }
 
     /// @notice Allows anyone to withdraw fees for a timed out request to the respective fee addresses
     /// @param requestId The ID of the request to withdraw
     function withdrawTimedOutRequest(bytes32 requestId) external {
-        RequestDetails memory details = _storageV1().requestDetails[requestId];
+        SedaCoreStorage.Layout storage s = SedaCoreStorage.layout();
+        SedaCoreStorage.RequestDetails memory details = s.requestDetails[requestId];
 
         // Verify request exists
         if (details.timestamp == 0) {
@@ -309,8 +287,8 @@ contract SedaCoreV1 is
         }
 
         // Check if request has timed out using current timeout period
-        if (block.timestamp < details.timestamp + _storageV1().timeoutPeriod) {
-            revert RequestNotTimedOut(requestId, block.timestamp, details.timestamp + _storageV1().timeoutPeriod);
+        if (block.timestamp < details.timestamp + s.timeoutPeriod) {
+            revert RequestNotTimedOut(requestId, block.timestamp, details.timestamp + s.timeoutPeriod);
         }
 
         // Calculate total refund
@@ -318,12 +296,12 @@ contract SedaCoreV1 is
 
         // Clean up state before transfer to prevent reentrancy
         _removePendingRequest(requestId);
-        delete _storageV1().requestDetails[requestId];
+        delete s.requestDetails[requestId];
 
         // Handle fee distribution if there are fees to distribute
         if (totalRefund > 0) {
             // Check if fee manager is set
-            if (address(_storageV1().feeManager) == address(0)) {
+            if (address(s.feeManager) == address(0)) {
                 revert FeeManagerRequired();
             }
 
@@ -366,7 +344,7 @@ contract SedaCoreV1 is
             }
 
             // Distribute all fees in a single call
-            _storageV1().feeManager.addPendingFeesMultiple{value: totalRefund}(recipients, amounts);
+            s.feeManager.addPendingFeesMultiple{value: totalRefund}(recipients, amounts);
         }
     }
 
@@ -389,7 +367,7 @@ contract SedaCoreV1 is
     /// @param newTimeoutPeriod New timeout period in seconds
     function setTimeoutPeriod(uint256 newTimeoutPeriod) external onlyOwner {
         if (newTimeoutPeriod == 0) revert InvalidTimeoutPeriod();
-        _storageV1().timeoutPeriod = newTimeoutPeriod;
+        SedaCoreStorage.layout().timeoutPeriod = newTimeoutPeriod;
         emit TimeoutPeriodUpdated(newTimeoutPeriod);
     }
 
@@ -398,14 +376,14 @@ contract SedaCoreV1 is
     /// @notice Returns the address of the fee manager contract
     /// @return The address of the fee manager
     function getFeeManager() external view override returns (address) {
-        return address(_storageV1().feeManager);
+        return address(SedaCoreStorage.layout().feeManager);
     }
 
     /// @notice Returns the details of a pending request
     /// @param requestId The ID of the request to retrieve details for
     /// @return The details of the pending request
-    function getPendingRequestDetails(bytes32 requestId) external view returns (RequestDetails memory) {
-        return _storageV1().requestDetails[requestId];
+    function getPendingRequestDetails(bytes32 requestId) external view returns (SedaCoreStorage.RequestDetails memory) {
+        return SedaCoreStorage.layout().requestDetails[requestId];
     }
 
     /// @notice Retrieves a list of active requests
@@ -419,7 +397,8 @@ contract SedaCoreV1 is
         uint256 offset,
         uint256 limit
     ) external view whenNotPaused returns (PendingRequest[] memory) {
-        uint256 totalRequests = _storageV1().pendingRequests.length();
+        SedaCoreStorage.Layout storage s = SedaCoreStorage.layout();
+        uint256 totalRequests = s.pendingRequests.length();
         if (offset >= totalRequests) {
             return new PendingRequest[](0);
         }
@@ -427,8 +406,8 @@ contract SedaCoreV1 is
         uint256 actualLimit = (offset + limit > totalRequests) ? totalRequests - offset : limit;
         PendingRequest[] memory queriedPendingRequests = new PendingRequest[](actualLimit);
         for (uint256 i = 0; i < actualLimit; ++i) {
-            bytes32 requestId = _storageV1().pendingRequests.at(offset + i);
-            RequestDetails memory details = _storageV1().requestDetails[requestId];
+            bytes32 requestId = s.pendingRequests.at(offset + i);
+            SedaCoreStorage.RequestDetails memory details = s.requestDetails[requestId];
 
             queriedPendingRequests[i] = PendingRequest({
                 id: requestId,
@@ -447,21 +426,10 @@ contract SedaCoreV1 is
     /// @notice Returns the current timeout period
     /// @return The current timeout period
     function getTimeoutPeriod() external view returns (uint256) {
-        return _storageV1().timeoutPeriod;
+        return SedaCoreStorage.layout().timeoutPeriod;
     }
 
     // ============ Internal Functions ============
-
-    /// @notice Returns the storage struct for the contract
-    /// @dev Uses ERC-7201 storage pattern to access the storage struct at a specific slot
-    /// @return s The storage struct containing the contract's state variables
-    function _storageV1() internal pure returns (SedaCoreStorage storage s) {
-        bytes32 slot = CORE_V1_STORAGE_SLOT;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            s.slot := slot
-        }
-    }
 
     /// @notice Authorizes an upgrade to a new implementation
     /// @dev Can only be called by the contract owner
@@ -480,7 +448,7 @@ contract SedaCoreV1 is
     /// preventing unauthorized additions and maintaining proper state management.
     /// @param requestId The ID of the request to add
     function _addRequest(bytes32 requestId) private {
-        _storageV1().pendingRequests.add(requestId);
+        SedaCoreStorage.layout().pendingRequests.add(requestId);
     }
 
     /// @notice Handles the distribution of fees to various participants
@@ -489,7 +457,7 @@ contract SedaCoreV1 is
     /// @param batchSender The address that submitted the batch containing this result
     function _handleFeeDistribution(
         SedaDataTypes.Result calldata result,
-        RequestDetails memory requestDetails,
+        SedaCoreStorage.RequestDetails memory requestDetails,
         address batchSender
     ) private {
         // Maximum 4 possible recipients (requestor, result submitter, batch sender, and payback address)
@@ -569,7 +537,7 @@ contract SedaCoreV1 is
             }
 
             // Distribute all fees in a single call
-            _storageV1().feeManager.addPendingFeesMultiple{value: totalFeeAmount}(recipients, amounts);
+            SedaCoreStorage.layout().feeManager.addPendingFeesMultiple{value: totalFeeAmount}(recipients, amounts);
         }
     }
 
@@ -610,7 +578,7 @@ contract SedaCoreV1 is
     /// @dev Internal helper function to clean up state
     /// @param requestId The ID of the request to remove
     function _removePendingRequest(bytes32 requestId) private {
-        _storageV1().pendingRequests.remove(requestId);
+        SedaCoreStorage.layout().pendingRequests.remove(requestId);
     }
 
     /// @notice Ensures transaction value matches expected fees and reverts if fees are provided but no fee manager is set
@@ -620,7 +588,7 @@ contract SedaCoreV1 is
             revert InvalidFeeAmount(msg.value, totalFees);
         }
 
-        if (msg.value > 0 && address(_storageV1().feeManager) == address(0)) {
+        if (msg.value > 0 && address(SedaCoreStorage.layout().feeManager) == address(0)) {
             revert FeeManagerRequired();
         }
     }
