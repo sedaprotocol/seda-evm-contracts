@@ -114,13 +114,12 @@ describe('SedaCoreV1', () => {
       let requests = await core.getPendingRequests(0, 10);
       expect(requests.length).to.equal(0);
 
-      const pr1 = await core.postRequest(data.requests[0]);
+      const pr1 = await core.getFunction('postRequest')(data.requests[0]);
       expect(pr1)
         .to.emit(core, 'RequestPosted')
         .withArgs(await deriveRequestId(data.requests[0]));
 
-      const pr2 = core.postRequest(data.requests[0]);
-
+      const pr2 = await core.getFunction('postRequest')(data.requests[0]);
       expect(pr2).not.to.emit(core, 'RequestPosted');
 
       requests = await core.getPendingRequests(0, 10);
@@ -131,13 +130,16 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Post initial request
-      await core.postRequest(data.requests[0]);
+      await core.getFunction('postRequest')(data.requests[0]);
 
       // Post result for the request
       await core.postResult(data.results[0], 0, data.proofs[0]);
 
       // Attempt to repost the same request
-      await expect(core.postRequest(data.requests[0])).to.be.revertedWithCustomError(core, 'RequestAlreadyResolved');
+      await expect(core.getFunction('postRequest')(data.requests[0])).to.be.revertedWithCustomError(
+        core,
+        'RequestAlreadyResolved',
+      );
 
       // Verify no requests are pending
       const requests = await core.getPendingRequests(0, 10);
@@ -154,26 +156,27 @@ describe('SedaCoreV1', () => {
       const totalFee = fees.request + fees.result + fees.batch;
 
       await expect(
-        core.postRequest(data.requests[0], fees.request, fees.result, fees.batch, {
+        core.getFunction('postRequest')(data.requests[0], fees.request, fees.result, fees.batch, {
           value: totalFee - ethers.parseEther('0.5'),
         }),
       ).to.be.revertedWithCustomError(core, 'InvalidFeeAmount');
 
-      await expect(core.postRequest(data.requests[0], fees.request, fees.result, fees.batch, { value: totalFee })).to
-        .not.be.reverted;
+      await expect(
+        core.getFunction('postRequest')(data.requests[0], fees.request, fees.result, fees.batch, { value: totalFee }),
+      ).to.not.be.reverted;
     });
 
     it('processes zero fees correctly', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
-      await core.postRequest(data.requests[0], 0, 0, 0, { value: 0 });
+      await core.getFunction('postRequest')(data.requests[0], 0, 0, 0, { value: 0 });
       await expect(core.postResult(data.results[0], 0, data.proofs[0])).to.not.be.reverted;
     });
 
     it('allows posting an already existing request with non-zero fees', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
-      await core.postRequest(data.requests[0], 0, 0, 0, { value: 0 });
-      await expect(core.postRequest(data.requests[0], 1, 1, 1, { value: 3 })).to.not.be.reverted;
-      await expect(core.postRequest(data.requests[0], 2, 2, 2, { value: 6 })).to.not.be.reverted;
+      await core.getFunction('postRequest')(data.requests[0], 0, 0, 0, { value: 0 });
+      await expect(core.getFunction('postRequest')(data.requests[0], 1, 1, 1, { value: 3 })).to.not.be.reverted;
+      await expect(core.getFunction('postRequest')(data.requests[0], 2, 2, 2, { value: 6 })).to.not.be.reverted;
     });
   });
 
@@ -196,7 +199,7 @@ describe('SedaCoreV1', () => {
     it('posts request and its result', async () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
-      await core.postRequest(data.requests[0]);
+      await core.getFunction('postRequest')(data.requests[0]);
       let requests = await core.getPendingRequests(0, 1);
       expect(requests.length).to.equal(1);
       compareRequests(requests[0].request, data.requests[0]);
@@ -213,7 +216,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
-        await core.postRequest(request);
+        await core.getFunction('postRequest')(request);
       }
 
       let requests = await core.getPendingRequests(0, 10);
@@ -236,7 +239,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       const requestIndex = data.results.length - 1;
-      await core.postRequest(data.requests[requestIndex]);
+      await core.getFunction('postRequest')(data.requests[requestIndex]);
 
       // Try to post the last result which has an invalid timestamp of 1
       await expect(
@@ -248,7 +251,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Post initial request
-      await core.postRequest(data.requests[0]);
+      await core.getFunction('postRequest')(data.requests[0]);
 
       // Post first result - should succeed
       await core.postResult(data.results[0], 0, data.proofs[0]);
@@ -266,7 +269,7 @@ describe('SedaCoreV1', () => {
         const [requestor] = await ethers.getSigners();
         const paybackAddress = data.results[1].paybackAddress;
 
-        await core.postRequest(data.requests[1], requestFee, 0, 0, { value: requestFee });
+        await core.getFunction('postRequest')(data.requests[1], requestFee, 0, 0, { value: requestFee });
 
         const totalGas = BigInt(data.requests[1].execGasLimit) + BigInt(data.requests[1].tallyGasLimit);
         const expectedPayback = (requestFee * BigInt(data.results[1].gasUsed)) / totalGas;
@@ -284,7 +287,7 @@ describe('SedaCoreV1', () => {
         const resultFee = ethers.parseEther('2.0');
         const [, resultSubmitter] = await ethers.getSigners();
 
-        await core.postRequest(data.requests[0], 0, resultFee, 0, { value: resultFee });
+        await core.getFunction('postRequest')(data.requests[0], 0, resultFee, 0, { value: resultFee });
 
         // Get fee manager contract directly from core
         const feeManagerAddress = await core.getFeeManager();
@@ -310,7 +313,7 @@ describe('SedaCoreV1', () => {
         const batchFee = ethers.parseEther('3.0');
         const [, batchSender] = await ethers.getSigners();
 
-        await core.postRequest(data.requests[0], 0, 0, batchFee, { value: batchFee });
+        await core.getFunction('postRequest')(data.requests[0], 0, 0, batchFee, { value: batchFee });
 
         const batch = { ...data.initialBatch, batchHeight: 1 };
         const signatures = [await data.wallets[0].signingKey.sign(deriveBatchId(batch)).serialized];
@@ -343,7 +346,7 @@ describe('SedaCoreV1', () => {
         const batchFee = ethers.parseEther('3.0');
         const [requestor] = await ethers.getSigners();
 
-        await core.postRequest(data.requests[0], 0, 0, batchFee, { value: batchFee });
+        await core.getFunction('postRequest')(data.requests[0], 0, 0, batchFee, { value: batchFee });
 
         await expect(core.postResult(data.results[0], 0, data.proofs[0]))
           .to.emit(core, 'FeeDistributed')
@@ -354,7 +357,7 @@ describe('SedaCoreV1', () => {
         const { core, feeManager, data } = await loadFixture(deployCoreFixture);
         const [requestor] = await ethers.getSigners();
 
-        await core.postRequest(data.requests[0], 1, 0, 0, { value: 1 });
+        await core.getFunction('postRequest')(data.requests[0], 1, 0, 0, { value: 1 });
 
         await expect(core.postResult(data.results[0], 0, data.proofs[0]))
           .to.emit(core, 'FeeDistributed')
@@ -368,7 +371,7 @@ describe('SedaCoreV1', () => {
         const { core, feeManager, data } = await loadFixture(deployCoreFixture);
         const [requestor] = await ethers.getSigners();
 
-        await core.postRequest(data.requests[3], 1, 0, 0, { value: 1 });
+        await core.getFunction('postRequest')(data.requests[3], 1, 0, 0, { value: 1 });
 
         await expect(core.postResult(data.results[3], 0, data.proofs[3]))
           .to.emit(core, 'FeeDistributed')
@@ -382,7 +385,7 @@ describe('SedaCoreV1', () => {
         const { core, feeManager, data } = await loadFixture(deployCoreFixture);
         const [requestor] = await ethers.getSigners();
 
-        await core.postRequest(data.requests[4], 1, 0, 0, { value: 1 });
+        await core.getFunction('postRequest')(data.requests[4], 1, 0, 0, { value: 1 });
 
         await expect(core.postResult(data.results[4], 0, data.proofs[4]))
           .to.emit(core, 'FeeDistributed')
@@ -397,7 +400,7 @@ describe('SedaCoreV1', () => {
         const requestFee = ethers.parseEther('1');
 
         // Create a result with gas used higher than gas limit
-        await core.postRequest(data.requests[6], requestFee, 0, 0, { value: requestFee });
+        await core.getFunction('postRequest')(data.requests[6], requestFee, 0, 0, { value: requestFee });
 
         // Since gasUsed > gasLimit, the entire request fee should go to the payback address
         // if it's valid, otherwise back to the requestor
@@ -413,7 +416,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
-        await core.postRequest(request);
+        await core.getFunction('postRequest')(request);
       }
 
       const requests1 = await core.getPendingRequests(0, 2);
@@ -429,7 +432,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
-        await core.postRequest(request);
+        await core.getFunction('postRequest')(request);
       }
 
       const requests = await core.getPendingRequests(10, 2);
@@ -440,7 +443,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
-        await core.postRequest(request);
+        await core.getFunction('postRequest')(request);
       }
 
       const allRequests = await core.getPendingRequests(0, data.requests.length);
@@ -453,7 +456,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       for (const request of data.requests) {
-        await core.postRequest(request);
+        await core.getFunction('postRequest')(request);
       }
 
       const requests1 = await core.getPendingRequests(0, 20);
@@ -470,7 +473,7 @@ describe('SedaCoreV1', () => {
 
       // Add some pending requests
       for (const request of data.requests) {
-        await core.postRequest(request);
+        await core.getFunction('postRequest')(request);
       }
 
       // Pause the contract
@@ -493,7 +496,9 @@ describe('SedaCoreV1', () => {
       };
       const totalFees = fees.request + fees.result + fees.batch;
       // Post request with all fees
-      await core.postRequest(data.requests[1], fees.request, fees.result, fees.batch, { value: totalFees });
+      await core.getFunction('postRequest')(data.requests[1], fees.request, fees.result, fees.batch, {
+        value: totalFees,
+      });
 
       // Increase fees
       const newFees = {
@@ -559,7 +564,7 @@ describe('SedaCoreV1', () => {
       const { core, feeManager, data } = await loadFixture(deployCoreFixture);
       const [alice] = await ethers.getSigners();
 
-      await core.postRequest(data.requests[0], 0, 0, 0);
+      await core.getFunction('postRequest')(data.requests[0], 0, 0, 0);
       const requestId = await deriveRequestId(data.requests[0]);
 
       await core.postResult(data.results[0], 0, data.proofs[0]);
@@ -574,7 +579,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // First post a request
-      await core.postRequest(data.requests[0], 0, 0, 0);
+      await core.getFunction('postRequest')(data.requests[0], 0, 0, 0);
       const requestId = await deriveRequestId(data.requests[0]);
 
       // Try to increase fees with incorrect amount
@@ -593,7 +598,7 @@ describe('SedaCoreV1', () => {
       const { core, feeManager, data } = await loadFixture(deployCoreFixture);
       const [alice] = await ethers.getSigners();
 
-      await core.postRequest(data.requests[0], 0, 0, 0);
+      await core.getFunction('postRequest')(data.requests[0], 0, 0, 0);
       const requestId = await deriveRequestId(data.requests[0]);
 
       await core.increaseFees(requestId, 1, 1, 1, { value: 3 });
@@ -607,7 +612,7 @@ describe('SedaCoreV1', () => {
       const { core, feeManager, data } = await loadFixture(deployCoreFixture);
       const [alice] = await ethers.getSigners();
 
-      await core.postRequest(data.requests[0], 0, 0, 0);
+      await core.getFunction('postRequest')(data.requests[0], 0, 0, 0);
       const requestId = await deriveRequestId(data.requests[0]);
 
       await core.increaseFees(requestId, 1, 1, 1, { value: 3 });
@@ -624,7 +629,7 @@ describe('SedaCoreV1', () => {
       const [alice] = await ethers.getSigners();
 
       const requestId = await deriveRequestId(data.requests[0]);
-      await core.postRequest(data.requests[0], 1, 1, 1, { value: 3 });
+      await core.getFunction('postRequest')(data.requests[0], 1, 1, 1, { value: 3 });
 
       await expect(core.increaseFees(requestId, 2, 1, 0, { value: 3 })).not.to.be.reverted;
       expect(await feeManager.getPendingFees(alice.address)).to.equal(2);
@@ -649,7 +654,9 @@ describe('SedaCoreV1', () => {
       const [requestor, withdrawer] = await ethers.getSigners();
 
       // Post request with fees
-      await core.postRequest(data.requests[0], fees.request, fees.result, fees.batch, { value: totalFee });
+      await core.getFunction('postRequest')(data.requests[0], fees.request, fees.result, fees.batch, {
+        value: totalFee,
+      });
       const requestId = await deriveRequestId(data.requests[0]);
 
       // Try to withdraw before timeout - should fail
@@ -690,7 +697,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Post request without fees
-      await core.postRequest(data.requests[0]);
+      await core.getFunction('postRequest')(data.requests[0]);
       const requestId = await deriveRequestId(data.requests[0]);
 
       // Fast forward past timeout period
@@ -710,7 +717,7 @@ describe('SedaCoreV1', () => {
       const fee = ethers.parseEther('1.0');
 
       // Post request with fee
-      await core.postRequest(data.requests[0], fee, 0, 0, { value: fee });
+      await core.getFunction('postRequest')(data.requests[0], fee, 0, 0, { value: fee });
       const requestId = await deriveRequestId(data.requests[0]);
 
       // Update timeout period to be shorter
@@ -743,7 +750,7 @@ describe('SedaCoreV1', () => {
       const fee = ethers.parseEther('1.0');
 
       // Post request with fee
-      await core.postRequest(data.requests[0], 0, fee, 0, { value: fee });
+      await core.getFunction('postRequest')(data.requests[0], 0, fee, 0, { value: fee });
       const requestId = await deriveRequestId(data.requests[0]);
 
       // Fast forward past timeout period
@@ -809,11 +816,16 @@ describe('SedaCoreV1', () => {
         await (core.connect(owner) as SedaCoreV1).pause();
 
         // Test postRequest
-        await expect(core.postRequest(data.requests[0])).to.be.revertedWithCustomError(core, 'EnforcedPause');
+        await expect(core.getFunction('postRequest')(data.requests[0])).to.be.revertedWithCustomError(
+          core,
+          'EnforcedPause',
+        );
 
         // Test postRequest with fees
         await expect(
-          core.postRequest(data.requests[0], ethers.parseEther('1'), 0, 0, { value: ethers.parseEther('1') }),
+          core.getFunction('postRequest')(data.requests[0], ethers.parseEther('1'), 0, 0, {
+            value: ethers.parseEther('1'),
+          }),
         ).to.be.revertedWithCustomError(core, 'EnforcedPause');
 
         // Test postResult
@@ -839,7 +851,7 @@ describe('SedaCoreV1', () => {
         await (core.connect(owner) as SedaCoreV1).unpause();
 
         // Should now be able to perform operations
-        await expect(core.postRequest(data.requests[0]))
+        await expect(core.getFunction('postRequest')(data.requests[0]))
           .to.emit(core, 'RequestPosted')
           .withArgs(await deriveRequestId(data.requests[0]));
 
@@ -894,7 +906,9 @@ describe('SedaCoreV1', () => {
       const totalFee = fees.request + fees.result + fees.batch;
 
       // Post request with fees
-      await core.postRequest(data.requests[0], fees.request, fees.result, fees.batch, { value: totalFee });
+      await core.getFunction('postRequest')(data.requests[0], fees.request, fees.result, fees.batch, {
+        value: totalFee,
+      });
       const requestId = await deriveRequestId(data.requests[0]);
 
       // Get request details
@@ -932,7 +946,7 @@ describe('SedaCoreV1', () => {
       const { core, data } = await loadFixture(deployCoreFixture);
 
       // Post request
-      await core.postRequest(data.requests[0]);
+      await core.getFunction('postRequest')(data.requests[0]);
       const requestId = await deriveRequestId(data.requests[0]);
 
       // Verify details exist
@@ -993,20 +1007,19 @@ describe('SedaCoreV1', () => {
       expect(await core.getFeeManager()).to.equal(ethers.ZeroAddress);
 
       // Test 1: Post request without fees
-      await core.postRequest(requests[0]);
+      await core.getFunction('postRequest')(requests[0]);
 
       // Post result without fees - should work even with fee manager not set
       await expect(core.postResult(results[0], 0, proofs[0])).to.not.be.reverted;
 
       // Test 2: Post request with fees
       const fee = ethers.parseEther('1.0');
-      await expect(core.postRequest(requests[1], fee, 0, 0, { value: fee })).to.be.revertedWithCustomError(
-        core,
-        'FeeManagerRequired',
-      );
+      await expect(
+        core.getFunction('postRequest')(requests[1], fee, 0, 0, { value: fee }),
+      ).to.be.revertedWithCustomError(core, 'FeeManagerRequired');
 
       // Test 3: Attempt to increase fees for a request
-      await core.postRequest(requests[1]);
+      await core.getFunction('postRequest')(requests[1]);
       const requestId = await deriveRequestId(requests[1]);
       await expect(
         core.increaseFees(requestId, ethers.parseEther('1.0'), 0, 0, { value: ethers.parseEther('1.0') }),
@@ -1018,7 +1031,7 @@ describe('SedaCoreV1', () => {
       const fee = ethers.parseEther('0.1');
 
       // First post a request with fees (this works because fee manager exists)
-      await core.postRequest(data.requests[0], fee, 0, 0, { value: fee });
+      await core.getFunction('postRequest')(data.requests[0], fee, 0, 0, { value: fee });
       const requestId = await deriveRequestId(data.requests[0]);
 
       // Calculate the base storage slot

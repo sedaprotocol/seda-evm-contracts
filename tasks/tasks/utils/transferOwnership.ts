@@ -69,7 +69,7 @@ sedaScope
       logger.info(`Transferring ownership to: ${newOwner}`);
 
       // Execute the ownership transfer
-      const tx = await contractInstance.connect(signer).transferOwnership(newOwner);
+      const tx = await contractInstance.connect(signer).getFunction('transferOwnership')(newOwner);
       logger.info(`Transaction hash: ${tx.hash}`);
       const receipt = await tx.wait();
 

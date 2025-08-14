@@ -21,7 +21,10 @@ contract Secp256k1ProverResettable is Secp256k1ProverV1 {
     function resetProverState(SedaDataTypes.Batch memory batch) external onlyOwner {
         // Reset storage to zero values
         Secp256k1ProverStorage.Layout storage s = Secp256k1ProverStorage.layout();
-        s.batches[batch.batchHeight] = Secp256k1ProverStorage.BatchData({resultsRoot: batch.resultsRoot, sender: address(0)});
+        s.batches[batch.batchHeight] = Secp256k1ProverStorage.BatchData({
+            resultsRoot: batch.resultsRoot,
+            sender: address(0)
+        });
         s.lastBatchHeight = batch.batchHeight;
         s.lastValidatorsRoot = batch.validatorsRoot;
         emit BatchPosted(batch.batchHeight, SedaDataTypes.deriveBatchId(batch), msg.sender);

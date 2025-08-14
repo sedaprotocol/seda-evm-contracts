@@ -36,8 +36,8 @@ describe('RequestHandler', () => {
     it('posts request and retrieves it successfully', async () => {
       const { handler, requests } = await loadFixture(deployFixture);
 
-      const requestId = await handler.postRequest.staticCall(requests[0]);
-      await handler.postRequest(requests[0]);
+      const requestId = await handler.getFunction('postRequest').staticCall(requests[0]);
+      await handler.getFunction('postRequest')(requests[0]);
 
       const postedRequest = await handler.getRequest(requestId);
       compareRequests(postedRequest, requests[0]);
@@ -46,11 +46,11 @@ describe('RequestHandler', () => {
     it('allows posting duplicate request', async () => {
       const { handler, requests } = await loadFixture(deployFixture);
 
-      const requestId = await handler.postRequest.staticCall(requests[0]);
-      await handler.postRequest(requests[0]);
+      const requestId = await handler.getFunction('postRequest').staticCall(requests[0]);
+      await handler.getFunction('postRequest')(requests[0]);
 
       // Second post of the same request should succeed and return the same ID
-      const duplicateRequestId = await handler.postRequest.staticCall(requests[0]);
+      const duplicateRequestId = await handler.getFunction('postRequest').staticCall(requests[0]);
       expect(duplicateRequestId).to.equal(requestId);
 
       // Verify the request data remains unchanged
@@ -63,7 +63,9 @@ describe('RequestHandler', () => {
 
       const requestId = await handler.deriveRequestId.staticCall(requests[0]);
 
-      await expect(handler.postRequest(requests[0])).to.emit(handler, 'RequestPosted').withArgs(requestId);
+      await expect(handler.getFunction('postRequest')(requests[0]))
+        .to.emit(handler, 'RequestPosted')
+        .withArgs(requestId);
     });
 
     it('reverts when replication factor is zero', async () => {
@@ -71,7 +73,7 @@ describe('RequestHandler', () => {
 
       const invalidRequest = { ...requests[0], replicationFactor: 0 };
 
-      await expect(handler.postRequest(invalidRequest))
+      await expect(handler.getFunction('postRequest')(invalidRequest))
         .to.be.revertedWithCustomError(handler, 'InvalidParameter')
         .withArgs('replicationFactor', 0, 1);
     });
@@ -81,7 +83,7 @@ describe('RequestHandler', () => {
 
       const invalidRequest = { ...requests[0], gasPrice: 999n };
 
-      await expect(handler.postRequest(invalidRequest))
+      await expect(handler.getFunction('postRequest')(invalidRequest))
         .to.be.revertedWithCustomError(handler, 'InvalidParameter')
         .withArgs('gasPrice', 999n, 1_000n);
     });
@@ -91,7 +93,7 @@ describe('RequestHandler', () => {
 
       const invalidRequest = { ...requests[0], execGasLimit: 9_999_999_999_999n };
 
-      await expect(handler.postRequest(invalidRequest))
+      await expect(handler.getFunction('postRequest')(invalidRequest))
         .to.be.revertedWithCustomError(handler, 'InvalidParameter')
         .withArgs('execGasLimit', 9_999_999_999_999n, 10_000_000_000_000n);
     });
@@ -101,7 +103,7 @@ describe('RequestHandler', () => {
 
       const invalidRequest = { ...requests[0], tallyGasLimit: 9_999_999_999_999n };
 
-      await expect(handler.postRequest(invalidRequest))
+      await expect(handler.getFunction('postRequest')(invalidRequest))
         .to.be.revertedWithCustomError(handler, 'InvalidParameter')
         .withArgs('tallyGasLimit', 9_999_999_999_999n, 10_000_000_000_000n);
     });
@@ -121,8 +123,8 @@ describe('RequestHandler', () => {
     it('retrieves existing request correctly', async () => {
       const { handler, requests } = await loadFixture(deployFixture);
 
-      const requestId = await handler.postRequest.staticCall(requests[0]);
-      await handler.postRequest(requests[0]);
+      const requestId = await handler.getFunction('postRequest').staticCall(requests[0]);
+      await handler.getFunction('postRequest')(requests[0]);
       const retrievedRequest = await handler.getRequest(requestId);
 
       compareRequests(retrievedRequest, requests[0]);

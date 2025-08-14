@@ -49,7 +49,7 @@ sedaScope
 
     logger.info(`Posting DR with memo: ${request.memo}`);
 
-    const tx = await core.postRequest(request, requestFee, resultFee, batchFee, {
+    const tx = await core.getFunction('postRequest')(request, requestFee, resultFee, batchFee, {
       value: totalValue,
     });
 
