@@ -81,6 +81,14 @@ describe('Proxy: Secp256k1Prover', () => {
 
       await expect(proxyV2.initialize()).to.be.revertedWithCustomError(proxyV2, 'InvalidInitialization');
     });
+
+    it('prevents non-owner from upgrading the proxy', async () => {
+      const { proxy, ProverV2Factory, nonOwner } = await loadFixture(deployProxyFixture);
+
+      await expect(
+        upgrades.upgradeProxy(await proxy.getAddress(), ProverV2Factory.connect(nonOwner)),
+      ).to.be.revertedWithCustomError(proxy, 'OwnableUnauthorizedAccount');
+    });
   });
 
   describe('resettable variant', () => {
