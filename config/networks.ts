@@ -12,6 +12,16 @@ export const networks: Networks = {
     chainId: 8453,
     url: 'https://base-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
   },
+  berachain: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 80094,
+    url: 'https://berachain-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
+    etherscan: {
+      apiKey: 'ETHERSCAN_API_KEY',
+      apiUrl: 'https://api.etherscan.io/v2/api?chainid=80094',
+      browserUrl: 'https://berascan.com/',
+    },
+  },
   gnosis: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 100,
@@ -47,6 +57,11 @@ export const networks: Networks = {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 84532,
     url: 'https://base-sepolia.g.alchemy.com/v2/{ALCHEMY_TESTNET_API_KEY}',
+  },
+  berachainBepolia: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 80069,
+    url: 'https://berachain-bepolia.g.alchemy.com/v2/{ALCHEMY_TESTNET_API_KEY}',
   },
   gnosisChiado: {
     accounts: 'EVM_PRIVATE_KEY',
