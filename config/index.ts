@@ -26,20 +26,6 @@ export const getNetworksConfig = (): NetworksUserConfig => {
 };
 
 export const getEtherscanConfig = (): Partial<EtherscanConfig> => {
-  // If CUSTOM_CHAINS is false, use a single apiKey for all networks
-  if (!process.env.CUSTOM_CHAINS) {
-    const apiKey = getEnv('ETHERSCAN_API_KEY');
-
-    if (!apiKey) {
-      console.log('Warning: ETHERSCAN_API_KEY is not set');
-    }
-
-    return {
-      enabled: true,
-      apiKey,
-    };
-  }
-
   // If CUSTOM_CHAINS is true, use a different apiKey and URLs for each network
   const apiKey: Record<string, string> = {};
   const customChains: ChainConfig[] = [];
@@ -68,7 +54,7 @@ export const getEtherscanConfig = (): Partial<EtherscanConfig> => {
 
   return {
     enabled: true,
-    apiKey,
+    apiKey: process.env.CUSTOM_CHAINS ? apiKey : getEnv('ETHERSCAN_API_KEY'),
     customChains,
   };
 };
