@@ -94,6 +94,11 @@ export const networks: Networks = {
     chainId: 5887,
     url: 'https://evm.dukong.mantrachain.io',
   },
+  neonDevnet: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 245022926,
+    url: 'https://devnet.neonevm.org',
+  },
   plumeTestnet: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 98867,

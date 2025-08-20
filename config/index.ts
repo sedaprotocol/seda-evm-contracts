@@ -1,10 +1,9 @@
+import './load-env';
 import type { ChainConfig, EtherscanConfig } from '@nomicfoundation/hardhat-verify/types';
-import dotenv from 'dotenv';
 import type { NetworksUserConfig } from 'hardhat/types';
 import { networks } from './networks';
 import { getAccount, getEnv, getUrl } from './utils';
 
-dotenv.config();
 
 export const getNetworksConfig = (): NetworksUserConfig => {
   return Object.fromEntries(
