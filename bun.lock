@@ -8,14 +8,14 @@
         "@openzeppelin/contracts-upgradeable": "5.4.0",
       },
       "devDependencies": {
-        "@biomejs/biome": "^2.1.2",
+        "@biomejs/biome": "^2.2.0",
         "@dotenvx/dotenvx": "^1.49.0",
         "@nomicfoundation/hardhat-toolbox": "^6.1.0",
-        "@nomicfoundation/hardhat-verify": "^2.1.0",
+        "@nomicfoundation/hardhat-verify": "^2.1.1",
         "@openzeppelin/hardhat-upgrades": "^3.9.1",
         "@openzeppelin/merkle-tree": "^1.0.8",
-        "dotenv": "^17.2.0",
-        "hardhat": "^2.26.1",
+        "dotenv": "^17.2.1",
+        "hardhat": "^2.26.3",
         "prettier": "^3.6.2",
         "prettier-plugin-solidity": "^2.1.0",
         "rimraf": "^6.0.1",
@@ -1378,8 +1378,6 @@
     "@aws-sdk/util-utf8-browser/tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
     "@aws-sdk/xml-builder/tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
-
-    "@dotenvx/dotenvx/dotenv": ["dotenv@17.2.1", "", {}, "sha512-kQhDYKZecqnM0fCnzI5eIv5L4cAe/iRI+HqMbO/hbRdTAeXDG+M9FjipUxNfbARuEg4iHIbhnhs78BCHNbSxEQ=="],
 
     "@ethereumjs/common/@ethereumjs/util": ["@ethereumjs/util@8.1.0", "", { "dependencies": { "@ethereumjs/rlp": "^4.0.1", "ethereum-cryptography": "^2.0.0", "micro-ftch": "^0.3.1" } }, "sha512-zQ0IqbdX8FZ9aw11vP+dZkKDkS+kgIvQPHnSAXzP9pLu+Rfu3D3XEeLbicvoXJTYnhZiPmsZUxgdzXwNKxRPbA=="],
 

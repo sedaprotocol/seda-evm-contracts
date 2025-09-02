@@ -4,7 +4,6 @@ import type { NetworksUserConfig } from 'hardhat/types';
 import { networks } from './networks';
 import { getAccount, getEnv, getUrl } from './utils';
 
-
 export const getNetworksConfig = (): NetworksUserConfig => {
   return Object.fromEntries(
     Object.entries(networks).map(([key, network]) => [
