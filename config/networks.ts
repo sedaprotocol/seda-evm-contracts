@@ -7,6 +7,26 @@ export const networks: Networks = {
     chainId: 42161,
     url: 'https://arb-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
   },
+  ink: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 57073,
+    url: 'https://ink-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
+    etherscan: {
+      apiKey: 'NO_API_KEY',
+      apiUrl: 'https://explorer.inkonchain.com/api',
+      browserUrl: 'https://explorer.inkonchain.com/',
+    },
+  },
+  sei: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 1329,
+    url: 'https://sei-mainnet.g.alchemy.com/v2/{ALCHEMY_MAINNET_API_KEY}',
+    etherscan: {
+      apiKey: 'ETHERSCAN_API_KEY',
+      apiUrl: 'https://api.etherscan.io/v2/',
+      browserUrl: 'https://seiscan.com/',
+    },
+  },
   base: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 8453,
@@ -48,6 +68,26 @@ export const networks: Networks = {
     },
   },
   // TESTNETS
+  inkSepolia: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 763373,
+    url: 'https://ink-sepolia.g.alchemy.com/v2/{ALCHEMY_TESTNET_API_KEY}',
+    etherscan: {
+      apiKey: 'NO_API_KEY',
+      apiUrl: 'https://explorer-sepolia.inkonchain.com/api',
+      browserUrl: 'https://explorer-sepolia.inkonchain.com/',
+    },
+  },
+  seiTestnet: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 1328,
+    url: 'https://sei-testnet.g.alchemy.com/v2/{ALCHEMY_TESTNET_API_KEY}',
+    etherscan: {
+      apiKey: 'ETHERSCAN_API_KEY',
+      apiUrl: 'https://api.etherscan.io/v2/',
+      browserUrl: 'https://testnet.seiscan.com/',
+    },
+  },
   arbitrumSepolia: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 421614,

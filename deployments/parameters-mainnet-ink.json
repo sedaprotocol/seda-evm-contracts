@@ -1,0 +1,12 @@
+{
+    "Secp256k1ProverV1": {
+      "initialBatch": {
+        "batchHeight": 239875,
+        "blockHeight": 5153605,
+        "validatorsRoot": "0x3d1539256430cea42ce8ebf8e0fbeede495d9a878c9fba6a769bc50700f1c37d",
+        "resultsRoot": "0x34c3aad7f66c2e5d9faddbc159ac2c59f7f3fbb2996363e8d7922465b3e1aaeb",
+        "provingMetadata": "0x0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "maxBatchAge": 100
+    }
+  }
