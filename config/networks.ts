@@ -57,6 +57,11 @@ export const networks: Networks = {
       browserUrl: 'https://hyperevmscan.io/',
     },
   },
+  mantra: {
+    accounts: 'EVM_PRIVATE_KEY',
+    chainId: 5888,
+    url: 'https://evm.mantrachain.io',
+  },
   plume: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 98866,
