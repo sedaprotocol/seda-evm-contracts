@@ -60,7 +60,12 @@ export const networks: Networks = {
   mantra: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 5888,
-    url: 'https://evm.mantrachain.io',
+    url: 'https://evm.archive.mantrachain.io/',
+    etherscan: {
+      apiKey: 'NO_API_KEY',
+      apiUrl: 'https://blockscout.mantrascan.io/api',
+      browserUrl: 'https://blockscout.mantrascan.io/',
+    },
   },
   plume: {
     accounts: 'EVM_PRIVATE_KEY',
@@ -137,7 +142,12 @@ export const networks: Networks = {
   mantraDukong: {
     accounts: 'EVM_PRIVATE_KEY',
     chainId: 5887,
-    url: 'https://evm.dukong.mantrachain.io',
+    url: 'https://evm.archive.dukong.mantrachain.io',
+    etherscan: {
+      apiKey: 'NO_API_KEY',
+      apiUrl: 'https://explorer.dukong.io/api',
+      browserUrl: 'https://explorer.dukong.io/',
+    },
   },
   neonDevnet: {
     accounts: 'EVM_PRIVATE_KEY',
